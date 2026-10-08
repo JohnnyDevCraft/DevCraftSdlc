@@ -54,11 +54,143 @@ download() {
     fail "curl or wget is required"
 }
 
-latest_asset_url() {
-    rid="$1"
+normalize_version_tag() {
+    version="$1"
 
-    api_url="https://api.github.com/repos/$REPOSITORY/releases/latest"
-    metadata="$TMP_DIR/latest-release.json"
+    case "$version" in
+        v*) printf '%s' "$version" ;;
+        *) printf 'v%s' "$version" ;;
+    esac
+}
+
+version_core() {
+    tag="$(normalize_version_tag "$1")"
+    tag="${tag#v}"
+    printf '%s' "${tag%%-*}"
+}
+
+version_prerelease() {
+    tag="$(normalize_version_tag "$1")"
+    tag="${tag#v}"
+
+    case "$tag" in
+        *-*) printf '%s' "${tag#*-}" ;;
+        *) printf '' ;;
+    esac
+}
+
+prerelease_rank() {
+    prerelease="$1"
+    label="${prerelease%%.*}"
+
+    case "$label" in
+        '') printf '9' ;;
+        alpha) printf '1' ;;
+        beta) printf '2' ;;
+        rc) printf '3' ;;
+        *) printf '0' ;;
+    esac
+}
+
+prerelease_number() {
+    prerelease="$1"
+
+    case "$prerelease" in
+        *.*) number="${prerelease#*.}" ;;
+        *) number="0" ;;
+    esac
+
+    case "$number" in
+        ''|*[!0-9]*) printf '0' ;;
+        *) printf '%s' "$number" ;;
+    esac
+}
+
+version_greater() {
+    left="$(normalize_version_tag "$1")"
+    right="$(normalize_version_tag "$2")"
+    left_core="$(version_core "$left")"
+    right_core="$(version_core "$right")"
+
+    left_major="${left_core%%.*}"
+    left_rest="${left_core#*.}"
+    left_minor="${left_rest%%.*}"
+    left_patch="${left_rest#*.}"
+
+    right_major="${right_core%%.*}"
+    right_rest="${right_core#*.}"
+    right_minor="${right_rest%%.*}"
+    right_patch="${right_rest#*.}"
+
+    for part in major minor patch; do
+        eval "left_value=\$left_$part"
+        eval "right_value=\$right_$part"
+
+        if [ "$left_value" -gt "$right_value" ]; then
+            return 0
+        fi
+
+        if [ "$left_value" -lt "$right_value" ]; then
+            return 1
+        fi
+    done
+
+    left_pre="$(version_prerelease "$left")"
+    right_pre="$(version_prerelease "$right")"
+    left_rank="$(prerelease_rank "$left_pre")"
+    right_rank="$(prerelease_rank "$right_pre")"
+
+    if [ "$left_rank" -gt "$right_rank" ]; then
+        return 0
+    fi
+
+    if [ "$left_rank" -lt "$right_rank" ]; then
+        return 1
+    fi
+
+    left_number="$(prerelease_number "$left_pre")"
+    right_number="$(prerelease_number "$right_pre")"
+
+    [ "$left_number" -gt "$right_number" ]
+}
+
+select_release_tag_from_metadata() {
+    metadata="$1"
+    selected=""
+
+    sed -n 's/.*"tag_name": "\(v[0-9][^"]*\)".*/\1/p' "$metadata" | while IFS= read -r tag; do
+        case "$tag" in
+            v[0-9]*.[0-9]*.[0-9]*)
+                if [ -z "$selected" ] || version_greater "$tag" "$selected"; then
+                    selected="$tag"
+                fi
+                printf '%s\n' "$selected" > "$TMP_DIR/selected-release-tag"
+                ;;
+        esac
+    done
+
+    [ -f "$TMP_DIR/selected-release-tag" ] || return 1
+    cat "$TMP_DIR/selected-release-tag"
+}
+
+resolve_release_tag() {
+    if [ -n "${DEVCRAFT_VERSION:-}" ]; then
+        normalize_version_tag "$DEVCRAFT_VERSION"
+        return
+    fi
+
+    api_url="https://api.github.com/repos/$REPOSITORY/releases?per_page=100"
+    metadata="$TMP_DIR/releases.json"
+    download "$api_url" "$metadata"
+    select_release_tag_from_metadata "$metadata"
+}
+
+asset_url_for_release() {
+    rid="$1"
+    release_tag="$2"
+
+    api_url="https://api.github.com/repos/$REPOSITORY/releases/tags/$release_tag"
+    metadata="$TMP_DIR/release-$release_tag.json"
     download "$api_url" "$metadata"
 
     asset="DevCraft-$rid.tar.gz"
@@ -107,15 +239,16 @@ install_from_directory() {
 install_from_release() {
     rid="$(detect_rid)"
     mkdir -p "$TMP_DIR"
-    asset_url="$(latest_asset_url "$rid")"
+    release_tag="$(resolve_release_tag)"
+    asset_url="$(asset_url_for_release "$rid" "$release_tag")"
 
-    [ -n "$asset_url" ] || fail "no release asset found for $rid"
+    [ -n "$asset_url" ] || fail "no release asset found for $rid in $release_tag"
 
     archive="$TMP_DIR/DevCraft-$rid.tar.gz"
     package_dir="$TMP_DIR/package"
     mkdir -p "$package_dir"
 
-    info "Downloading DevCraft for $rid..."
+    info "Downloading DevCraft $release_tag for $rid..."
     download "$asset_url" "$archive"
     tar -xzf "$archive" -C "$package_dir"
     install_from_directory "$package_dir"
@@ -192,4 +325,6 @@ main() {
     ensure_path
 }
 
-main "$@"
+if [ "${DEVCRAFT_INSTALLER_TEST_MODE:-0}" != "1" ]; then
+    main "$@"
+fi

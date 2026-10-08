@@ -57,13 +57,109 @@ function Install-FromDirectory($PackageDir) {
     Copy-Item $binary (Join-Path $InstallDir "devcraft.exe") -Force
 }
 
-function Get-LatestAssetUrl($Rid) {
-    $release = Invoke-RestMethod "https://api.github.com/repos/$Repository/releases/latest"
+function Get-NormalizedVersionTag($Version) {
+    if ($Version.StartsWith("v")) {
+        return $Version
+    }
+
+    return "v$Version"
+}
+
+function Get-VersionParts($Tag) {
+    $normalized = Get-NormalizedVersionTag $Tag
+    $value = $normalized.Substring(1)
+    $pieces = $value -split "-", 2
+    $core = $pieces[0] -split "\."
+    $preLabel = ""
+    $preNumber = 0
+    $preRank = 9
+
+    if ($pieces.Count -gt 1) {
+        $prePieces = $pieces[1] -split "\.", 2
+        $preLabel = $prePieces[0]
+
+        if ($prePieces.Count -gt 1 -and [int]::TryParse($prePieces[1], [ref]$preNumber)) {
+            $preNumber = [int]$prePieces[1]
+        }
+
+        $preRank = switch ($preLabel) {
+            "alpha" { 1 }
+            "beta" { 2 }
+            "rc" { 3 }
+            default { 0 }
+        }
+    }
+
+    [PSCustomObject]@{
+        Major = [int]$core[0]
+        Minor = [int]$core[1]
+        Patch = [int]$core[2]
+        PreRank = $preRank
+        PreNumber = $preNumber
+    }
+}
+
+function Test-VersionGreater($Left, $Right) {
+    $leftParts = Get-VersionParts $Left
+    $rightParts = Get-VersionParts $Right
+
+    foreach ($part in @("Major", "Minor", "Patch", "PreRank", "PreNumber")) {
+        if ($leftParts.$part -gt $rightParts.$part) {
+            return $true
+        }
+
+        if ($leftParts.$part -lt $rightParts.$part) {
+            return $false
+        }
+    }
+
+    return $false
+}
+
+function Select-ReleaseTag($Releases) {
+    if ($env:DEVCRAFT_VERSION) {
+        return Get-NormalizedVersionTag $env:DEVCRAFT_VERSION
+    }
+
+    $selected = $null
+
+    foreach ($release in $Releases) {
+        if ($release.draft) {
+            continue
+        }
+
+        if ($release.tag_name -notmatch '^v\d+\.\d+\.\d+(-[A-Za-z]+\.\d+)?$') {
+            continue
+        }
+
+        if (-not $selected -or (Test-VersionGreater $release.tag_name $selected)) {
+            $selected = $release.tag_name
+        }
+    }
+
+    if (-not $selected) {
+        Fail "no published DevCraft release found"
+    }
+
+    return $selected
+}
+
+function Get-ReleaseTag {
+    if ($env:DEVCRAFT_VERSION) {
+        return Get-NormalizedVersionTag $env:DEVCRAFT_VERSION
+    }
+
+    $releases = Invoke-RestMethod "https://api.github.com/repos/$Repository/releases?per_page=100"
+    return Select-ReleaseTag $releases
+}
+
+function Get-AssetUrl($Rid, $ReleaseTag) {
+    $release = Invoke-RestMethod "https://api.github.com/repos/$Repository/releases/tags/$ReleaseTag"
     $assetName = "DevCraft-$Rid.zip"
     $asset = $release.assets | Where-Object { $_.name -eq $assetName } | Select-Object -First 1
 
     if (-not $asset) {
-        Fail "no release asset found for $Rid"
+        Fail "no release asset found for $Rid in $ReleaseTag"
     }
 
     return $asset.browser_download_url
@@ -76,9 +172,10 @@ function Install-FromRelease {
     $packageDir = Join-Path $temp "package"
 
     New-Item -ItemType Directory -Force -Path $temp, $packageDir | Out-Null
-    $assetUrl = Get-LatestAssetUrl $rid
+    $releaseTag = Get-ReleaseTag
+    $assetUrl = Get-AssetUrl $rid $releaseTag
 
-    Write-Host "Downloading DevCraft for $rid..."
+    Write-Host "Downloading DevCraft $releaseTag for $rid..."
     Invoke-WebRequest $assetUrl -OutFile $archive
     Expand-Archive $archive -DestinationPath $packageDir -Force
     Install-FromDirectory $packageDir
@@ -97,12 +194,18 @@ function Add-ToPath {
     Write-Host "Open a new PowerShell window, then run: devcraft"
 }
 
-$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+function Main {
+    $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-if ((Test-Path (Join-Path $scriptDir "devcraft.exe")) -and (Test-Path (Join-Path $scriptDir "profile"))) {
-    Install-FromDirectory $scriptDir
-} else {
-    Install-FromRelease
+    if ((Test-Path (Join-Path $scriptDir "devcraft.exe")) -and (Test-Path (Join-Path $scriptDir "profile"))) {
+        Install-FromDirectory $scriptDir
+    } else {
+        Install-FromRelease
+    }
+
+    Add-ToPath
 }
 
-Add-ToPath
+if (-not $env:DEVCRAFT_INSTALLER_TEST_MODE) {
+    Main
+}
