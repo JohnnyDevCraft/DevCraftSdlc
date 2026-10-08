@@ -61,7 +61,7 @@ public sealed class StartupFlow
         {
             console.ShowStartupStage("No SDLC workflow detected.");
             console.WriteStatus("Folder ready for DevCraft");
-            InstallDevCraft(context.CurrentDirectory, AskForNewProjectProfile(context.CurrentDirectory));
+            InstallDevCraft(context.CurrentDirectory, AskForNewProjectProfile(context.CurrentDirectory), context.ProfileDirectory);
             return;
         }
 
@@ -95,7 +95,7 @@ public sealed class StartupFlow
         if (!hasSdlcWorkflowMarkers && !scanResult.AiDrivenSdlc.Detected)
         {
             ProjectProfile selectedProfile = SelectProjectProfile(scanResult.ProjectProfile);
-            InstallDevCraft(context.CurrentDirectory, selectedProfile);
+            InstallDevCraft(context.CurrentDirectory, selectedProfile, context.ProfileDirectory);
         }
     }
 
@@ -142,9 +142,9 @@ public sealed class StartupFlow
         return suggestion;
     }
 
-    private static void InstallDevCraft(string directoryPath, ProjectProfile? projectProfile)
+    private static void InstallDevCraft(string directoryPath, ProjectProfile? projectProfile, string profileDirectory)
     {
-        DevCraftInstallationResult result = DevCraftInstaller.Install(directoryPath, projectProfile);
+        DevCraftInstallationResult result = DevCraftInstaller.Install(directoryPath, projectProfile, profileDirectory);
         ConsoleDevCraftInstallationWriter.Write(result);
     }
 

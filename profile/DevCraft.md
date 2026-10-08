@@ -66,7 +66,7 @@ Profile library folders:
 - `.DevCraft/skills/` - reusable DevCraft skills.
 - `.DevCraft/standards/` - reusable coding and engineering standards.
 - `.DevCraft/architectures/` - reusable architecture guidance.
-- `.DevCraft/templates/` - reusable creation templates, including `skill-template.md`.
+- `.DevCraft/templates/` - reusable creation templates for profile resources, project control files, and feature workflow artifacts.
 - `.DevCraft/project-types/` - reusable project type definitions.
 
 `configure.json` is the index for the profile library. Entries use lowercase kebab-case slugs so DevCraft commands can list, import, export, and reference exact items. The configuration also includes supported terminal clients such as Codex, Claude Code, and GitHub Copilot.
@@ -289,7 +289,7 @@ DevCraft supports two branching models.
 1. Confirm the project will operate in `DevCraft` mode.
 2. Create the project root `AGENT.md` immediately and record that the active mode is `DevCraft`.
 3. Create `.devcraft/`.
-4. Generate the DevCraft control files inside `.devcraft/` using the templates in [`./templates`](./templates).
+4. Generate the DevCraft control files inside `.devcraft/` using the installed profile templates in `.DevCraft/templates/`.
 5. Ascertain project purpose, users, rules, security concerns, languages, frameworks, architecture, work-item handling, collaboration model, branching model, and master branch.
 6. Set the project status to `Discovery` and the discovery stage to `Brainstorming`.
 7. Fill the `.devcraft` control files with the best known information before implementation begins.
@@ -307,7 +307,7 @@ DevCraft supports two branching models.
 ## Feature Flow
 
 1. Create `.devcraft/features/<id>-<FeatureNamePascalCased>/`.
-2. Create `spec.md` first from the spec template.
+2. Create `spec.md` first from `.DevCraft/templates/spec.template.md`.
 3. Set the feature type:
    - `Feature`
    - `Bug`
@@ -315,11 +315,11 @@ DevCraft supports two branching models.
    - `Task`
 4. Set the feature state explicitly.
 5. Move through the states only when the operator asks.
-6. Create `research.md` during `Research` when needed.
-7. Create `tasks.md` during `Planning`.
-8. Create `analysis.md` during `Analysis`.
-9. Create `issues.md` when implementation review issues appear or when post-phase fixes are needed before `Complete`.
-10. Create and maintain `results.md` during `Implementation`.
+6. Create `research.md` from `.DevCraft/templates/research.template.md` during `Research` when needed.
+7. Create `tasks.md` from `.DevCraft/templates/tasks.template.md` during `Planning`.
+8. Create `analysis.md` from `.DevCraft/templates/analysis.template.md` during `Analysis`.
+9. Create `issues.md` from `.DevCraft/templates/issues.md` when implementation review issues appear or when post-phase fixes are needed before `Complete`.
+10. Create and maintain `results.md` from `.DevCraft/templates/results.template.md` during `Implementation`.
 11. In `spec.md`, document how relevant profile `.DevCraft/standards` entries apply to the feature.
 12. Keep each artifact aligned to its purpose instead of overloading `spec.md` with every workflow concern.
 
@@ -337,11 +337,36 @@ These are the default DevCraft project control files for a new project:
 
 ## Template Files
 
-Reusable creation templates live in the profile `.DevCraft/templates/` folder and are indexed by `configure.json`. The current required skill template is:
+Reusable creation templates live in the profile `.DevCraft/templates/` folder and are indexed by `configure.json`.
+
+Profile library templates:
 
 - `.DevCraft/templates/skill-template.md`
+- `.DevCraft/templates/standard-template.md`
+- `.DevCraft/templates/architecture-template.md`
+- `.DevCraft/templates/project-type-template.md`
 
-Project-control templates may be added to this folder later and should be indexed in `configure.json` when they become user-selectable resources.
+Repository control templates:
+
+- `.DevCraft/templates/AGENT.template.md` -> project `AGENT.md` and `.devcraft/AGENT.md`
+- `.DevCraft/templates/README.template.md` -> `.devcraft/README.md`
+- `.DevCraft/templates/DISCOVERY.template.md` -> `.devcraft/DISCOVERY.md`
+- `.DevCraft/templates/ARCH.template.md` -> `.devcraft/ARCH.md`
+- `.DevCraft/templates/GOV.template.md` -> `.devcraft/GOV.md`
+- `.DevCraft/templates/MODEL.template.md` -> `.devcraft/MODEL.md`
+- `.DevCraft/templates/THEME.template.md` -> `.devcraft/THEME.md`
+- `.DevCraft/templates/DESIGN.template.md` -> `.devcraft/DESIGN.md` when the project needs reusable UI component patterns
+
+Feature workflow templates:
+
+- `.DevCraft/templates/spec.template.md` -> `spec.md`
+- `.DevCraft/templates/research.template.md` -> `research.md`
+- `.DevCraft/templates/tasks.template.md` -> `tasks.md`
+- `.DevCraft/templates/analysis.template.md` -> `analysis.md`
+- `.DevCraft/templates/issues.md` -> `issues.md`
+- `.DevCraft/templates/results.template.md` -> `results.md`
+
+When creating any DevCraft project or feature artifact, use the installed profile template first. Only fall back to embedded defaults when the template is missing.
 
 ## AI Responsibilities In DevCraft
 

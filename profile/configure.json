@@ -59,10 +59,64 @@
   "Architectures": [],
   "Templates": [
     {
+      "Slug": "agent-template",
+      "Name": "AGENT.template",
+      "Description": "Active Mode: `DevCraft` DevCraft Control Folder: `.devcraft/` Project Name: Primary Goal: Project Status: Discovery Valid Project Statuses: Discovery | Active | Maintenance Branching Model: Master Branch:",
+      "Path": "templates/AGENT.template.md"
+    },
+    {
+      "Slug": "analysis-template",
+      "Name": "analysis.template",
+      "Description": "Feature ID: Feature Name: Spec: [spec.md](./spec.md) Research: [research.md](./research.md) Tasks: [tasks.md](./tasks.md) State: Analysis",
+      "Path": "templates/analysis.template.md"
+    },
+    {
+      "Slug": "arch-template",
+      "Name": "ARCH.template",
+      "Description": "Track the chosen architecture and important design decisions.",
+      "Path": "templates/ARCH.template.md"
+    },
+    {
       "Slug": "architecture-template",
       "Name": "architecture template",
       "Description": "One sentence: what this architecture enables and when DevCraft should use it.",
       "Path": "templates/architecture-template.md"
+    },
+    {
+      "Slug": "design-template",
+      "Name": "DESIGN.template",
+      "Description": "Define **repeatable UI element designs and layouts** for the project.",
+      "Path": "templates/DESIGN.template.md"
+    },
+    {
+      "Slug": "discovery-template",
+      "Name": "DISCOVERY.template",
+      "Description": "Project Status: Discovery Discovery Stage: Brainstorming Valid Discovery Stages: Brainstorming | Architecture Planning | Model Design | Brand and Theming | Governance Design | Complete",
+      "Path": "templates/DISCOVERY.template.md"
+    },
+    {
+      "Slug": "feature-spec-template",
+      "Name": "Feature Spec.template",
+      "Description": "> **Deprecated.** > > Use the DevCraft feature folder structure under `.devcraft/features/<id>-<FeatureNamePascalCased>/`: > > - [`spec.template.md`](./spec.template.md) for discovery and clarification > - [`research.template.md`](./research.template.md) for research > - [`tasks.template.md`](./tasks.template.md) for planning > - [`analysis.template.md`](./analysis.template.md) for analysis > - [`issues.md`](./issues.md) for implementation issues > - [`results.template.md`](./results.template.md) for implementation results > > Code is only allowed when the feature state is `Implementation`.",
+      "Path": "templates/Feature-Spec.template.md"
+    },
+    {
+      "Slug": "gov-template",
+      "Name": "GOV.template",
+      "Description": "Track the rules, controls, approvals, and operational boundaries that govern the project.",
+      "Path": "templates/GOV.template.md"
+    },
+    {
+      "Slug": "issues",
+      "Name": "issues",
+      "Description": "Use this file for implementation issues found during or after a phase review while the feature is still active.",
+      "Path": "templates/issues.md"
+    },
+    {
+      "Slug": "model-template",
+      "Name": "MODEL.template",
+      "Description": "Track the current database and model structure for the project.",
+      "Path": "templates/MODEL.template.md"
     },
     {
       "Slug": "project-type-template",
@@ -71,16 +125,52 @@
       "Path": "templates/project-type-template.md"
     },
     {
+      "Slug": "readme-template",
+      "Name": "README.template",
+      "Description": "Describe the project, what it does, and who it serves.",
+      "Path": "templates/README.template.md"
+    },
+    {
+      "Slug": "research-template",
+      "Name": "research.template",
+      "Description": "Feature Name: Feature ID: State: Research Owner: Date:",
+      "Path": "templates/research.template.md"
+    },
+    {
+      "Slug": "results-template",
+      "Name": "results.template",
+      "Description": "Feature ID: Feature Name: Spec: [spec.md](./spec.md) Tasks: [tasks.md](./tasks.md) Issues: [issues.md](./issues.md)",
+      "Path": "templates/results.template.md"
+    },
+    {
       "Slug": "skill-template",
       "Name": "skill template",
       "Description": "One sentence: what this skill enables.",
       "Path": "templates/skill-template.md"
     },
     {
+      "Slug": "spec-template",
+      "Name": "spec.template",
+      "Description": "Feature ID: Feature Name: Type: Feature | Bug | Enabler | Task State: Discovery",
+      "Path": "templates/spec.template.md"
+    },
+    {
       "Slug": "standard-template",
       "Name": "standard template",
       "Description": "One sentence: what this standard governs and when DevCraft should apply it.",
       "Path": "templates/standard-template.md"
+    },
+    {
+      "Slug": "tasks-template",
+      "Name": "tasks.template",
+      "Description": "Feature ID: Feature Name: Spec: [spec.md](./spec.md) Research: [research.md](./research.md) State: Planning",
+      "Path": "templates/tasks.template.md"
+    },
+    {
+      "Slug": "theme-template",
+      "Name": "THEME.template",
+      "Description": "Track the active visual theme, design choices, and reusable theme assets for the project.",
+      "Path": "templates/THEME.template.md"
     }
   ],
   "ProjectTypes": [],

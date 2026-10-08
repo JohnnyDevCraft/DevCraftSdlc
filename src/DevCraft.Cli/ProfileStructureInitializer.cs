@@ -51,6 +51,7 @@ public static class ProfileStructureInitializer
         CopyDocuments(sharedGuidanceRoot, profileDirectory, "standards", "standards", createdFiles);
         CopyDocuments(sharedGuidanceRoot, profileDirectory, "Architecture", "architectures", createdFiles);
         CopySkillTemplate(sharedGuidanceRoot, profileDirectory, createdFiles);
+        CopyDevCraftTemplates(sharedGuidanceRoot, profileDirectory, createdFiles);
         EnsureProjectTypeTemplate(profileDirectory, createdFiles);
         EnsureArchitectureTemplate(profileDirectory, createdFiles);
         EnsureStandardTemplate(profileDirectory, createdFiles);
@@ -188,6 +189,32 @@ public static class ProfileStructureInitializer
 
             """);
         createdFiles.Add(targetFile);
+    }
+
+    private static void CopyDevCraftTemplates(string sharedGuidanceRoot, string profileDirectory, List<string> createdFiles)
+    {
+        string sourcePath = Path.Combine(sharedGuidanceRoot, "modes", "DevCraft", "templates");
+        string targetPath = Path.Combine(profileDirectory, "templates");
+
+        if (!Directory.Exists(sourcePath))
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(targetPath);
+
+        foreach (string sourceFile in Directory.EnumerateFiles(sourcePath, "*.md").OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            string targetFile = Path.Combine(targetPath, Path.GetFileName(sourceFile));
+
+            if (File.Exists(targetFile))
+            {
+                continue;
+            }
+
+            File.Copy(sourceFile, targetFile);
+            createdFiles.Add(targetFile);
+        }
     }
 
     private static void EnsureCreateSkillSkill(string profileDirectory, List<string> createdFiles)

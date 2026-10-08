@@ -2,7 +2,10 @@ namespace DevCraft.Cli;
 
 public static class DevCraftInstaller
 {
-    public static DevCraftInstallationResult Install(string projectDirectory, ProjectProfile? projectProfile = null)
+    public static DevCraftInstallationResult Install(
+        string projectDirectory,
+        ProjectProfile? projectProfile = null,
+        string? profileDirectory = null)
     {
         ProjectProfile profile = ResolveProjectProfile(projectDirectory, projectProfile);
         string controlDirectory = Path.Combine(projectDirectory, ".devcraft");
@@ -12,14 +15,15 @@ public static class DevCraftInstaller
         CreateDirectory(controlDirectory, projectDirectory, createdPaths, preservedPaths);
         CreateDirectory(Path.Combine(controlDirectory, "features"), projectDirectory, createdPaths, preservedPaths);
 
-        WriteIfMissing(Path.Combine(projectDirectory, "AGENT.md"), RootAgent(profile), projectDirectory, createdPaths, preservedPaths);
-        WriteIfMissing(Path.Combine(controlDirectory, "AGENT.md"), ControlAgent(profile), projectDirectory, createdPaths, preservedPaths);
-        WriteIfMissing(Path.Combine(controlDirectory, "README.md"), Readme(profile), projectDirectory, createdPaths, preservedPaths);
-        WriteIfMissing(Path.Combine(controlDirectory, "DISCOVERY.md"), Discovery(profile), projectDirectory, createdPaths, preservedPaths);
-        WriteIfMissing(Path.Combine(controlDirectory, "ARCH.md"), Architecture(), projectDirectory, createdPaths, preservedPaths);
-        WriteIfMissing(Path.Combine(controlDirectory, "GOV.md"), Governance(), projectDirectory, createdPaths, preservedPaths);
-        WriteIfMissing(Path.Combine(controlDirectory, "MODEL.md"), Model(), projectDirectory, createdPaths, preservedPaths);
-        WriteIfMissing(Path.Combine(controlDirectory, "THEME.md"), Theme(), projectDirectory, createdPaths, preservedPaths);
+        WriteIfMissing(Path.Combine(projectDirectory, "AGENT.md"), Template(profileDirectory, "AGENT.template.md", RootAgent(profile), profile), projectDirectory, createdPaths, preservedPaths);
+        WriteIfMissing(Path.Combine(controlDirectory, "AGENT.md"), Template(profileDirectory, "AGENT.template.md", ControlAgent(profile), profile), projectDirectory, createdPaths, preservedPaths);
+        WriteIfMissing(Path.Combine(controlDirectory, "README.md"), Template(profileDirectory, "README.template.md", Readme(profile), profile), projectDirectory, createdPaths, preservedPaths);
+        WriteIfMissing(Path.Combine(controlDirectory, "DISCOVERY.md"), Template(profileDirectory, "DISCOVERY.template.md", Discovery(profile), profile), projectDirectory, createdPaths, preservedPaths);
+        WriteIfMissing(Path.Combine(controlDirectory, "ARCH.md"), Template(profileDirectory, "ARCH.template.md", Architecture(), profile), projectDirectory, createdPaths, preservedPaths);
+        WriteIfMissing(Path.Combine(controlDirectory, "GOV.md"), Template(profileDirectory, "GOV.template.md", Governance(), profile), projectDirectory, createdPaths, preservedPaths);
+        WriteIfMissing(Path.Combine(controlDirectory, "MODEL.md"), Template(profileDirectory, "MODEL.template.md", Model(), profile), projectDirectory, createdPaths, preservedPaths);
+        WriteIfMissing(Path.Combine(controlDirectory, "THEME.md"), Template(profileDirectory, "THEME.template.md", Theme(), profile), projectDirectory, createdPaths, preservedPaths);
+        WriteIfMissing(Path.Combine(controlDirectory, "DESIGN.md"), Template(profileDirectory, "DESIGN.template.md", Design(), profile), projectDirectory, createdPaths, preservedPaths);
         WriteProjectConfiguration(controlDirectory, profile, projectDirectory, createdPaths, preservedPaths);
 
         return new DevCraftInstallationResult(
@@ -95,6 +99,36 @@ public static class DevCraftInstaller
     private static string RelativePath(string root, string path)
     {
         return Path.GetRelativePath(root, path).Replace(Path.DirectorySeparatorChar, '/');
+    }
+
+    private static string Template(
+        string? profileDirectory,
+        string templateFileName,
+        string fallback,
+        ProjectProfile profile)
+    {
+        string? templatePath = profileDirectory is null
+            ? null
+            : Path.Combine(profileDirectory, "templates", templateFileName);
+        string content = templatePath is not null && File.Exists(templatePath)
+            ? File.ReadAllText(templatePath)
+            : fallback;
+
+        return ApplyProjectProfile(content, profile);
+    }
+
+    private static string ApplyProjectProfile(string content, ProjectProfile profile)
+    {
+        return content
+            .Replace("# Project Name", $"# {profile.Name}", StringComparison.Ordinal)
+            .Replace("- Project Name:", $"- Project Name: {profile.Name}", StringComparison.Ordinal)
+            .Replace("- Primary Goal:", $"- Primary Goal: {profile.Purpose}", StringComparison.Ordinal)
+            .Replace("- Core project purpose:", $"- Core project purpose: {profile.Purpose}", StringComparison.Ordinal)
+            .Replace("- Primary problem solved:", $"- Primary problem solved: {profile.Description}", StringComparison.Ordinal)
+            .Replace("- MVP outcome:", $"- MVP outcome: {profile.Purpose}", StringComparison.Ordinal)
+            .Replace("Describe the project and what problem it solves.", profile.Description, StringComparison.Ordinal)
+            .Replace("Describe the project, what it does, and who it serves.", profile.Description, StringComparison.Ordinal)
+            .Replace("- Goal 1", $"- {profile.Purpose}", StringComparison.Ordinal);
     }
 
     private static string RootAgent(ProjectProfile profile)
@@ -262,6 +296,22 @@ public static class DevCraftInstaller
             ## Notes
 
             Theme decisions are pending.
+
+            """;
+    }
+
+    private static string Design()
+    {
+        return """
+            # DESIGN.md
+
+            ## Purpose
+
+            Define repeatable UI element designs and layouts for the project.
+
+            ## Notes
+
+            Design patterns are pending.
 
             """;
     }
