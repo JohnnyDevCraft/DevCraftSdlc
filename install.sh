@@ -77,10 +77,8 @@ copy_profile() {
             done
             find . -type f ! -name 'soul.md' | while IFS= read -r file; do
                 target="$INSTALL_DIR/$file"
-                if [ ! -e "$target" ]; then
-                    mkdir -p "$(dirname "$target")"
-                    cp "$file" "$target"
-                fi
+                mkdir -p "$(dirname "$target")"
+                cp "$file" "$target"
             done
         )
     fi
