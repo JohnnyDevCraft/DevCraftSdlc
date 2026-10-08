@@ -7,6 +7,12 @@
       "Path": "skills/Create-Architecture.md"
     },
     {
+      "Slug": "create-library-installer",
+      "Name": "Create Library Installer",
+      "Description": "Create DevCraft documentation-library installer scripts and a repository-local `catalog.json` so a library repository can install its Markdown resources into a user's profile-level DevCraft folder and merge the library catalog with `devcraft merge`.",
+      "Path": "skills/Create-Library-Installer.md"
+    },
+    {
       "Slug": "create-project-type",
       "Name": "Create Project Type",
       "Description": "Help the operator design a reusable DevCraft project type through a focused back-and-forth conversation, then produce a completed project type document from the project type template.",
@@ -53,6 +59,12 @@
       "Name": "Operator Questions",
       "Description": "Present material questions to the operator of a project or feature in a consistent, decision-ready format outside formal DevCraft discovery and clarification sessions.",
       "Path": "skills/Operator-Questions.md"
+    },
+    {
+      "Slug": "update-library-catalog",
+      "Name": "Update Library Catalog",
+      "Description": "Refresh a DevCraft documentation-library repository's `catalog.json` so it reflects the current skills, standards, architectures, and project types that can later be installed and merged into a profile-level DevCraft catalog.",
+      "Path": "skills/Update-Library-Catalog.md"
     }
   ],
   "Standards": [],
