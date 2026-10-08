@@ -20,6 +20,8 @@
 - Added beta 1 header polish: padded `Dev` before `Craft`, stripped build metadata from the visible version, and bumped the project version to `1.0.0-beta.1`.
 - Added beta 2 installer release polish so one-command installs can resolve the current beta prerelease.
 - Added beta 3 scan-failure diagnostics so Codex, Claude Code, and shared terminal-client failures report exit code, provider errors, stderr/stdout, parse failures, and bounded actionable hints.
+- Added a post-beta-3 `select-agent` command and corrected terminal-client resolution so legacy soul values such as `Claude AI` resolve to Claude Code instead of falling back to Codex.
+- Bumped the completed select-agent and terminal-client routing fixes to `1.0.0-beta.4` for release.
 
 ## Files Changed
 
@@ -44,6 +46,11 @@
 - `src/DevCraft.Cli/AssemblyInfo.cs` - Exposed internal scanner diagnostic helpers to the focused test assembly.
 - `src/DevCraft.Cli/DevCraft.Cli.csproj` and `tests/DevCraft.Cli.Tests/CliLogoRendererTests.cs` - Bumped the Beta 3 release version and displayed version expectation to `1.0.0-beta.3`.
 - `tests/DevCraft.Cli.Tests/TerminalAiProjectScannerTests.cs`, `tests/DevCraft.Cli.Tests/TerminalClientOutputExtractorTests.cs`, and `tests/DevCraft.Cli.Tests/SupportedTerminalClientCatalogTests.cs` - Added regression coverage for missing client startup text, Codex unsupported-model NDJSON, recoverable warning demotion, Claude JSON result/error output, invalid response diagnostics, and terminal scan argument expectations.
+- `src/DevCraft.Cli/AgentSelectionCommand.cs`, `src/DevCraft.Cli/SoulDefaultAgentStore.cs`, `src/DevCraft.Cli/SupportedTerminalClientResolver.cs`, and `src/DevCraft.Cli/SupportedTerminalClientProfileNormalizer.cs` - Added selectable default-agent persistence, shared client resolution, and profile client normalization that preserves custom executable paths while refreshing built-in arguments.
+- `src/DevCraft.Cli/DevCraftCli.cs`, `src/DevCraft.Cli/StartupFlow.cs`, `src/DevCraft.Cli/TerminalAiProjectScanner.cs`, and `src/DevCraft.Cli/IAiProjectScanner.cs` - Wired `devcraft select-agent` before normal startup, passed the profile directory into scans, and switched scans to the resolved configured client operation instead of hardcoded client branches.
+- `profile/configure.json` - Updated seeded Codex and Claude Code scan arguments to include the post-beta-3 scan fixes.
+- `tests/DevCraft.Cli.Tests/AgentSelectionCommandTests.cs`, `tests/DevCraft.Cli.Tests/SupportedTerminalClientCatalogTests.cs`, `tests/DevCraft.Cli.Tests/TerminalAiProjectScannerTests.cs`, and `tests/DevCraft.Cli.Tests/FakeAiProjectScanner.cs` - Added tests for selection persistence, normal startup scan reuse, legacy `Claude AI` resolution, custom executable preservation, and Codex-output mismatch diagnostics.
+- `src/DevCraft.Cli/DevCraft.Cli.csproj` and `tests/DevCraft.Cli.Tests/CliLogoRendererTests.cs` - Bumped the Beta 4 release version and displayed version expectation to `1.0.0-beta.4`.
 
 ## Validation
 
@@ -61,6 +68,15 @@
 - `dotnet build -c Release` passed with 0 warnings and 0 errors after the Beta 3 scan diagnostics.
 - `tests/installer-release-selection.sh` passed after the Beta 3 version bump.
 - `dotnet publish src/DevCraft.Cli/DevCraft.Cli.csproj -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/publish/osx-arm64` passed after the Beta 3 version bump.
+- `dotnet test` passed after the `select-agent` and scanner-resolution fixes: 101 tests.
+- `dotnet list package --vulnerable --include-transitive` passed with no vulnerable packages reported by the configured sources after the `select-agent` and scanner-resolution fixes.
+- `dotnet build -c Release` passed with 0 warnings and 0 errors after the `select-agent` and scanner-resolution fixes.
+- `dotnet publish src/DevCraft.Cli/DevCraft.Cli.csproj -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/publish/osx-arm64` passed after the `select-agent` and scanner-resolution fixes.
+- `dotnet list package --vulnerable --include-transitive` passed with no vulnerable packages reported by the configured sources after the Beta 4 version bump.
+- `dotnet test` passed after the Beta 4 version bump: 101 tests.
+- `dotnet build -c Release` passed with 0 warnings and 0 errors after the Beta 4 version bump.
+- `tests/installer-release-selection.sh` passed after the Beta 4 version bump.
+- `dotnet publish src/DevCraft.Cli/DevCraft.Cli.csproj -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/publish/osx-arm64` passed after the Beta 4 version bump.
 
 ## Notes
 

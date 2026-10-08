@@ -9,7 +9,7 @@ public sealed class TerminalAiProjectScanner : IAiProjectScanner
 {
     private const int MaximumCapturedOutputLength = 4_000;
 
-    public ProjectScanResult Scan(string directoryPath, string defaultAgent)
+    public ProjectScanResult Scan(string directoryPath, string defaultAgent, string profileDirectory)
     {
         string? controlledResponse = Environment.GetEnvironmentVariable("DEVCRAFT_AI_SCAN_RESPONSE");
 
@@ -19,19 +19,15 @@ public sealed class TerminalAiProjectScanner : IAiProjectScanner
         }
 
         string prompt = ProjectScanPromptBuilder.Build(directoryPath);
-        TerminalProcessResult processResult = RunAgent(directoryPath, defaultAgent, prompt);
+        SupportedTerminalClient client = ResolveClient(defaultAgent, profileDirectory);
+        TerminalProcessResult processResult = RunAgent(directoryPath, defaultAgent, client, prompt);
         TerminalClientOutput clientOutput;
-
-        SupportedTerminalClient client = SupportedTerminalClientCatalog
-            .Create()
-            .FirstOrDefault(client => client.Name.Equals(defaultAgent, StringComparison.OrdinalIgnoreCase))
-            ?? SupportedTerminalClientCatalog.Create()[0];
 
         clientOutput = TerminalClientOutputExtractor.Extract(processResult.StandardOutput, client);
 
         if (processResult.ExitCode != 0 || clientOutput.Errors.Count > 0)
         {
-            throw new InvalidOperationException(BuildFailureMessage(defaultAgent, processResult, clientOutput));
+            throw new InvalidOperationException(BuildFailureMessage(defaultAgent, client, processResult, clientOutput));
         }
 
         try
@@ -40,13 +36,19 @@ public sealed class TerminalAiProjectScanner : IAiProjectScanner
         }
         catch (InvalidOperationException exception)
         {
-            throw new InvalidOperationException(BuildInvalidResponseMessage(defaultAgent, processResult, clientOutput, exception), exception);
+            throw new InvalidOperationException(BuildInvalidResponseMessage(defaultAgent, client, processResult, clientOutput, exception), exception);
         }
     }
 
-    private static TerminalProcessResult RunAgent(string directoryPath, string defaultAgent, string prompt)
+    private static SupportedTerminalClient ResolveClient(string defaultAgent, string profileDirectory)
     {
-        ProcessStartInfo startInfo = CreateStartInfo(directoryPath, defaultAgent, prompt);
+        IReadOnlyList<SupportedTerminalClient> clients = ProfileConfigurationReader.Read(profileDirectory).SupportedClients;
+        return SupportedTerminalClientResolver.Resolve(defaultAgent, clients.Count == 0 ? SupportedTerminalClientCatalog.Create() : clients);
+    }
+
+    private static TerminalProcessResult RunAgent(string directoryPath, string defaultAgent, SupportedTerminalClient client, string prompt)
+    {
+        ProcessStartInfo startInfo = CreateStartInfo(directoryPath, client, prompt);
         using Process process = StartAgent(defaultAgent, startInfo);
 
         string output = process.StandardOutput.ReadToEnd();
@@ -76,7 +78,7 @@ public sealed class TerminalAiProjectScanner : IAiProjectScanner
         return $"{defaultAgent} scan could not start '{binaryPath}'. Confirm the CLI is installed and available on PATH. {exceptionMessage}";
     }
 
-    private static ProcessStartInfo CreateStartInfo(string directoryPath, string defaultAgent, string prompt)
+    internal static ProcessStartInfo CreateStartInfo(string directoryPath, SupportedTerminalClient client, string prompt)
     {
         ProcessStartInfo startInfo = new()
         {
@@ -88,46 +90,28 @@ public sealed class TerminalAiProjectScanner : IAiProjectScanner
             StandardErrorEncoding = Encoding.UTF8,
         };
 
-        if (defaultAgent.Equals("Claude AI", StringComparison.OrdinalIgnoreCase))
+        startInfo.FileName = client.Scan.BinaryPath;
+
+        foreach (string argument in client.Scan.Arguments)
         {
-            startInfo.FileName = "claude";
-            startInfo.ArgumentList.Add("--print");
-            startInfo.ArgumentList.Add("--output-format");
-            startInfo.ArgumentList.Add("json");
-            startInfo.ArgumentList.Add(prompt);
-
-            return startInfo;
+            startInfo.ArgumentList.Add(argument
+                .Replace("{workingDirectory}", directoryPath, StringComparison.Ordinal)
+                .Replace("{prompt}", prompt, StringComparison.Ordinal));
         }
-
-        if (defaultAgent.Equals("GitHub Copilot", StringComparison.OrdinalIgnoreCase))
-        {
-            startInfo.FileName = "gh";
-            startInfo.ArgumentList.Add("copilot");
-            startInfo.ArgumentList.Add("-p");
-            startInfo.ArgumentList.Add(prompt);
-
-            return startInfo;
-        }
-
-        startInfo.FileName = "codex";
-        startInfo.ArgumentList.Add("exec");
-        startInfo.ArgumentList.Add("--cd");
-        startInfo.ArgumentList.Add(directoryPath);
-        startInfo.ArgumentList.Add("--json");
-        startInfo.ArgumentList.Add("--skip-git-repo-check");
-        startInfo.ArgumentList.Add(prompt);
 
         return startInfo;
     }
 
-    internal static string BuildFailureMessage(string defaultAgent, TerminalProcessResult processResult, TerminalClientOutput clientOutput)
+    internal static string BuildFailureMessage(string requestedAgent, SupportedTerminalClient client, TerminalProcessResult processResult, TerminalClientOutput clientOutput)
     {
-        StringBuilder message = new($"{defaultAgent} scan failed with exit code {processResult.ExitCode}.");
+        StringBuilder message = new($"{client.Name} scan failed with exit code {processResult.ExitCode}.");
+        AppendOutput(message, "Requested agent", requestedAgent);
+        AppendOutput(message, "Executable", client.Scan.BinaryPath);
         AppendOutput(message, "Provider error", string.Join(Environment.NewLine, clientOutput.Errors));
         AppendOutput(message, "stderr", processResult.StandardError);
         AppendOutput(message, "stdout", clientOutput.Response);
         AppendOutput(message, "Provider warning", string.Join(Environment.NewLine, clientOutput.Warnings));
-        AppendHint(message, clientOutput, processResult);
+        AppendHint(message, client, clientOutput, processResult);
 
         if (processResult.StandardError.Contains("failed to load models cache", StringComparison.OrdinalIgnoreCase) &&
             processResult.StandardError.Contains("base_instructions", StringComparison.OrdinalIgnoreCase))
@@ -140,18 +124,21 @@ public sealed class TerminalAiProjectScanner : IAiProjectScanner
     }
 
     internal static string BuildInvalidResponseMessage(
-        string defaultAgent,
+        string requestedAgent,
+        SupportedTerminalClient client,
         TerminalProcessResult processResult,
         TerminalClientOutput clientOutput,
         Exception parseException)
     {
-        StringBuilder message = new($"{defaultAgent} scan finished, but DevCraft could not read project scan JSON.");
+        StringBuilder message = new($"{client.Name} scan finished, but DevCraft could not read project scan JSON.");
+        AppendOutput(message, "Requested agent", requestedAgent);
+        AppendOutput(message, "Executable", client.Scan.BinaryPath);
         AppendOutput(message, "Parse error", parseException.Message);
         AppendOutput(message, "Provider error", string.Join(Environment.NewLine, clientOutput.Errors));
         AppendOutput(message, "stdout", clientOutput.Response);
         AppendOutput(message, "stderr", processResult.StandardError);
         AppendOutput(message, "Provider warning", string.Join(Environment.NewLine, clientOutput.Warnings));
-        AppendHint(message, clientOutput, processResult);
+        AppendHint(message, client, clientOutput, processResult);
 
         return message.ToString();
     }
@@ -171,11 +158,20 @@ public sealed class TerminalAiProjectScanner : IAiProjectScanner
         message.Append(trimmed);
     }
 
-    private static void AppendHint(StringBuilder message, TerminalClientOutput clientOutput, TerminalProcessResult processResult)
+    private static void AppendHint(StringBuilder message, SupportedTerminalClient client, TerminalClientOutput clientOutput, TerminalProcessResult processResult)
     {
         string diagnosticText = string.Join(
             Environment.NewLine,
             clientOutput.Errors.Concat(clientOutput.Warnings).Concat([processResult.StandardError, clientOutput.Response]));
+
+        if (!client.Slug.Equals("codex", StringComparison.OrdinalIgnoreCase) &&
+            diagnosticText.Contains("\"thread.started\"", StringComparison.OrdinalIgnoreCase) &&
+            diagnosticText.Contains("not supported when using Codex", StringComparison.OrdinalIgnoreCase))
+        {
+            message.AppendLine();
+            message.Append("Hint: The selected client is not Codex, but the captured output looks like Codex JSON events. Check the configured executable for this client in the profile configure.json file.");
+            return;
+        }
 
         if (diagnosticText.Contains("not supported when using Codex with a ChatGPT account", StringComparison.OrdinalIgnoreCase))
         {
@@ -191,6 +187,7 @@ public sealed class TerminalAiProjectScanner : IAiProjectScanner
             message.AppendLine();
             message.Append("Hint: The terminal AI client appears to need login or authentication repair. Run the client directly and complete its login flow before retrying DevCraft.");
         }
+
     }
 
     private static string BoundAndRedact(string value)

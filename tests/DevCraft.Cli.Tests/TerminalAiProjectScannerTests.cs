@@ -17,8 +17,9 @@ public sealed class TerminalAiProjectScannerTests
             fatal scan detail
             """);
         TerminalClientOutput output = new("model list recovered, but later scan failed", [], []);
+        SupportedTerminalClient codex = Assert.Single(SupportedTerminalClientCatalog.Create(), client => client.Slug == "codex");
 
-        string message = TerminalAiProjectScanner.BuildFailureMessage("Codex", result, output);
+        string message = TerminalAiProjectScanner.BuildFailureMessage("Codex", codex, result, output);
 
         Assert.Contains("Codex scan failed with exit code 7.", message);
         Assert.Contains("stderr:", message);
@@ -46,8 +47,9 @@ public sealed class TerminalAiProjectScannerTests
             "",
             ["The gpt-5.3-codex model is not supported when using Codex with a ChatGPT account"],
             ["Ignoring unknown feature: ultrafast_mode enterprise requirements"]);
+        SupportedTerminalClient codex = Assert.Single(SupportedTerminalClientCatalog.Create(), client => client.Slug == "codex");
 
-        string message = TerminalAiProjectScanner.BuildFailureMessage("Codex", result, output);
+        string message = TerminalAiProjectScanner.BuildFailureMessage("Codex", codex, result, output);
 
         Assert.Contains("Provider error:", message);
         Assert.Contains("gpt-5.3-codex", message);
@@ -63,8 +65,9 @@ public sealed class TerminalAiProjectScannerTests
             "{\"projectProfile\":{\"name\":\"Should Not Trust\",\"purpose\":\"Ignored.\",\"description\":\"Ignored.\"},\"projects\":[],\"aiDrivenSdlc\":{\"detected\":false,\"name\":null}}",
             ["Provider returned a structured error despite exit code 0."],
             []);
+        SupportedTerminalClient claude = Assert.Single(SupportedTerminalClientCatalog.Create(), client => client.Slug == "claude-code");
 
-        string message = TerminalAiProjectScanner.BuildFailureMessage("Claude Code", result, output);
+        string message = TerminalAiProjectScanner.BuildFailureMessage("Claude Code", claude, result, output);
 
         Assert.Contains("Claude Code scan failed with exit code 0.", message);
         Assert.Contains("Provider returned a structured error", message);
@@ -78,9 +81,11 @@ public sealed class TerminalAiProjectScannerTests
             "not-json",
             ["Claude Code login required before non-interactive use."],
             []);
+        SupportedTerminalClient claude = Assert.Single(SupportedTerminalClientCatalog.Create(), client => client.Slug == "claude-code");
 
         string message = TerminalAiProjectScanner.BuildInvalidResponseMessage(
             "Claude Code",
+            claude,
             result,
             output,
             new InvalidOperationException("AI scan did not return valid project scan JSON."));
@@ -91,6 +96,39 @@ public sealed class TerminalAiProjectScannerTests
         Assert.Contains("login required", message);
         Assert.Contains("stdout: not-json", message);
         Assert.Contains("stderr: stderr detail", message);
+    }
+
+    [Fact]
+    public void CreateStartInfoUsesResolvedClaudeClientInsteadOfCodexFallback()
+    {
+        SupportedTerminalClient claude = SupportedTerminalClientResolver.Resolve("Claude AI", SupportedTerminalClientCatalog.Create());
+
+        System.Diagnostics.ProcessStartInfo startInfo = TerminalAiProjectScanner.CreateStartInfo("/tmp/sample", claude, "scan prompt");
+
+        Assert.Equal("claude", startInfo.FileName);
+        Assert.Contains("--print", startInfo.ArgumentList);
+        Assert.Contains("--output-format", startInfo.ArgumentList);
+        Assert.Contains("json", startInfo.ArgumentList);
+        Assert.DoesNotContain("exec", startInfo.ArgumentList);
+    }
+
+    [Fact]
+    public void BuildFailureMessageReportsMismatchWhenSelectedClientEmitsCodexEvents()
+    {
+        SupportedTerminalClient claude = Assert.Single(SupportedTerminalClientCatalog.Create(), client => client.Slug == "claude-code");
+        TerminalProcessResult result = new(
+            1,
+            """
+            {"type":"thread.started","thread_id":"00000000-0000-0000-0000-000000000000"}
+            {"type":"error","message":"The gpt-5.3-codex model is not supported when using Codex with a ChatGPT account."}
+            """,
+            "");
+        TerminalClientOutput output = new(result.StandardOutput, [], []);
+
+        string message = TerminalAiProjectScanner.BuildFailureMessage("claude-code", claude, result, output);
+
+        Assert.Contains("Executable: claude", message);
+        Assert.Contains("captured output looks like Codex JSON events", message);
     }
 
     [Fact]
@@ -122,7 +160,7 @@ public sealed class TerminalAiProjectScannerTests
         {
             TerminalAiProjectScanner scanner = new();
 
-            ProjectScanResult result = scanner.Scan("/tmp/sample", "Codex");
+            ProjectScanResult result = scanner.Scan("/tmp/sample", "Codex", "/tmp/profile");
 
             Assert.Equal("Sample", result.ProjectProfile.Name);
             DetectedProject project = Assert.Single(result.Projects);

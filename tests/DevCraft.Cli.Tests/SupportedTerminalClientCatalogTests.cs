@@ -23,4 +23,38 @@ public sealed class SupportedTerminalClientCatalogTests
         Assert.All(clients, client => Assert.NotEmpty(client.Scan.Arguments));
         Assert.All(clients, client => Assert.NotEmpty(client.Session.Arguments));
     }
+
+    [Fact]
+    public void NormalizePreservesCustomBinaryPathButRefreshesDefaultArguments()
+    {
+        SupportedTerminalClient staleClaude = new(
+            "claude-code",
+            "Claude Code",
+            "Custom Claude.",
+            new TerminalClientOperation(
+                "Old scan.",
+                "/opt/custom/claude",
+                ["--print", "{prompt}"]),
+            new TerminalClientOperation(
+                "Old session.",
+                "/opt/custom/claude",
+                ["{prompt}"]));
+
+        SupportedTerminalClient normalized = Assert.Single(
+            SupportedTerminalClientProfileNormalizer.Normalize([staleClaude]),
+            client => client.Slug == "claude-code");
+
+        Assert.Equal("/opt/custom/claude", normalized.Scan.BinaryPath);
+        Assert.Contains("--output-format", normalized.Scan.Arguments);
+        Assert.Contains("json", normalized.Scan.Arguments);
+    }
+
+    [Fact]
+    public void ResolverMapsLegacyClaudeAiNameToClaudeCodeClient()
+    {
+        SupportedTerminalClient resolved = SupportedTerminalClientResolver.Resolve("Claude AI", SupportedTerminalClientCatalog.Create());
+
+        Assert.Equal("claude-code", resolved.Slug);
+        Assert.Equal("claude", resolved.Scan.BinaryPath);
+    }
 }

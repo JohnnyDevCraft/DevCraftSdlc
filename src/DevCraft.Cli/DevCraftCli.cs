@@ -30,6 +30,12 @@ public static class DevCraftCli
 
         IConsoleInteraction console = new SpectreConsoleInteraction();
         FeatureAiSessionLauncher sessionLauncher = new();
+
+        if (args.Length > 0 && args[0].Equals("select-agent", StringComparison.OrdinalIgnoreCase))
+        {
+            AgentSelectionCommand.Run(context, console, CommandLocator.Exists);
+        }
+
         StartupFlow startupFlow = new(
             console,
             new TerminalAiProjectScanner(),

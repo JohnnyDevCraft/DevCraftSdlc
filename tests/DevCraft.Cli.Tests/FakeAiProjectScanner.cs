@@ -13,11 +13,16 @@ public sealed class FakeAiProjectScanner : IAiProjectScanner
 
     public bool WasCalled { get; private set; }
 
-    public ProjectScanResult Scan(string directoryPath, string defaultAgent)
+    public string? DefaultAgent { get; private set; }
+
+    public string? ProfileDirectory { get; private set; }
+
+    public ProjectScanResult Scan(string directoryPath, string defaultAgent, string profileDirectory)
     {
         WasCalled = true;
+        DefaultAgent = defaultAgent;
+        ProfileDirectory = profileDirectory;
 
         return result;
     }
 }
-

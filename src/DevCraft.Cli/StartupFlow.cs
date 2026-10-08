@@ -82,7 +82,7 @@ public sealed class StartupFlow
         {
             scanResult = console.RunStatus(
                 $"Scanning folder with {defaultAgent}...",
-                () => aiProjectScanner.Scan(context.CurrentDirectory, defaultAgent));
+                () => aiProjectScanner.Scan(context.CurrentDirectory, defaultAgent, context.ProfileDirectory));
         }
         catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
         {
@@ -182,16 +182,6 @@ public sealed class StartupFlow
             return "Codex";
         }
 
-        string line = File
-            .ReadLines(soulFilePath)
-            .FirstOrDefault(value => value.StartsWith("- Default terminal AI agent:", StringComparison.OrdinalIgnoreCase))
-            ?? string.Empty;
-
-        if (string.IsNullOrWhiteSpace(line))
-        {
-            return "Codex";
-        }
-
-        return line.Split(':', 2)[1].Trim();
+        return SoulDefaultAgentStore.Read(soulFilePath);
     }
 }

@@ -730,7 +730,7 @@ public static class ProfileStructureInitializer
             ProfileDocumentCatalogBuilder.Build(profileDirectory, "templates"),
             ProfileDocumentCatalogBuilder.Build(profileDirectory, "project-types"),
             ProfileDocumentCatalogBuilder.Build(profileDirectory, "feature-storage"),
-            SupportedTerminalClientCatalog.Create(),
+            SupportedTerminalClientProfileNormalizer.Normalize(existing.SupportedClients),
             existing.SituationEnabled,
             existing.SituationScale,
             existing.SituationStorage,
