@@ -58,4 +58,65 @@ public sealed class ProjectScanJsonParserTests
         Assert.Equal("Pending.", result.ProjectProfile.Purpose);
         Assert.Equal("Pending.", result.ProjectProfile.Description);
     }
+
+    [Fact]
+    public void ParseReadsJsonWrappedInMarkdownCodeFence()
+    {
+        const string json = """
+        ```json
+        {
+          "projectProfile": {
+            "name": "Wrapped Project",
+            "purpose": "Verify wrapped JSON.",
+            "description": "The AI returned Markdown."
+          },
+          "projects": [],
+          "aiDrivenSdlc": {
+            "detected": false,
+            "name": null
+          }
+        }
+        ```
+        """;
+
+        ProjectScanResult result = ProjectScanJsonParser.Parse(json);
+
+        Assert.Equal("Wrapped Project", result.ProjectProfile.Name);
+        Assert.Equal("Verify wrapped JSON.", result.ProjectProfile.Purpose);
+        Assert.Equal("The AI returned Markdown.", result.ProjectProfile.Description);
+    }
+
+    [Fact]
+    public void ParseReadsJsonWithIntroductoryText()
+    {
+        const string json = """
+        Here is the scan result:
+
+        {
+          "projectProfile": {
+            "name": "Text Wrapped Project",
+            "purpose": "Verify text before JSON.",
+            "description": "The AI returned a sentence before the JSON."
+          },
+          "projects": [],
+          "aiDrivenSdlc": {
+            "detected": false,
+            "name": null
+          }
+        }
+        """;
+
+        ProjectScanResult result = ProjectScanJsonParser.Parse(json);
+
+        Assert.Equal("Text Wrapped Project", result.ProjectProfile.Name);
+    }
+
+    [Fact]
+    public void ParseThrowsInvalidOperationWhenJsonIsInvalid()
+    {
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => ProjectScanJsonParser.Parse("```not json```"));
+
+        Assert.Contains("valid project scan JSON", exception.Message);
+    }
 }
