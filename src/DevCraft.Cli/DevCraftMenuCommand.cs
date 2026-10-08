@@ -10,7 +10,9 @@ public static class DevCraftMenuCommand
     private const string ProjectSetup = "Project setup";
     private const string CreateProject = "Create Project";
     private const string Features = "Features";
+    private const string Skills = "Skills";
     private const string ConfigureDevCraft = "Configure DevCraft";
+    private const string Back = "Back";
     private const string Exit = "Exit";
     private const string ListFeatures = "List features";
     private const string NewFeature = "Create new feature";
@@ -44,7 +46,7 @@ public static class DevCraftMenuCommand
             notice = null;
             string selected = console.Select(
                 title,
-                [ProjectDiscovery, ProjectDesign, ProjectTheme, ProjectSetup, CreateProject, Features, ConfigureDevCraft, Exit]);
+                [ProjectDiscovery, ProjectDesign, ProjectTheme, ProjectSetup, CreateProject, Features, Skills, ConfigureDevCraft, Exit]);
 
             switch (selected)
             {
@@ -95,6 +97,9 @@ public static class DevCraftMenuCommand
                 case Features:
                     notice = LaunchClient(() => RunFeatureMenu(context, console, featureLauncher));
                     break;
+                case Skills:
+                    notice = RunSkillsMenu(context, console, launcher, projectConfiguration);
+                    break;
                 case ConfigureDevCraft:
                     notice = LaunchClient(() => RunConfigureDevCraft(context, console, launcher, projectConfiguration));
                     break;
@@ -118,7 +123,13 @@ public static class DevCraftMenuCommand
         console.ShowMenuShell();
         string selected = console.Select(
             "Select a project type",
-            profileConfiguration.ProjectTypes.Select(ProjectTypeChoice).ToList());
+            profileConfiguration.ProjectTypes.Select(ProjectTypeChoice).Append(Back).ToList());
+
+        if (selected == Back)
+        {
+            return null;
+        }
+
         ProfileCatalogDocument projectType = profileConfiguration.ProjectTypes.First(item => selected.EndsWith($"({item.Slug})", StringComparison.Ordinal));
         string projectTypePath = Path.Combine(context.ProfileDirectory, projectType.Path);
 
@@ -154,10 +165,12 @@ public static class DevCraftMenuCommand
         console.ShowMenuShell();
         string selected = console.Select(
             "Configure DevCraft",
-            [ImportSettings, CreateSkill, CreateStandards, CreateArchitecture, CreateProjectType]);
+            [ImportSettings, CreateSkill, CreateStandards, CreateArchitecture, CreateProjectType, Back]);
 
         switch (selected)
         {
+            case Back:
+                return;
             case ImportSettings:
                 RunImportSettings(context, console, launcher, projectConfiguration);
                 break;
@@ -286,7 +299,12 @@ public static class DevCraftMenuCommand
         IFeatureAiSessionLauncher featureLauncher)
     {
         console.ShowMenuShell();
-        string selected = console.Select("Feature options", [ListFeatures, NewFeature]);
+        string selected = console.Select("Feature options", [ListFeatures, NewFeature, Back]);
+
+        if (selected == Back)
+        {
+            return;
+        }
 
         if (selected == ListFeatures)
         {
@@ -297,6 +315,55 @@ public static class DevCraftMenuCommand
         console.ShowMenuShell();
         string featureName = console.Ask("What is the feature name?");
         FeatureCommand.Run(context, ["new", featureName], console, featureLauncher, SelectAiClient(context, console));
+    }
+
+    private static string? RunSkillsMenu(
+        StartupContext context,
+        IConsoleInteraction console,
+        IDevCraftAiSessionLauncher launcher,
+        ProjectDevCraftConfiguration projectConfiguration)
+    {
+        DevCraftProfileConfiguration profileConfiguration = ProfileConfigurationReader.Read(context.ProfileDirectory);
+
+        if (profileConfiguration.Skills.Count == 0)
+        {
+            return "There are no skills in the catalog. Please add a skill and try again.";
+        }
+
+        console.ShowMenuShell();
+        string selected = console.Select(
+            "Select a skill",
+            profileConfiguration.Skills.Select(SkillChoice).Append(Back).ToList());
+
+        if (selected == Back)
+        {
+            return null;
+        }
+
+        ProfileCatalogDocument skill = profileConfiguration.Skills.First(item => selected.EndsWith($"({item.Slug})", StringComparison.Ordinal));
+        string skillPath = Path.Combine(context.ProfileDirectory, skill.Path);
+
+        return LaunchClient(
+            () => launcher.Launch(
+                context,
+                projectConfiguration,
+                SelectAiClient(context, console),
+                $"""
+                Use the selected DevCraft skill with the user.
+
+                Selected skill:
+                - Name: {skill.Name}
+                - Slug: {skill.Slug}
+                - Description: {skill.Description}
+                - Skill file: {skillPath}
+
+                Read the selected skill file before acting. Start by telling the user you are ready to use the skill, then ask the user for the details required by that skill. Do not assume the missing inputs. Let the skill guide the conversation and any files you create or update.
+                """));
+    }
+
+    private static string SkillChoice(ProfileCatalogDocument skill)
+    {
+        return $"{skill.Name} ({skill.Slug})";
     }
 
     private static SupportedTerminalClient SelectAiClient(StartupContext context, IConsoleInteraction console)
