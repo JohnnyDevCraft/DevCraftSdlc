@@ -13,7 +13,7 @@ public static class SupportedTerminalClientCatalog
                 new TerminalClientOperation(
                     "Run Codex in non-interactive JSON mode for DevCraft folder scanning.",
                     "codex",
-                    ["exec", "--json", "--cd", "{workingDirectory}", "{prompt}"]),
+                    ["exec", "--json", "--cd", "{workingDirectory}", "--skip-git-repo-check", "{prompt}"]),
                 new TerminalClientOperation(
                     "Open an interactive Codex session that the operator can take over.",
                     "codex",
@@ -25,7 +25,7 @@ public static class SupportedTerminalClientCatalog
                 new TerminalClientOperation(
                     "Run Claude Code in print mode for DevCraft folder scanning.",
                     "claude",
-                    ["--print", "{prompt}"]),
+                    ["--print", "--output-format", "json", "{prompt}"]),
                 new TerminalClientOperation(
                     "Open an interactive Claude Code session that the operator can take over.",
                     "claude",

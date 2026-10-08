@@ -19,6 +19,7 @@
 - Added central situational-awareness prompt context injection for AI handoffs when enabled.
 - Added beta 1 header polish: padded `Dev` before `Craft`, stripped build metadata from the visible version, and bumped the project version to `1.0.0-beta.1`.
 - Added beta 2 installer release polish so one-command installs can resolve the current beta prerelease.
+- Added beta 3 scan-failure diagnostics so Codex, Claude Code, and shared terminal-client failures report exit code, provider errors, stderr/stdout, parse failures, and bounded actionable hints.
 
 ## Files Changed
 
@@ -38,6 +39,11 @@
 - `tests/DevCraft.Cli.Tests/*` - Added focused tests for configuration defaults, file initialization, person/log writes, compression no-data behavior, fenced JSON parsing, handoff context inclusion/omission, database setup instructions, version display, and profile initialization updates.
 - `.devcraft/AGENT.md`, `.devcraft/features/0004-SituationalAwarenessLogs/spec.md`, `.devcraft/features/0004-SituationalAwarenessLogs/tasks.md`, and this file - Updated DevCraft workflow records for the beta 1 implementation.
 - `install.sh`, `install.ps1`, `README.md`, `tests/installer-release-selection.sh`, and `tests/InstallerReleaseSelection.Tests.ps1` - Resolved [ISSUE-001](./issues.md) so the normal installer selects the highest published SemVer release including beta prereleases, while preserving explicit version overrides.
+- `src/DevCraft.Cli/TerminalAiProjectScanner.cs`, `src/DevCraft.Cli/TerminalClientOutputExtractor.cs`, `src/DevCraft.Cli/TerminalClientOutput.cs`, `src/DevCraft.Cli/TerminalProcessResult.cs`, `src/DevCraft.Cli/CodexLineKind.cs`, and `src/DevCraft.Cli/CodexLineResult.cs` - Captured terminal process exit data, extracted provider diagnostics from Codex NDJSON and Claude JSON output, preserved raw bounded output for invalid responses, and added recognized hints without letting recoverable warnings overshadow fatal provider errors.
+- `src/DevCraft.Cli/SupportedTerminalClientCatalog.cs` - Added `--skip-git-repo-check` for Codex scans and JSON output mode for Claude Code scans.
+- `src/DevCraft.Cli/AssemblyInfo.cs` - Exposed internal scanner diagnostic helpers to the focused test assembly.
+- `src/DevCraft.Cli/DevCraft.Cli.csproj` and `tests/DevCraft.Cli.Tests/CliLogoRendererTests.cs` - Bumped the Beta 3 release version and displayed version expectation to `1.0.0-beta.3`.
+- `tests/DevCraft.Cli.Tests/TerminalAiProjectScannerTests.cs`, `tests/DevCraft.Cli.Tests/TerminalClientOutputExtractorTests.cs`, and `tests/DevCraft.Cli.Tests/SupportedTerminalClientCatalogTests.cs` - Added regression coverage for missing client startup text, Codex unsupported-model NDJSON, recoverable warning demotion, Claude JSON result/error output, invalid response diagnostics, and terminal scan argument expectations.
 
 ## Validation
 
@@ -51,6 +57,10 @@
 - Live read-only shell release resolution with `DEVCRAFT_VERSION=1.0.0-alpha.12` selected `v1.0.0-alpha.12`.
 - Beta 2 release validation will verify the normal live installer resolution selects `v1.0.0-beta.2` after the release is published.
 - `dotnet publish src/DevCraft.Cli/DevCraft.Cli.csproj -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/publish/osx-arm64` passed again after the Beta 2 version bump.
+- `dotnet test` passed after the Beta 3 scan diagnostics: 93 tests.
+- `dotnet build -c Release` passed with 0 warnings and 0 errors after the Beta 3 scan diagnostics.
+- `tests/installer-release-selection.sh` passed after the Beta 3 version bump.
+- `dotnet publish src/DevCraft.Cli/DevCraft.Cli.csproj -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/publish/osx-arm64` passed after the Beta 3 version bump.
 
 ## Notes
 
