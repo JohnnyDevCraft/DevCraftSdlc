@@ -40,7 +40,11 @@ Each catalog entry must include:
 - `Description`: the document purpose, intent, or first meaningful paragraph.
 - `Path`: the profile-relative path to the imported file.
 
-If a slug already exists, add a numeric suffix such as `-2`, `-3`, or the next available number.
+If an imported file targets the same profile-relative path as an existing file, replace the existing file with the imported file. The imported repository is the source of truth for that file during this import.
+
+If a catalog entry already exists for the same profile-relative path or slug, update that existing entry with the imported file's current name, description, slug, and path instead of creating a duplicate.
+
+If the imported item is genuinely new and its generated slug conflicts with an unrelated existing item, add a numeric suffix such as `-2`, `-3`, or the next available number.
 
 ## Workflow
 
@@ -48,14 +52,15 @@ If a slug already exists, add a numeric suffix such as `-2`, `-3`, or the next a
 2. Inspect only the supported source folders: `standards`, `architectures`, `project-types`, and `skills`.
 3. Ignore non-Markdown files, `README.md`, and underscore-prefixed template files unless the operator explicitly asks to import them.
 4. Copy each valid Markdown file into the matching profile-level DevCraft folder.
-5. Preserve existing local files unless the operator explicitly approves an overwrite.
+5. Replace any existing profile-level file at the same target path with the imported file without asking for additional approval.
 6. Generate or refresh the matching catalog entries in profile `configure.json`.
-7. Report what was imported, what was skipped, and whether any names or slugs needed collision handling.
+7. Report what was imported, what was replaced, what was skipped, and whether any names or slugs needed collision handling.
 
 ## Output / Done Definition
 
 - Imported Markdown files exist in the correct profile-level DevCraft folders.
 - Profile `configure.json` includes every imported item in the correct catalog section.
 - Every imported item has a stable slug, readable name, description, and profile-relative path.
-- The operator receives a concise import summary with imported, skipped, and collision-handled files.
-
+- Existing profile files at matching target paths are replaced by the imported versions.
+- Existing catalog entries for matching paths or slugs are refreshed rather than duplicated.
+- The operator receives a concise import summary with imported, replaced, skipped, and collision-handled files.
