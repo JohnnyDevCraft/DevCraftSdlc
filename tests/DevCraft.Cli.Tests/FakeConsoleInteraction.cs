@@ -19,6 +19,8 @@ public sealed class FakeConsoleInteraction : IConsoleInteraction
 
     public List<string> SelectTitles { get; } = [];
 
+    public List<IReadOnlyList<string>> SelectChoices { get; } = [];
+
     public int MenuShellCount { get; private set; }
 
     public void WriteStatus(string message)
@@ -44,6 +46,7 @@ public sealed class FakeConsoleInteraction : IConsoleInteraction
     public string Select(string title, IReadOnlyList<string> choices)
     {
         SelectTitles.Add(title);
+        SelectChoices.Add(choices);
 
         if (selections.Count > 0)
         {

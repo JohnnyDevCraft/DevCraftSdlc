@@ -2,12 +2,22 @@ using DevCraft.Cli;
 
 namespace DevCraft.Cli.Tests;
 
-public sealed class DevCraftMenuCommandTests
+public sealed class DevCraftMenuCommandTests : IDisposable
 {
     private static readonly ProjectProfile SampleProfile = new(
         "Sample Project",
         "Validate menu behavior.",
         "A sample project for menu command tests.");
+
+    public DevCraftMenuCommandTests()
+    {
+        DevCraftMenuCommand.CommandExists = command => command == "codex";
+    }
+
+    public void Dispose()
+    {
+        DevCraftMenuCommand.CommandExists = CommandLocator.Exists;
+    }
 
     [Fact]
     public void RunLaunchesProjectDiscovery()
@@ -29,6 +39,54 @@ public sealed class DevCraftMenuCommandTests
         Assert.Contains("project discovery", instruction, StringComparison.OrdinalIgnoreCase);
         Assert.True(console.MenuShellCount > 0);
         Assert.Empty(featureLauncher.Launches);
+    }
+
+    [Fact]
+    public void RunOnlyShowsAvailableAiClients()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        ProfileStructureInitializer.Ensure(profile);
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Project discovery", "OpenAI Codex (codex)", "Exit"]);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        int clientPromptIndex = console.SelectTitles.FindIndex(title => title == "Which AI client should I use?");
+        IReadOnlyList<string> choices = console.SelectChoices[clientPromptIndex];
+        string choice = Assert.Single(choices);
+        Assert.Equal("OpenAI Codex (codex)", choice);
+    }
+
+    [Fact]
+    public void RunReturnsToMenuWhenAiClientFailsToStart()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        ProfileStructureInitializer.Ensure(profile);
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Project discovery", "OpenAI Codex (codex)", "Exit"]);
+        FakeDevCraftAiSessionLauncher launcher = new()
+        {
+            ExceptionToThrow = new InvalidOperationException("Could not start OpenAI Codex."),
+        };
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        Assert.Contains(
+            console.SelectTitles,
+            title => title.Contains("Could not start the selected AI client", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

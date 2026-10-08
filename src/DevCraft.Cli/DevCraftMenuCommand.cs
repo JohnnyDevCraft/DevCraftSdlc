@@ -2,6 +2,8 @@ namespace DevCraft.Cli;
 
 public static class DevCraftMenuCommand
 {
+    public static Func<string, bool> CommandExists { get; set; } = CommandLocator.Exists;
+
     private const string ProjectDiscovery = "Project discovery";
     private const string ProjectDesign = "Project design";
     private const string ProjectTheme = "Project theme";
@@ -49,52 +51,58 @@ public static class DevCraftMenuCommand
                 case Exit:
                     return;
                 case ProjectDiscovery:
-                    launcher.Launch(
-                        context,
-                        projectConfiguration,
-                        SelectAiClient(context, console),
-                        "Work on project discovery. Use and maintain the repository DevCraft discovery artifact for this project.");
+                    notice = LaunchClient(
+                        () => launcher.Launch(
+                            context,
+                            projectConfiguration,
+                            SelectAiClient(context, console),
+                            "Work on project discovery. Use and maintain the repository DevCraft discovery artifact for this project."));
                     break;
                 case ProjectDesign:
-                    launcher.Launch(
-                        context,
-                        projectConfiguration,
-                        SelectAiClient(context, console),
-                        "Work on project design and component design. Use and maintain the repository DevCraft design artifact for this project.");
+                    notice = LaunchClient(
+                        () => launcher.Launch(
+                            context,
+                            projectConfiguration,
+                            SelectAiClient(context, console),
+                            "Work on project design and component design. Use and maintain the repository DevCraft design artifact for this project."));
                     break;
                 case ProjectTheme:
-                    launcher.Launch(
-                        context,
-                        projectConfiguration,
-                        SelectAiClient(context, console),
-                        "Work on project theme. Use and maintain the repository DevCraft theme artifact for this project.");
+                    notice = LaunchClient(
+                        () => launcher.Launch(
+                            context,
+                            projectConfiguration,
+                            SelectAiClient(context, console),
+                            "Work on project theme. Use and maintain the repository DevCraft theme artifact for this project."));
                     break;
                 case ProjectSetup:
-                    launcher.Launch(
-                        context,
-                        projectConfiguration,
-                        SelectAiClient(context, console),
-                        "Work on project setup. Use and maintain the repository DevCraft setup context for this project.");
+                    notice = LaunchClient(
+                        () => launcher.Launch(
+                            context,
+                            projectConfiguration,
+                            SelectAiClient(context, console),
+                            "Work on project setup. Use and maintain the repository DevCraft setup context for this project."));
                     break;
                 case CreateProject:
-                    if (RunCreateProject(context, console, launcher, projectConfiguration))
+                    string? createProjectNotice = RunCreateProject(context, console, launcher, projectConfiguration);
+
+                    if (createProjectNotice is null)
                     {
                         break;
                     }
 
-                    notice = "There are no project types in the catalog. Please add a project type and try again.";
+                    notice = createProjectNotice;
                     break;
                 case Features:
-                    RunFeatureMenu(context, console, featureLauncher);
+                    notice = LaunchClient(() => RunFeatureMenu(context, console, featureLauncher));
                     break;
                 case ConfigureDevCraft:
-                    RunConfigureDevCraft(context, console, launcher, projectConfiguration);
+                    notice = LaunchClient(() => RunConfigureDevCraft(context, console, launcher, projectConfiguration));
                     break;
             }
         }
     }
 
-    private static bool RunCreateProject(
+    private static string? RunCreateProject(
         StartupContext context,
         IConsoleInteraction console,
         IDevCraftAiSessionLauncher launcher,
@@ -104,7 +112,7 @@ public static class DevCraftMenuCommand
 
         if (profileConfiguration.ProjectTypes.Count == 0)
         {
-            return false;
+            return "There are no project types in the catalog. Please add a project type and try again.";
         }
 
         console.ShowMenuShell();
@@ -114,23 +122,22 @@ public static class DevCraftMenuCommand
         ProfileCatalogDocument projectType = profileConfiguration.ProjectTypes.First(item => selected.EndsWith($"({item.Slug})", StringComparison.Ordinal));
         string projectTypePath = Path.Combine(context.ProfileDirectory, projectType.Path);
 
-        launcher.Launch(
-            context,
-            projectConfiguration,
-            SelectAiClient(context, console),
-            $"""
-            Help the user create a project using the selected DevCraft project type.
+        return LaunchClient(
+            () => launcher.Launch(
+                context,
+                projectConfiguration,
+                SelectAiClient(context, console),
+                $"""
+                Help the user create a project using the selected DevCraft project type.
 
-            Selected project type:
-            - Name: {projectType.Name}
-            - Slug: {projectType.Slug}
-            - Description: {projectType.Description}
-            - Project type file: {projectTypePath}
+                Selected project type:
+                - Name: {projectType.Name}
+                - Slug: {projectType.Slug}
+                - Description: {projectType.Description}
+                - Project type file: {projectTypePath}
 
-            Read the selected project type Markdown file before making recommendations or creating project files.
-            """);
-
-        return true;
+                Read the selected project type Markdown file before making recommendations or creating project files.
+                """));
     }
 
     private static string ProjectTypeChoice(ProfileCatalogDocument projectType)
@@ -294,11 +301,23 @@ public static class DevCraftMenuCommand
 
     private static SupportedTerminalClient SelectAiClient(StartupContext context, IConsoleInteraction console)
     {
-        IReadOnlyList<SupportedTerminalClient> clients = ProfileConfigurationReader.Read(context.ProfileDirectory).SupportedClients;
+        IReadOnlyList<SupportedTerminalClient> clients = ProfileConfigurationReader
+            .Read(context.ProfileDirectory)
+            .SupportedClients
+            .Where(IsSessionClientAvailable)
+            .ToList();
 
         if (clients.Count == 0)
         {
-            clients = SupportedTerminalClientCatalog.Create();
+            clients = SupportedTerminalClientCatalog
+                .Create()
+                .Where(IsSessionClientAvailable)
+                .ToList();
+        }
+
+        if (clients.Count == 0)
+        {
+            throw new InvalidOperationException("No supported AI clients are installed or available on PATH.");
         }
 
         console.ShowMenuShell();
@@ -310,5 +329,24 @@ public static class DevCraftMenuCommand
     private static string ClientChoice(SupportedTerminalClient client)
     {
         return $"{client.Name} ({client.Slug})";
+    }
+
+    private static bool IsSessionClientAvailable(SupportedTerminalClient client)
+    {
+        return CommandExists(client.Session.BinaryPath);
+    }
+
+    private static string? LaunchClient(Action launch)
+    {
+        try
+        {
+            launch();
+
+            return null;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            return $"Could not start the selected AI client: {exception.Message}";
+        }
     }
 }
