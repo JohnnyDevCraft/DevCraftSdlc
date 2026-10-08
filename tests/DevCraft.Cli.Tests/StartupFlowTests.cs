@@ -216,4 +216,74 @@ public sealed class StartupFlowTests
         Assert.False(Directory.Exists(Path.Combine(root.Path, ".devcraft")));
         Assert.False(scanner.WasCalled);
     }
+
+    [Fact]
+    public void RunInstallsDevCraftWhenForcedDespiteOtherSdlcMarkers()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string soul = Path.Combine(profile, "soul.md");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".specify"));
+        File.WriteAllText(soul, "- Default terminal AI agent: Codex");
+        StartupContext context = new(root.Path, profile, soul);
+        FakeConsoleInteraction console = new(["Forced Project", "Forced description."]);
+        FakeAiProjectScanner scanner = new(new ProjectScanResult(SampleProfile, [], new AiSdlcDetection(false, null)));
+        StartupFlow flow = new(console, scanner, () => []);
+
+        flow.Run(context, forceInstall: true);
+
+        Assert.True(Directory.Exists(Path.Combine(root.Path, ".devcraft")));
+        Assert.True(File.Exists(Path.Combine(root.Path, ".devcraft", "configure.json")));
+        Assert.False(File.Exists(Path.Combine(root.Path, "AGENT.md")));
+        Assert.True(Directory.Exists(Path.Combine(root.Path, ".specify")));
+        Assert.False(scanner.WasCalled);
+    }
+
+    [Fact]
+    public void RunInstallsDevCraftWhenForcedInCodeFolderWithoutScanning()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string soul = Path.Combine(profile, "soul.md");
+        Directory.CreateDirectory(profile);
+        File.WriteAllText(Path.Combine(root.Path, "Program.cs"), "Console.WriteLine(\"hello\");");
+        File.WriteAllText(soul, "- Default terminal AI agent: Codex");
+        StartupContext context = new(root.Path, profile, soul);
+        FakeConsoleInteraction console = new(["Forced Code Project", "Forced code description."]);
+        FakeAiProjectScanner scanner = new(new ProjectScanResult(SampleProfile, [], new AiSdlcDetection(true, "Other AI workflow")));
+        StartupFlow flow = new(console, scanner, () => []);
+
+        flow.Run(context, forceInstall: true);
+
+        Assert.True(Directory.Exists(Path.Combine(root.Path, ".devcraft")));
+        Assert.True(File.Exists(Path.Combine(root.Path, ".devcraft", "configure.json")));
+        Assert.False(File.Exists(Path.Combine(root.Path, "AGENT.md")));
+        Assert.False(scanner.WasCalled);
+    }
+
+    [Fact]
+    public void RunPrefersExistingDevCraftWhenOtherSdlcMarkersAlsoExist()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string soul = Path.Combine(profile, "soul.md");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        Directory.CreateDirectory(Path.Combine(root.Path, ".specify"));
+        File.WriteAllText(soul, "- Default terminal AI agent: Codex");
+        StartupContext context = new(root.Path, profile, soul);
+        FakeConsoleInteraction console = new([]);
+        FakeAiProjectScanner scanner = new(new ProjectScanResult(SampleProfile, [], new AiSdlcDetection(false, null)));
+        StartupFlow flow = new(console, scanner, () => []);
+
+        flow.Run(context);
+
+        Assert.Contains(console.StatusMessages, message => message == "Folder already uses DevCraft");
+        Assert.DoesNotContain(console.StatusMessages, message => message == "Folder has SDLC workflow markers");
+        Assert.False(scanner.WasCalled);
+    }
 }

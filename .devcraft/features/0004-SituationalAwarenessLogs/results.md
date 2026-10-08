@@ -22,6 +22,12 @@
 - Added beta 3 scan-failure diagnostics so Codex, Claude Code, and shared terminal-client failures report exit code, provider errors, stderr/stdout, parse failures, and bounded actionable hints.
 - Added a post-beta-3 `select-agent` command and corrected terminal-client resolution so legacy soul values such as `Claude AI` resolve to Claude Code instead of falling back to Codex.
 - Bumped the completed select-agent and terminal-client routing fixes to `1.0.0-beta.4` for release.
+- Added forced DevCraft installation with `devcraft -force`, preserving other SDLC markers while installing only `.devcraft` artifacts.
+- Removed root `AGENT.md` generation from DevCraft installation and preserved existing root `AGENT.md` and `AGENTS.md` files.
+- Made existing `.devcraft` markers take precedence over other SDLC markers so DevCraft wins when multiple workflows are present.
+- Updated DevCraft shared, seed profile, live profile, and project guidance to require TDD Red -> Green -> Refactor evidence.
+- Bumped the forced-install and TDD guidance release to `1.0.0-beta.5` for Beta 5.
+- Updated the GitHub release workflow so prerelease tags publish as prereleases.
 
 ## Files Changed
 
@@ -51,6 +57,27 @@
 - `profile/configure.json` - Updated seeded Codex and Claude Code scan arguments to include the post-beta-3 scan fixes.
 - `tests/DevCraft.Cli.Tests/AgentSelectionCommandTests.cs`, `tests/DevCraft.Cli.Tests/SupportedTerminalClientCatalogTests.cs`, `tests/DevCraft.Cli.Tests/TerminalAiProjectScannerTests.cs`, and `tests/DevCraft.Cli.Tests/FakeAiProjectScanner.cs` - Added tests for selection persistence, normal startup scan reuse, legacy `Claude AI` resolution, custom executable preservation, and Codex-output mismatch diagnostics.
 - `src/DevCraft.Cli/DevCraft.Cli.csproj` and `tests/DevCraft.Cli.Tests/CliLogoRendererTests.cs` - Bumped the Beta 4 release version and displayed version expectation to `1.0.0-beta.4`.
+- `src/DevCraft.Cli/DevCraftCli.cs` - Added `devcraft -force` argument handling and rejected unsupported extra arguments.
+- `src/DevCraft.Cli/StartupFlow.cs` - Added force-install startup flow and made existing DevCraft markers preferred over other SDLC markers.
+- `src/DevCraft.Cli/DevCraftInstaller.cs` - Stopped creating root `AGENT.md` while preserving `.devcraft/AGENT.md` and all other control files.
+- `tests/DevCraft.Cli.Tests/DevCraftInstallerTests.cs` - Added coverage proving installation does not create root `AGENT.md` and preserves existing root agent files.
+- `tests/DevCraft.Cli.Tests/StartupFlowTests.cs` - Added coverage for forced installation, force bypassing scans, and DevCraft precedence over other SDLC markers.
+- `profile/DevCraft.md`, `profile/templates/AGENT.template.md`, `profile/templates/tasks.template.md`, and `profile/templates/results.template.md` - Updated seeded profile guidance and templates for `.devcraft`-only install behavior and TDD evidence.
+- `.devcraft/AGENT.md` - Recorded the project-level TDD and root-agent preservation working agreements.
+- `/Users/john/codex-setup/modes/DevCraft.md` and `/Users/john/codex-setup/modes/DevCraft/templates/*` - Updated the shared source of truth for `.devcraft`-only install behavior and TDD evidence.
+- `/Users/john/.DevCraft/DevCraft.md` and `/Users/john/.DevCraft/templates/*` - Updated the live installed DevCraft operating rules and templates for `.devcraft`-only install behavior and TDD evidence.
+- `src/DevCraft.Cli/DevCraft.Cli.csproj` and `tests/DevCraft.Cli.Tests/CliLogoRendererTests.cs` - Bumped the Beta 5 release version and displayed version expectation to `1.0.0-beta.5`.
+- `README.md`, `tests/installer-release-selection.sh`, and `tests/InstallerReleaseSelection.Tests.ps1` - Updated installer documentation and release-selection tests for `1.0.0-beta.5`.
+- `.github/workflows/release.yml` - Marked GitHub releases as prerelease when the pushed tag contains a prerelease suffix.
+
+## TDD Evidence
+
+### Force Install And Root Agent Preservation
+
+- Red: `dotnet test --filter "FullyQualifiedName~DevCraftInstallerTests|FullyQualifiedName~StartupFlowTests"` failed to compile because `StartupFlow.Run` had no `forceInstall` parameter after adding the first force-install tests.
+- Red: `dotnet test --filter "FullyQualifiedName~StartupFlowTests"` failed `RunInstallsDevCraftWhenForcedInCodeFolderWithoutScanning` because force did not install in a code folder without SDLC markers.
+- Green: `dotnet test --filter "FullyQualifiedName~DevCraftInstallerTests|FullyQualifiedName~StartupFlowTests"` passed with 13 focused tests after wiring `devcraft -force`, removing root `AGENT.md` generation, and making force bypass scans.
+- Refactor: Shared/profile/live rules and templates were updated after the focused green run to make TDD evidence and root-agent preservation part of the reusable DevCraft workflow.
 
 ## Validation
 
@@ -77,9 +104,22 @@
 - `dotnet build -c Release` passed with 0 warnings and 0 errors after the Beta 4 version bump.
 - `tests/installer-release-selection.sh` passed after the Beta 4 version bump.
 - `dotnet publish src/DevCraft.Cli/DevCraft.Cli.csproj -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/publish/osx-arm64` passed after the Beta 4 version bump.
+- `dotnet test --filter "FullyQualifiedName~DevCraftInstallerTests|FullyQualifiedName~StartupFlowTests"` passed after adding `devcraft -force` and root-agent preservation coverage: 13 focused tests.
+- `dotnet test` passed after forced-install and TDD guidance updates: 105 tests.
+- `dotnet build -c Release` passed with 0 warnings and 0 errors after forced-install and TDD guidance updates.
+- `dotnet list package --vulnerable --include-transitive` passed with no vulnerable packages reported by the configured sources after forced-install and TDD guidance updates.
+- `dotnet publish src/DevCraft.Cli/DevCraft.Cli.csproj -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/publish/osx-arm64` passed after forced-install and TDD guidance updates.
+- `dotnet test` passed after the Beta 5 version bump and release workflow update: 105 tests.
+- `tests/installer-release-selection.sh` passed after the Beta 5 release-selection updates.
+- `dotnet build -c Release` passed with 0 warnings and 0 errors after the Beta 5 version bump.
+- `dotnet list package --vulnerable --include-transitive` passed with no vulnerable packages reported by the configured sources after the Beta 5 version bump.
+- `dotnet publish src/DevCraft.Cli/DevCraft.Cli.csproj -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/publish/osx-arm64` passed after the Beta 5 version bump.
+- `codesign --verify --deep --strict --verbose=4 artifacts/publish/osx-arm64/DevCraft.Cli` passed for the local Beta 5 macOS arm64 binary; `file` and `lipo -archs` reported a thin arm64 Mach-O.
+- Isolated upgrade validation passed by installing published `v1.0.0-beta.4` into a temp `DEVCRAFT_HOME`, overwriting it with the local Beta 5 package, verifying the installed binary signature, and confirming a seeded isolated startup exited 0 with `Version 1.0.0-beta.5` and no unhandled exception.
 
 ## Notes
 
 - Earlier `MongoDB.Driver 3.5.0` restore output reported vulnerable transitive `SharpCompress` and `Snappier` packages. Updating to `MongoDB.Driver 3.12.0` resolved those warnings in `dotnet list package --vulnerable --include-transitive`.
 - Database migration code is implemented, but automated tests avoid requiring a live MongoDB instance. The configuration flow displays Docker setup instructions rather than starting Docker.
 - PowerShell Core was not installed on the validation host, so `tests/InstallerReleaseSelection.Tests.ps1` was added but not executed locally.
+- The Beta 4 instant-kill report was not reproduced locally during isolated Beta 4 to Beta 5 upgrade validation. The affected Mac still needs local binary, code-signing, architecture, and termination-log inspection before assigning a root cause.

@@ -17,6 +17,7 @@ cat > "$metadata" <<'JSON'
   { "tag_name": "v1.0.0-alpha.9", "draft": false },
   { "tag_name": "v1.0.0-beta.1", "draft": false },
   { "tag_name": "v1.0.0-beta.2", "draft": false },
+  { "tag_name": "v1.0.0-beta.5", "draft": false },
   { "tag_name": "v0.9.0", "draft": false }
 ]
 JSON
@@ -42,9 +43,10 @@ assert_true() {
     fi
 }
 
-assert_equal "v1.0.0-beta.2" "$(select_release_tag_from_metadata "$metadata")" "selects newest beta over alpha releases"
+assert_equal "v1.0.0-beta.5" "$(select_release_tag_from_metadata "$metadata")" "selects newest beta over alpha releases"
 assert_true "beta sorts after alpha 12" version_greater "v1.0.0-beta.1" "v1.0.0-alpha.12"
 assert_true "beta 2 sorts after beta 1" version_greater "v1.0.0-beta.2" "v1.0.0-beta.1"
+assert_true "beta 5 sorts after beta 2" version_greater "v1.0.0-beta.5" "v1.0.0-beta.2"
 assert_true "alpha 12 sorts after alpha 9" version_greater "v1.0.0-alpha.12" "v1.0.0-alpha.9"
 
 DEVCRAFT_VERSION="1.0.0-alpha.12"

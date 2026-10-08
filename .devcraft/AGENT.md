@@ -72,4 +72,6 @@
 - Features may only move to the next state when the operator explicitly asks.
 - Features may only move to the next implementation phase when the operator explicitly asks.
 - Code is only allowed while the active feature state is `Implementation`.
+- Implementation must follow TDD: red test, green implementation, refactor while tests stay green.
+- DevCraft installation creates and maintains `.devcraft/` artifacts only; preserve root `AGENT.md` and `AGENTS.md` if they already exist.
 - Context files must be updated as part of completed work.

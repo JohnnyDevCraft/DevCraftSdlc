@@ -13,6 +13,7 @@
 - Planning goal:
 - Recommended implementation sequence:
 - Known dependencies:
+- TDD approach:
 
 ## Phases
 
@@ -30,8 +31,9 @@
 
 #### Tests And Validation
 
-- [ ] TEST-001 <Named test case>
-- [ ] TEST-002 <Named test case>
+- [ ] TEST-001 RED: <Named failing test or currently failing behavior to prove before implementation>
+- [ ] TEST-002 GREEN: <Named passing test command or case after the minimal implementation>
+- [ ] TEST-003 REFACTOR: <Named regression test command or case that stays green after cleanup>
 
 ### Phase 2: <Phase Name>
 
@@ -47,8 +49,9 @@
 
 #### Tests And Validation
 
-- [ ] TEST-003 <Named test case>
-- [ ] TEST-004 <Named test case>
+- [ ] TEST-004 RED: <Named failing test or currently failing behavior to prove before implementation>
+- [ ] TEST-005 GREEN: <Named passing test command or case after the minimal implementation>
+- [ ] TEST-006 REFACTOR: <Named regression test command or case that stays green after cleanup>
 
 ### Final Phase: Validation And Completion
 

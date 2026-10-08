@@ -13,6 +13,7 @@
 - Planning goal: Add DevCraft situational-awareness configuration, people tracking, log entry tracking, scale-aware compression, AI handoff context, and desktop-agent setup instructions.
 - Recommended implementation sequence: Add profile `Situation*` settings, add storage models, add file-storage structure, add configuration menus, add people and log entry actions, add scale-aware compression, add AI handoff context, add desktop-agent instruction display, then validate preservation and migration behavior.
 - Known dependencies: Existing menu system, profile initialization, profile configuration, AI client selection and launcher infrastructure.
+- TDD approach: For implementation changes, prove a focused red test or compile failure first, make the smallest implementation change to pass, then rerun focused and full validation before handoff.
 
 ## Phases
 
@@ -224,3 +225,9 @@
 - [ ] VAL-007 Strip build metadata from the visible version line.
 - [ ] VAL-008 Bump the DevCraft version to beta 1.
 - [ ] VAL-009 Record created and modified files in `results.md`.
+- [x] VAL-010 RED: Prove `devcraft -force` startup/install behavior is not supported by the existing CLI/startup flow.
+- [x] VAL-011 GREEN: Implement `devcraft -force` so it installs `.devcraft` in the current folder without creating root `AGENT.md` or `AGENTS.md`.
+- [x] VAL-012 REFACTOR: Update DevCraft shared/profile/current rules and templates so TDD evidence is required and root agent files are preserved.
+- [x] VAL-013 Verify existing `.devcraft` takes precedence over other SDLC markers.
+- [x] VAL-014 Bump DevCraft release metadata, docs, and tests to `1.0.0-beta.5`.
+- [x] VAL-015 Mark prerelease GitHub releases automatically for prerelease tags.

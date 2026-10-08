@@ -30,6 +30,13 @@ public static class DevCraftCli
 
         IConsoleInteraction console = new SpectreConsoleInteraction();
         FeatureAiSessionLauncher sessionLauncher = new();
+        bool forceInstall = args.Length > 0 && args[0].Equals("-force", StringComparison.OrdinalIgnoreCase);
+
+        if (forceInstall && args.Length > 1)
+        {
+            console.WriteStatus("Unsupported argument combination. Use `devcraft -force` by itself.");
+            return;
+        }
 
         if (args.Length > 0 && args[0].Equals("select-agent", StringComparison.OrdinalIgnoreCase))
         {
@@ -41,7 +48,7 @@ public static class DevCraftCli
             new TerminalAiProjectScanner(),
             () => TerminalAgentCatalog.Create(CommandLocator.Exists));
 
-        startupFlow.Run(context);
+        startupFlow.Run(context, forceInstall);
         DevCraftMenuCommand.Run(context, console, sessionLauncher, sessionLauncher);
     }
 }

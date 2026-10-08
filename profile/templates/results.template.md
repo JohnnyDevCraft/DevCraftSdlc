@@ -39,6 +39,14 @@ Briefly describe what was implemented.
 - Related Task IDs:
 - Related Issue IDs:
 
+## TDD Evidence
+
+### Phase 1: <Phase Name>
+
+- Red:
+- Green:
+- Refactor:
+
 ## New Files
 
 ### <File Path>

@@ -15,7 +15,6 @@ public static class DevCraftInstaller
         CreateDirectory(controlDirectory, projectDirectory, createdPaths, preservedPaths);
         CreateDirectory(Path.Combine(controlDirectory, "features"), projectDirectory, createdPaths, preservedPaths);
 
-        WriteIfMissing(Path.Combine(projectDirectory, "AGENT.md"), Template(profileDirectory, "AGENT.template.md", RootAgent(profile), profile), projectDirectory, createdPaths, preservedPaths);
         WriteIfMissing(Path.Combine(controlDirectory, "AGENT.md"), Template(profileDirectory, "AGENT.template.md", ControlAgent(profile), profile), projectDirectory, createdPaths, preservedPaths);
         WriteIfMissing(Path.Combine(controlDirectory, "README.md"), Template(profileDirectory, "README.template.md", Readme(profile), profile), projectDirectory, createdPaths, preservedPaths);
         WriteIfMissing(Path.Combine(controlDirectory, "DISCOVERY.md"), Template(profileDirectory, "DISCOVERY.template.md", Discovery(profile), profile), projectDirectory, createdPaths, preservedPaths);
@@ -129,28 +128,6 @@ public static class DevCraftInstaller
             .Replace("Describe the project and what problem it solves.", profile.Description, StringComparison.Ordinal)
             .Replace("Describe the project, what it does, and who it serves.", profile.Description, StringComparison.Ordinal)
             .Replace("- Goal 1", $"- {profile.Purpose}", StringComparison.Ordinal);
-    }
-
-    private static string RootAgent(ProjectProfile profile)
-    {
-        return $"""
-            # AGENT.md
-
-            This project uses DevCraft.
-
-            ## Project Context
-
-            - Active Mode: `DevCraft`
-            - DevCraft Control Folder: `.devcraft/`
-            - Project Name: {profile.Name}
-            - Project Purpose: {profile.Purpose}
-
-            ## Working Agreement
-
-            Read `.devcraft/AGENT.md` before making project decisions.
-            Keep DevCraft context files current as work progresses.
-
-            """;
     }
 
     private static string ControlAgent(ProjectProfile profile)

@@ -15,6 +15,7 @@ public sealed class DevCraftInstallerTests
 
         DevCraftInstaller.Install(root.Path, profile);
 
+        Assert.False(File.Exists(Path.Combine(root.Path, "AGENT.md")));
         string configurePath = Path.Combine(root.Path, ".devcraft", "configure.json");
         string configureJson = File.ReadAllText(configurePath);
         Assert.Contains("\"ProjectKey\"", configureJson);
@@ -66,5 +67,19 @@ public sealed class DevCraftInstallerTests
         Assert.Contains("- Core project purpose: Build from profile templates.", discovery);
         Assert.Contains("- Primary problem solved: Project description from profile.", discovery);
         Assert.True(File.Exists(Path.Combine(root.Path, ".devcraft", "DESIGN.md")));
+    }
+
+    [Fact]
+    public void InstallPreservesExistingRootAgentFiles()
+    {
+        using TestDirectory root = new();
+        File.WriteAllText(Path.Combine(root.Path, "AGENT.md"), "existing singular");
+        File.WriteAllText(Path.Combine(root.Path, "AGENTS.md"), "existing plural");
+
+        DevCraftInstaller.Install(root.Path);
+
+        Assert.Equal("existing singular", File.ReadAllText(Path.Combine(root.Path, "AGENT.md")));
+        Assert.Equal("existing plural", File.ReadAllText(Path.Combine(root.Path, "AGENTS.md")));
+        Assert.True(File.Exists(Path.Combine(root.Path, ".devcraft", "AGENT.md")));
     }
 }

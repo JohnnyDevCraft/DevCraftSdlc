@@ -15,7 +15,7 @@ The installer creates `~/.DevCraft`, copies the DevCraft binary and profile seed
 By default, the installer chooses the highest published DevCraft SemVer release, including prereleases such as beta builds. To install a specific release, set `DEVCRAFT_VERSION`, for example:
 
 ```sh
-DEVCRAFT_VERSION="1.0.0-beta.2" DEVCRAFT_REPOSITORY="JohnnyDevCraft/DevCraftSdlc" sh -c "$(curl -fsSL https://raw.githubusercontent.com/JohnnyDevCraft/DevCraftSdlc/master/install.sh)"
+DEVCRAFT_VERSION="1.0.0-beta.5" DEVCRAFT_REPOSITORY="JohnnyDevCraft/DevCraftSdlc" sh -c "$(curl -fsSL https://raw.githubusercontent.com/JohnnyDevCraft/DevCraftSdlc/master/install.sh)"
 ```
 
 After installation, refresh your shell:
@@ -37,7 +37,7 @@ The installer creates the profile DevCraft folder under your user profile, copie
 To install a specific release, set `DEVCRAFT_VERSION` before running the installer:
 
 ```powershell
-$env:DEVCRAFT_VERSION="1.0.0-beta.2"; $env:DEVCRAFT_REPOSITORY="JohnnyDevCraft/DevCraftSdlc"; iwr https://raw.githubusercontent.com/JohnnyDevCraft/DevCraftSdlc/master/install.ps1 -UseB | iex
+$env:DEVCRAFT_VERSION="1.0.0-beta.5"; $env:DEVCRAFT_REPOSITORY="JohnnyDevCraft/DevCraftSdlc"; iwr https://raw.githubusercontent.com/JohnnyDevCraft/DevCraftSdlc/master/install.ps1 -UseB | iex
 ```
 
 Open a new PowerShell window after installation, then run:

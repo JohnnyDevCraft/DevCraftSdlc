@@ -16,7 +16,7 @@ public sealed class StartupFlow
         this.detectAgents = detectAgents;
     }
 
-    public void Run(StartupContext context)
+    public void Run(StartupContext context, bool forceInstall = false)
     {
         console.ShowStartupStage("Scanning for profile...");
         ProfileState profileState = ProfileStateDetector.Detect(context);
@@ -56,6 +56,22 @@ public sealed class StartupFlow
         FolderReadinessResult readiness = FolderReadinessDetector.Detect(context.CurrentDirectory);
         console.ShowStartupStage("Checking for SDLC...");
         bool hasSdlcWorkflowMarkers = markerDetections.Any(detection => detection.Category == MarkerCategory.SdlcWorkflow);
+        bool hasDevCraftMarkers = markerDetections.Any(detection => detection.IsDevCraft);
+
+        if (hasDevCraftMarkers)
+        {
+            console.ShowStartupStage("DevCraft workflow detected.");
+            console.WriteStatus("Folder already uses DevCraft");
+            return;
+        }
+
+        if (forceInstall)
+        {
+            console.ShowStartupStage("Force installing DevCraft.");
+            console.WriteStatus("Force installing DevCraft in the current folder");
+            InstallDevCraft(context.CurrentDirectory, AskForNewProjectProfile(context.CurrentDirectory), context.ProfileDirectory);
+            return;
+        }
 
         if (readiness.Readiness == FolderReadiness.ReadyForDevCraft && !hasSdlcWorkflowMarkers)
         {
