@@ -107,6 +107,27 @@ Repository configuration lives in `.devcraft/configure.json`.
 
 Feature storage selection is repository-scoped. The profile `.DevCraft/configure.json` catalogs available feature storage types, but it must not store the selected feature storage for every repository. If `.devcraft/configure.json` does not have a `SelectedFeatureStorage` value when a user lists or creates features, DevCraft must ask the user to choose one and save that choice back to the current repository's `.devcraft/configure.json`. Changing feature storage from Configure DevCraft updates only the current repository.
 
+## Situational Awareness AI Handoff
+
+When `SituationEnabled` is true, DevCraft gives terminal AI agents instructions for reading situational-awareness data without embedding the records in the prompt.
+
+File storage mode:
+
+- Data lives under profile `.DevCraft/situation/`.
+- `people.json` contains relationship/contact records and all records may be read.
+- `log-entries.json` contains individual entries; agents should read only records where `IsCompressed=false`.
+- `summaries.json` contains summary records; agents should read only records where `IsCompressed=false`.
+- Summary `Type` values define the level: `week` means daily rollups, `sprint` means sprint summaries, `month` means weekly rollups, `quarter` means month or sprint rollups depending on the configured scale, and `year` means quarter rollups.
+
+Database storage mode:
+
+- Agents must read profile `.DevCraft/configure.json` locally to obtain `SituationConnection`; DevCraft must not paste the connection string into the handoff prompt.
+- MongoDB defaults to database `DevCraft` when the connection string does not name a database.
+- Collections are `People`, `LogEntries`, and `Summaries`.
+- Agents may read all `People` documents.
+- Agents must read only `LogEntries` and `Summaries` documents where `IsCompressed=false`.
+- Agents should use read-only MongoDB access when available, such as `mongosh` or an installed MongoDB driver/library, and report missing MongoDB access/tooling rather than falling back to stale file-mode data.
+
 ## Project Status
 
 Valid DevCraft project statuses are:

@@ -46,6 +46,22 @@ function Copy-Profile($SourceProfile) {
     }
 }
 
+function Install-Binary($SourceBinary, $TargetBinary) {
+    $targetDirectory = Split-Path -Parent $TargetBinary
+    New-Item -ItemType Directory -Force -Path $targetDirectory | Out-Null
+    $tempBinary = Join-Path $targetDirectory ".devcraft-install-$([Guid]::NewGuid()).tmp"
+
+    try {
+        Copy-Item $SourceBinary $tempBinary -Force
+        Move-Item $tempBinary $TargetBinary -Force
+    }
+    finally {
+        if (Test-Path $tempBinary) {
+            Remove-Item $tempBinary -Force
+        }
+    }
+}
+
 function Install-FromDirectory($PackageDir) {
     $binary = Join-Path $PackageDir "devcraft.exe"
 
@@ -54,7 +70,7 @@ function Install-FromDirectory($PackageDir) {
     }
 
     Copy-Profile (Join-Path $PackageDir "profile")
-    Copy-Item $binary (Join-Path $InstallDir "devcraft.exe") -Force
+    Install-Binary $binary (Join-Path $InstallDir "devcraft.exe")
 }
 
 function Get-NormalizedVersionTag($Version) {

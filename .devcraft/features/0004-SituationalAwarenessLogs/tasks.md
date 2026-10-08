@@ -231,3 +231,9 @@
 - [x] VAL-013 Verify existing `.devcraft` takes precedence over other SDLC markers.
 - [x] VAL-014 Bump DevCraft release metadata, docs, and tests to `1.0.0-beta.5`.
 - [x] VAL-015 Mark prerelease GitHub releases automatically for prerelease tags.
+- [x] VAL-016 RED: Prove the Unix installer overwrites an existing `devcraft` binary in place instead of replacing it with a new inode.
+- [x] VAL-017 GREEN: Install Unix binaries through a staged temp file, macOS ad-hoc sign/verify, and atomic rename.
+- [x] VAL-018 Validate a patched isolated macOS upgrade replaces the installed Mach-O inode, verifies code signing, and starts with the Beta 5 header.
+- [x] VAL-019 RED: Prove situational handoff no longer may embed records and must describe file/database read paths.
+- [x] VAL-020 GREEN: Change situational handoff to file-mode file guidance and database-mode Mongo read guidance with no connection string or record payload in the prompt.
+- [x] VAL-021 Bump DevCraft release metadata, docs, and tests to `1.0.0-beta.6`.

@@ -43,7 +43,7 @@ public sealed class CliLogoRendererTests
 
         string output = logo.ToPlainText();
 
-        Assert.Contains("Version 1.0.0-beta.5", output);
+        Assert.Contains("Version 1.0.0-beta.6", output);
         Assert.DoesNotContain("+", logo.VersionLine);
     }
 

@@ -225,6 +225,45 @@ copy_profile() {
         "$INSTALL_DIR/templates"
 }
 
+sign_macos_binary_if_needed() {
+    binary="$1"
+
+    [ "$(uname -s)" = "Darwin" ] || return 0
+    has_command codesign || return 0
+
+    codesign --force --sign - "$binary" >/dev/null 2>&1 || fail "failed to ad-hoc sign installed macOS binary"
+    codesign --verify --deep --strict --verbose=4 "$binary" >/dev/null 2>&1 || fail "installed macOS binary signature verification failed"
+}
+
+validate_binary_for_platform() {
+    binary="$1"
+
+    has_command file || return 0
+
+    case "$(uname -s)" in
+        Darwin)
+            file "$binary" | grep 'Mach-O' >/dev/null 2>&1 || fail "package binary is not a macOS Mach-O executable"
+            ;;
+        Linux)
+            file "$binary" | grep 'ELF' >/dev/null 2>&1 || fail "package binary is not a Linux ELF executable"
+            ;;
+    esac
+}
+
+install_binary() {
+    source_binary="$1"
+    target_binary="$2"
+    target_directory="$(dirname "$target_binary")"
+    temp_binary="$target_directory/.devcraft-install-$(basename "$target_binary").$$"
+
+    rm -f "$temp_binary"
+    cp "$source_binary" "$temp_binary"
+    chmod +x "$temp_binary"
+    validate_binary_for_platform "$temp_binary"
+    sign_macos_binary_if_needed "$temp_binary"
+    mv -f "$temp_binary" "$target_binary"
+}
+
 install_from_directory() {
     package_dir="$1"
 
@@ -232,8 +271,7 @@ install_from_directory() {
     [ -f "$binary" ] || fail "package binary not found"
 
     copy_profile "$package_dir/profile"
-    cp "$binary" "$INSTALL_DIR/devcraft"
-    chmod +x "$INSTALL_DIR/devcraft"
+    install_binary "$binary" "$INSTALL_DIR/devcraft"
 }
 
 install_from_release() {

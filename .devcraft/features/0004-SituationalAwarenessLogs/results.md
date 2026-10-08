@@ -28,6 +28,11 @@
 - Updated DevCraft shared, seed profile, live profile, and project guidance to require TDD Red -> Green -> Refactor evidence.
 - Bumped the forced-install and TDD guidance release to `1.0.0-beta.5` for Beta 5.
 - Updated the GitHub release workflow so prerelease tags publish as prereleases.
+- Added a conservative macOS installer hardening fix for launch-time `SIGKILL (Code Signature Invalid)` reports by replacing the installed Mach-O with a newly staged inode, ad-hoc signing/verifying the staged Mach-O on macOS, and then atomically renaming it into place.
+- Changed situational-awareness AI handoff so prompts no longer embed people, log-entry, or summary payloads.
+- Added file-mode handoff guidance that points the AI agent to actual profile situation files and explains how to read only active records.
+- Added database-mode handoff guidance that tells the AI agent how to use local profile configuration to access MongoDB, read all people, and read only uncompressed log-entry and summary records without exposing the connection string in the prompt.
+- Bumped the release to `1.0.0-beta.6` for Beta 6.
 
 ## Files Changed
 
@@ -69,6 +74,14 @@
 - `src/DevCraft.Cli/DevCraft.Cli.csproj` and `tests/DevCraft.Cli.Tests/CliLogoRendererTests.cs` - Bumped the Beta 5 release version and displayed version expectation to `1.0.0-beta.5`.
 - `README.md`, `tests/installer-release-selection.sh`, and `tests/InstallerReleaseSelection.Tests.ps1` - Updated installer documentation and release-selection tests for `1.0.0-beta.5`.
 - `.github/workflows/release.yml` - Marked GitHub releases as prerelease when the pushed tag contains a prerelease suffix.
+- `install.sh` - Changed Unix install to copy the binary to a temporary file, ad-hoc sign and verify Mach-O binaries on macOS, then atomically rename the staged binary over the previous install path.
+- `install.ps1` - Changed Windows install to copy through a temporary file before replacing the installed executable.
+- `tests/installer-release-selection.sh` - Added coverage proving installer replacement creates a new installed `devcraft` inode.
+- `src/DevCraft.Cli/SituationPromptContextBuilder.cs` - Replaced serialized situational payload injection with file-mode and database-mode read instructions.
+- `tests/DevCraft.Cli.Tests/SituationPromptContextBuilderTests.cs` - Added coverage for no embedded record payloads, disabled omission, file-mode guidance, database-mode guidance, connection-string omission, and no generated database snapshot.
+- `profile/DevCraft.md` - Documented situational-awareness AI handoff behavior for file and database storage modes.
+- `src/DevCraft.Cli/DevCraft.Cli.csproj` and `tests/DevCraft.Cli.Tests/CliLogoRendererTests.cs` - Bumped the Beta 6 release version and displayed version expectation to `1.0.0-beta.6`.
+- `README.md`, `tests/installer-release-selection.sh`, and `tests/InstallerReleaseSelection.Tests.ps1` - Updated installer documentation and release-selection tests for `1.0.0-beta.6`.
 
 ## TDD Evidence
 
@@ -78,6 +91,18 @@
 - Red: `dotnet test --filter "FullyQualifiedName~StartupFlowTests"` failed `RunInstallsDevCraftWhenForcedInCodeFolderWithoutScanning` because force did not install in a code folder without SDLC markers.
 - Green: `dotnet test --filter "FullyQualifiedName~DevCraftInstallerTests|FullyQualifiedName~StartupFlowTests"` passed with 13 focused tests after wiring `devcraft -force`, removing root `AGENT.md` generation, and making force bypass scans.
 - Refactor: Shared/profile/live rules and templates were updated after the focused green run to make TDD evidence and root-agent preservation part of the reusable DevCraft workflow.
+
+### macOS Installer Code-Signing Hardening
+
+- Red: `tests/installer-release-selection.sh` failed with `FAIL: install should replace devcraft with a new inode`, proving the previous Unix installer overwrote the existing executable in place.
+- Green: `tests/installer-release-selection.sh` passed after staging the binary to a temporary path, macOS ad-hoc signing/verifying the staged Mach-O, and atomically renaming it into place.
+- Refactor: The Windows installer was aligned to the same staged-copy replacement pattern even though the observed failure is macOS-specific.
+
+### Situational Awareness File And Database Handoff
+
+- Red: `dotnet test --filter "FullyQualifiedName~SituationPromptContextBuilderTests"` failed after adding tests for file/database read guidance because the builder still materialized a handoff snapshot and accepted an injected store.
+- Green: `dotnet test --filter "FullyQualifiedName~SituationPromptContextBuilderTests"` passed after file mode pointed at `people.json`, `log-entries.json`, and `summaries.json`, and database mode pointed at MongoDB collections and `IsCompressed=false` filters without embedding payloads or credentials.
+- Refactor: The unused handoff snapshot writer and fake situation store were removed after the user clarified database mode should not export a file snapshot.
 
 ## Validation
 
@@ -116,6 +141,19 @@
 - `dotnet publish src/DevCraft.Cli/DevCraft.Cli.csproj -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/publish/osx-arm64` passed after the Beta 5 version bump.
 - `codesign --verify --deep --strict --verbose=4 artifacts/publish/osx-arm64/DevCraft.Cli` passed for the local Beta 5 macOS arm64 binary; `file` and `lipo -archs` reported a thin arm64 Mach-O.
 - Isolated upgrade validation passed by installing published `v1.0.0-beta.4` into a temp `DEVCRAFT_HOME`, overwriting it with the local Beta 5 package, verifying the installed binary signature, and confirming a seeded isolated startup exited 0 with `Version 1.0.0-beta.5` and no unhandled exception.
+- Isolated patched-installer validation passed by installing published `v1.0.0-beta.5`, reinstalling with the patched local package, proving the installed binary inode changed, verifying the installed Mach-O code signature, and confirming seeded startup displayed `Version 1.0.0-beta.5`.
+- `dotnet test` passed after installer hardening: 105 tests.
+- `dotnet build -c Release` passed with 0 warnings and 0 errors after installer hardening.
+- `dotnet list package --vulnerable --include-transitive` passed with no vulnerable packages reported by the configured sources after installer hardening.
+- `dotnet publish src/DevCraft.Cli/DevCraft.Cli.csproj -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/publish/osx-arm64` passed after installer hardening.
+- `dotnet test --filter "FullyQualifiedName~SituationPromptContextBuilderTests"` passed after situational-awareness handoff guidance updates: 3 focused tests.
+- `tests/installer-release-selection.sh` passed after adding platform-binary validation and Beta 6 release-selection coverage.
+- `dotnet test` passed after Beta 6 handoff, installer, and version updates: 106 tests.
+- `tests/installer-release-selection.sh` passed after Beta 6 handoff, installer, and version updates.
+- `dotnet build -c Release` passed with 0 warnings and 0 errors after Beta 6 handoff, installer, and version updates.
+- `dotnet list package --vulnerable --include-transitive` passed with no vulnerable packages reported by the configured sources after Beta 6 updates.
+- `dotnet publish src/DevCraft.Cli/DevCraft.Cli.csproj -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/publish/osx-arm64` passed after Beta 6 updates.
+- Isolated Beta 5 to local Beta 6 upgrade validation passed: the installed macOS arm64 binary inode changed, `codesign --verify --deep --strict --verbose=4` passed, and seeded startup displayed `Version 1.0.0-beta.6`.
 
 ## Notes
 
@@ -123,3 +161,5 @@
 - Database migration code is implemented, but automated tests avoid requiring a live MongoDB instance. The configuration flow displays Docker setup instructions rather than starting Docker.
 - PowerShell Core was not installed on the validation host, so `tests/InstallerReleaseSelection.Tests.ps1` was added but not executed locally.
 - The Beta 4 instant-kill report was not reproduced locally during isolated Beta 4 to Beta 5 upgrade validation. The affected Mac still needs local binary, code-signing, architecture, and termination-log inspection before assigning a root cause.
+- The affected Mac's later crash report established launch-time code-signing enforcement: `EXC_CRASH`, `SIGKILL (Code Signature Invalid)`, `Taskgated Invalid Signature`, namespace `CODESIGNING`, exit 137. This confirms the symptom is not a managed application exception or memory/resource kill. The exact origin of the invalid taskgated state remains unproven, but the installer now avoids in-place Mach-O overwrite and re-seals the staged macOS binary before replacement.
+- A local safe-read audit found `/Users/john/.DevCraft/devcraft` contained the 11-byte text fixture `new binary`. The installer regression test was changed to use real platform executables instead of text fixtures, and the installer now rejects non-platform executable payloads before replacement.
