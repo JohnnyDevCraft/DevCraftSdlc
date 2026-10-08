@@ -34,6 +34,18 @@ function Copy-Profile($SourceProfile) {
     if ($savedSoul) {
         Copy-Item $savedSoul $soulPath -Force
     }
+
+    @(
+        "architectures",
+        "feature-storage",
+        "features",
+        "project-types",
+        "skills",
+        "standards",
+        "templates"
+    ) | ForEach-Object {
+        New-Item -ItemType Directory -Force -Path (Join-Path $InstallDir $_) | Out-Null
+    }
 }
 
 function Install-FromDirectory($PackageDir) {

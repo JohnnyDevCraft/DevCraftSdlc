@@ -82,6 +82,15 @@ copy_profile() {
     if [ -n "$saved_soul" ]; then
         cp "$saved_soul" "$INSTALL_DIR/soul.md"
     fi
+
+    mkdir -p \
+        "$INSTALL_DIR/architectures" \
+        "$INSTALL_DIR/feature-storage" \
+        "$INSTALL_DIR/features" \
+        "$INSTALL_DIR/project-types" \
+        "$INSTALL_DIR/skills" \
+        "$INSTALL_DIR/standards" \
+        "$INSTALL_DIR/templates"
 }
 
 install_from_directory() {
@@ -113,6 +122,22 @@ install_from_release() {
 }
 
 profile_file() {
+    shell_name="$(basename "${SHELL:-}")"
+
+    if [ "$shell_name" = "zsh" ]; then
+        printf '%s/.zshrc' "$HOME"
+        return
+    fi
+
+    if [ "$shell_name" = "bash" ]; then
+        if [ -f "$HOME/.bash_profile" ]; then
+            printf '%s/.bash_profile' "$HOME"
+        else
+            printf '%s/.bashrc' "$HOME"
+        fi
+        return
+    fi
+
     if [ -n "${ZSH_VERSION:-}" ]; then
         printf '%s/.zshrc' "$HOME"
         return
