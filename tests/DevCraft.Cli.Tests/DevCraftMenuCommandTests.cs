@@ -1,0 +1,148 @@
+using DevCraft.Cli;
+
+namespace DevCraft.Cli.Tests;
+
+public sealed class DevCraftMenuCommandTests
+{
+    private static readonly ProjectProfile SampleProfile = new(
+        "Sample Project",
+        "Validate menu behavior.",
+        "A sample project for menu command tests.");
+
+    [Fact]
+    public void RunLaunchesProjectDiscovery()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Project discovery"]);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        string instruction = Assert.Single(launcher.Instructions);
+        Assert.Contains("project discovery", instruction, StringComparison.OrdinalIgnoreCase);
+        Assert.True(console.MenuShellCount > 0);
+        Assert.Empty(featureLauncher.Launches);
+    }
+
+    [Fact]
+    public void RunFeatureMenuCreatesNewFeature()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new(["Menu Feature"], ["Features", "Create new feature"]);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        ProjectDevCraftConfiguration configuration = ProjectDevCraftConfigurationReader.Read(root.Path)!;
+        DevCraftFeature feature = Assert.Single(configuration.Features);
+        Assert.Equal("Menu Feature", feature.Name);
+        Assert.Empty(launcher.Instructions);
+        Assert.Single(featureLauncher.Launches);
+    }
+
+    [Fact]
+    public void RunCreateProjectLaunchesWithSelectedProjectType()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        using TestDirectory sourceRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(profile, "project-types"));
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        File.WriteAllText(
+            Path.Combine(profile, "project-types", "web-api.md"),
+            """
+            # Web API
+
+            ## Purpose
+
+            Create a service-oriented HTTP API.
+            """);
+        ProfileStructureInitializer.Ensure(profile, sourceRoot.Path);
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Create Project", "Web API (web-api)"]);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        string instruction = Assert.Single(launcher.Instructions);
+        Assert.Contains("create a project", instruction, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Web API", instruction);
+        Assert.Contains(Path.Combine(profile, "project-types", "web-api.md"), instruction);
+        Assert.Empty(featureLauncher.Launches);
+    }
+
+    [Fact]
+    public void RunConfigureDevCraftImportSettingsLaunchesImportSkill()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        using TestDirectory importRoot = new();
+        using TestDirectory sourceRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        ProfileStructureInitializer.Ensure(profile, sourceRoot.Path);
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([importRoot.Path], ["Configure DevCraft", "Import Settings"]);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        string instruction = Assert.Single(launcher.Instructions);
+        Assert.Contains("Import DevCraft settings", instruction);
+        Assert.Contains(importRoot.Path, instruction);
+        Assert.Contains(Path.Combine(profile, "skills", "DevCraft-Import.md"), instruction);
+        Assert.Empty(featureLauncher.Launches);
+    }
+
+    [Fact]
+    public void RunConfigureDevCraftCreateSkillLaunchesCreationSkill()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        using TestDirectory sourceRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        ProfileStructureInitializer.Ensure(profile, sourceRoot.Path);
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Configure DevCraft", "Create Skill"]);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        string instruction = Assert.Single(launcher.Instructions);
+        Assert.Contains("Create Skill", instruction);
+        Assert.Contains(Path.Combine(profile, "skills", "Create-Skill.md"), instruction);
+        Assert.Contains(Path.Combine(profile, "templates", "skill-template.md"), instruction);
+        Assert.Contains("Read the three core DevCraft files", instruction);
+        Assert.Contains("ask the user where it should be created", instruction);
+        Assert.Contains("Current repository", instruction);
+        Assert.Contains("Profile DevCraft folder", instruction);
+        Assert.Contains(Path.Combine(profile, "configure.json"), instruction);
+        Assert.Contains(ProjectDevCraftConfigurationStore.PathFor(root.Path), instruction);
+        Assert.Empty(featureLauncher.Launches);
+    }
+}

@@ -1,0 +1,330 @@
+{
+  "Skills": [
+    {
+      "Slug": "create-architecture",
+      "Name": "Create Architecture",
+      "Description": "Help the operator design a reusable DevCraft architecture through a focused back-and-forth conversation, then produce a completed architecture document from the architecture template.",
+      "Path": "skills/Create-Architecture.md"
+    },
+    {
+      "Slug": "create-project-type",
+      "Name": "Create Project Type",
+      "Description": "Help the operator design a reusable DevCraft project type through a focused back-and-forth conversation, then produce a completed project type document from the project type template.",
+      "Path": "skills/Create-Project-Type.md"
+    },
+    {
+      "Slug": "create-skill",
+      "Name": "Create Skill",
+      "Description": "Help the operator design a reusable DevCraft skill through a focused back-and-forth conversation, then produce a completed skill document from the skill template.",
+      "Path": "skills/Create-Skill.md"
+    },
+    {
+      "Slug": "create-standard",
+      "Name": "Create Standard",
+      "Description": "Help the operator design a reusable DevCraft standard through a focused back-and-forth conversation, then produce a completed standard document from the standard template.",
+      "Path": "skills/Create-Standard.md"
+    },
+    {
+      "Slug": "devcraft-import",
+      "Name": "DevCraft Import",
+      "Description": "Import reusable DevCraft documentation from a local documentation repository into the profile-level DevCraft folder, then update the profile catalog in \u0060configure.json\u0060.",
+      "Path": "skills/DevCraft-Import.md"
+    },
+    {
+      "Slug": "devcraft-discovery-questions",
+      "Name": "DevCraft Discovery Questions",
+      "Description": "Drive clear operator decisions during both project-level DevCraft discovery and feature-level DevCraft discovery or clarification. Present every material decision as a fully written numbered question, followed by explanatory context and lettered options in the operator\u0027s required format.",
+      "Path": "skills/Discovery-Clarifications.md"
+    },
+    {
+      "Slug": "discovery-gap-analyzer",
+      "Name": "Discovery Gap Analyzer",
+      "Description": "Find and resolve weaknesses in DevCraft feature documentation before implementation by comparing the active feature artifacts, recording issues in \u0060analysis.md\u0060, and presenting all known issues together for compact batch resolution.",
+      "Path": "skills/Discovery-Gap-Analyzer.md"
+    },
+    {
+      "Slug": "github-issue-feature-intake",
+      "Name": "GitHub Issue Feature Intake",
+      "Description": "Create an evidence-backed DevCraft feature dossier, initial \u0060spec.md\u0060, and initial feature discovery from a GitHub issue while preserving operator-controlled state transitions.",
+      "Path": "skills/GitHub-Issue-Feature-Intake.md"
+    },
+    {
+      "Slug": "operator-questions",
+      "Name": "Operator Questions",
+      "Description": "Present material questions to the operator of a project or feature in a consistent, decision-ready format outside formal DevCraft discovery and clarification sessions.",
+      "Path": "skills/Operator-Questions.md"
+    }
+  ],
+  "Standards": [
+    {
+      "Slug": "asp-net-core-standards",
+      "Name": "ASP.NET Core Standards",
+      "Description": "Define ASP.NET Core specific standards that build on the shared C# standards.",
+      "Path": "standards/ASP.Net Core.md"
+    },
+    {
+      "Slug": "c-standards",
+      "Name": "C# Standards",
+      "Description": "Define default coding standards for C# code across services, applications, libraries, and tests.",
+      "Path": "standards/CSharp.md"
+    },
+    {
+      "Slug": "go-standards",
+      "Name": "Go Standards",
+      "Description": "Define default coding standards for Go services, CLIs, libraries, and tests.",
+      "Path": "standards/GoLANG.md"
+    },
+    {
+      "Slug": "javascript-standards",
+      "Name": "JavaScript Standards",
+      "Description": "Define default coding standards for JavaScript code in browser, server, scripting, and test environments.",
+      "Path": "standards/Javascript.md"
+    },
+    {
+      "Slug": "laravel-standards",
+      "Name": "Laravel Standards",
+      "Description": "Define Laravel-specific standards that build on the shared PHP standards.",
+      "Path": "standards/Laravel.md"
+    },
+    {
+      "Slug": "php-standards",
+      "Name": "PHP Standards",
+      "Description": "Define default coding standards for PHP applications, libraries, CLI commands, jobs, and tests.",
+      "Path": "standards/PHP.md"
+    },
+    {
+      "Slug": "python-standards",
+      "Name": "Python Standards",
+      "Description": "Define default coding standards for Python applications, services, scripts, automation, and tests.",
+      "Path": "standards/Python.md"
+    },
+    {
+      "Slug": "typescript-standards",
+      "Name": "TypeScript Standards",
+      "Description": "Define default coding standards for TypeScript applications, libraries, frontend code, backend code, and tests.",
+      "Path": "standards/Typescript.md"
+    }
+  ],
+  "Architectures": [
+    {
+      "Slug": "angular-frontend",
+      "Name": "Angular FrontEnd",
+      "Description": "Define the default architecture guidance for Angular frontend applications.",
+      "Path": "architectures/Angular-FrontEnd.md"
+    },
+    {
+      "Slug": "net-aspire-13-3",
+      "Name": ".NET Aspire 13.3\u002B",
+      "Description": "Define the default architecture guidance for building and operating distributed .NET applications with Aspire 13.3\u002B.",
+      "Path": "architectures/AspireDotNet.md"
+    },
+    {
+      "Slug": "net-distributed-app",
+      "Name": ".NET Distributed App",
+      "Description": "Define the default architecture guidance for a .NET distributed application made up of multiple deployable parts.",
+      "Path": "architectures/DotNet-Distributed-App.md"
+    },
+    {
+      "Slug": "net-mediator-pattern-with-xmediat",
+      "Name": ".NET Mediator Pattern with XMediat",
+      "Description": "Define how .NET applications use the mediator pattern through Xelseor LLC\u0027s \u0060XMediat\u0060 library. The mediator is the in-process boundary between callers and application behavior: callers express intent as messages, while XMediat locates and invokes the matching handlers.",
+      "Path": "architectures/DotNet-Mediator-Pattern-XMediator.md"
+    },
+    {
+      "Slug": "net-mediator-pattern",
+      "Name": ".NET Mediator Pattern",
+      "Description": "Define how .NET applications use the mediator pattern through the \u0060Mediator\u0060 library. The mediator is the in-process boundary between callers and application behavior: callers express intent as messages, while Mediator locates and invokes matching handlers.",
+      "Path": "architectures/DotNet-Mediator-Pattern.md"
+    },
+    {
+      "Slug": "net-micro-services",
+      "Name": ".NET Micro Services",
+      "Description": "Define the default architecture guidance for a .NET microservices system.",
+      "Path": "architectures/DotNet-Micro-Services.md"
+    },
+    {
+      "Slug": "net-modular-monolith",
+      "Name": ".NET Modular Monolith",
+      "Description": "Define the default architecture guidance for a .NET modular monolith application.",
+      "Path": "architectures/DotNet-Modular-Monolith.md"
+    },
+    {
+      "Slug": "net-n-tier-monolith",
+      "Name": ".NET N-Tier Monolith",
+      "Description": "Define the default architecture guidance for a .NET n-tier monolith.",
+      "Path": "architectures/DotNet-N-Tier-Monolith.md"
+    },
+    {
+      "Slug": "net-repository-pattern",
+      "Name": ".NET Repository Pattern",
+      "Description": "Define a reusable repository pattern for C# and .NET applications that use Entity Framework Core while preserving clear module boundaries, readable query composition, and testable data access.",
+      "Path": "architectures/DotNet-Repository-Pattern.md"
+    },
+    {
+      "Slug": "electron-wrapped-angular",
+      "Name": "Electron Wrapped Angular",
+      "Description": "Define the default architecture guidance for an Angular application packaged with Electron.",
+      "Path": "architectures/Electron-Wrapped-Angular.md"
+    },
+    {
+      "Slug": "ionic-angular",
+      "Name": "Ionic Angular",
+      "Description": "Define the default architecture guidance for Ionic Angular applications.",
+      "Path": "architectures/Ionic-Angular.md"
+    },
+    {
+      "Slug": "nx-workspace",
+      "Name": "Nx Workspace",
+      "Description": "Define the default architecture guidance for an Nx workspace.",
+      "Path": "architectures/Nx-Workspace.md"
+    },
+    {
+      "Slug": "php-laravel-modular-monolith",
+      "Name": "PHP Laravel Modular Monolith",
+      "Description": "Define the default architecture guidance for a Laravel modular monolith.",
+      "Path": "architectures/PHP-Laravel-Modular-Monolith.md"
+    },
+    {
+      "Slug": "playwright-testing",
+      "Name": "Playwright Testing",
+      "Description": "Define the default architecture guidance for building Playwright end-to-end and workflow-focused UI tests.",
+      "Path": "architectures/Playwrite-Tesing.md"
+    },
+    {
+      "Slug": "swiftui-app",
+      "Name": "SwiftUI App",
+      "Description": "Define the default architecture guidance for SwiftUI applications.",
+      "Path": "architectures/SwiftUI-App.md"
+    }
+  ],
+  "Templates": [
+    {
+      "Slug": "architecture-template",
+      "Name": "architecture template",
+      "Description": "One sentence: what this architecture enables and when DevCraft should use it.",
+      "Path": "templates/architecture-template.md"
+    },
+    {
+      "Slug": "project-type-template",
+      "Name": "project type template",
+      "Description": "Use this template to define a type of project that DevCraft can be used to create.",
+      "Path": "templates/project-type-template.md"
+    },
+    {
+      "Slug": "skill-template",
+      "Name": "skill template",
+      "Description": "One sentence: what this skill enables.",
+      "Path": "templates/skill-template.md"
+    },
+    {
+      "Slug": "standard-template",
+      "Name": "standard template",
+      "Description": "One sentence: what this standard governs and when DevCraft should apply it.",
+      "Path": "templates/standard-template.md"
+    }
+  ],
+  "ProjectTypes": [],
+  "FeatureStorageTypes": [
+    {
+      "Slug": "ado-work-item",
+      "Name": "ado work item",
+      "Description": "Use this feature storage mode when DevCraft feature artifacts should live on an Azure DevOps work item instead of inside the project repository.",
+      "Path": "feature-storage/ado-work-item.md"
+    },
+    {
+      "Slug": "github-issue",
+      "Name": "github issue",
+      "Description": "Use this feature storage mode when DevCraft feature artifacts should live on a GitHub issue instead of inside the project repository.",
+      "Path": "feature-storage/github-issue.md"
+    },
+    {
+      "Slug": "jira-work-item",
+      "Name": "jira work item",
+      "Description": "Use this feature storage mode when DevCraft feature artifacts should live on a JIRA issue instead of inside the project repository.",
+      "Path": "feature-storage/jira-work-item.md"
+    },
+    {
+      "Slug": "repo-central",
+      "Name": "repo central",
+      "Description": "Store DevCraft feature artifacts inside the repository DevCraft folder. This is the current local-repository behavior.",
+      "Path": "feature-storage/repo-central.md"
+    },
+    {
+      "Slug": "system-central",
+      "Name": "system central",
+      "Description": "Store DevCraft feature artifacts in the profile DevCraft folder so multiple repositories can be tracked from one central system-level feature store.",
+      "Path": "feature-storage/system-central.md"
+    }
+  ],
+  "SelectedFeatureStorage": "repo-central",
+  "SupportedClients": [
+    {
+      "Slug": "codex",
+      "Name": "OpenAI Codex",
+      "Description": "OpenAI\u0027s terminal coding agent.",
+      "Scan": {
+        "Description": "Run Codex in non-interactive JSON mode for DevCraft folder scanning.",
+        "BinaryPath": "codex",
+        "Arguments": [
+          "exec",
+          "--json",
+          "--cd",
+          "{workingDirectory}",
+          "{prompt}"
+        ]
+      },
+      "Session": {
+        "Description": "Open an interactive Codex session that the operator can take over.",
+        "BinaryPath": "codex",
+        "Arguments": [
+          "--cd",
+          "{workingDirectory}",
+          "{prompt}"
+        ]
+      }
+    },
+    {
+      "Slug": "claude-code",
+      "Name": "Claude Code",
+      "Description": "Anthropic\u0027s Claude terminal coding agent.",
+      "Scan": {
+        "Description": "Run Claude Code in print mode for DevCraft folder scanning.",
+        "BinaryPath": "claude",
+        "Arguments": [
+          "--print",
+          "{prompt}"
+        ]
+      },
+      "Session": {
+        "Description": "Open an interactive Claude Code session that the operator can take over.",
+        "BinaryPath": "claude",
+        "Arguments": [
+          "{prompt}"
+        ]
+      }
+    },
+    {
+      "Slug": "github-copilot",
+      "Name": "GitHub Copilot",
+      "Description": "GitHub Copilot terminal integration through the GitHub CLI.",
+      "Scan": {
+        "Description": "Run GitHub Copilot through the GitHub CLI for DevCraft folder scanning.",
+        "BinaryPath": "gh",
+        "Arguments": [
+          "copilot",
+          "suggest",
+          "{prompt}"
+        ]
+      },
+      "Session": {
+        "Description": "Open a GitHub Copilot CLI interaction that the operator can take over.",
+        "BinaryPath": "gh",
+        "Arguments": [
+          "copilot",
+          "suggest",
+          "{prompt}"
+        ]
+      }
+    }
+  ]
+}

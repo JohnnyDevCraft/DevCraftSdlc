@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DevCraft.Cli/DevCraft.Cli.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DevCraft.Cli.Tests/DevCraft.Cli.Tests.csproj" />
+  </Folder>
+</Solution>
