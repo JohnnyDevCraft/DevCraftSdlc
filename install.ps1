@@ -19,20 +19,21 @@ function Get-Rid {
 function Copy-Profile($SourceProfile) {
     New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 
-    $soulPath = Join-Path $InstallDir "soul.md"
-    $savedSoul = $null
-
-    if (Test-Path $soulPath) {
-        $savedSoul = Join-Path ([System.IO.Path]::GetTempPath()) "devcraft-soul-$([Guid]::NewGuid()).md"
-        Copy-Item $soulPath $savedSoul -Force
-    }
-
     if (Test-Path $SourceProfile) {
-        Copy-Item (Join-Path $SourceProfile "*") $InstallDir -Recurse -Force
-    }
+        Get-ChildItem $SourceProfile -Directory -Recurse | ForEach-Object {
+            $relativePath = [System.IO.Path]::GetRelativePath($SourceProfile, $_.FullName)
+            New-Item -ItemType Directory -Force -Path (Join-Path $InstallDir $relativePath) | Out-Null
+        }
 
-    if ($savedSoul) {
-        Copy-Item $savedSoul $soulPath -Force
+        Get-ChildItem $SourceProfile -File -Recurse | Where-Object { $_.Name -ne "soul.md" } | ForEach-Object {
+            $relativePath = [System.IO.Path]::GetRelativePath($SourceProfile, $_.FullName)
+            $targetPath = Join-Path $InstallDir $relativePath
+
+            if (-not (Test-Path $targetPath)) {
+                New-Item -ItemType Directory -Force -Path (Split-Path -Parent $targetPath) | Out-Null
+                Copy-Item $_.FullName $targetPath
+            }
+        }
     }
 
     @(

@@ -69,18 +69,20 @@ copy_profile() {
     source_profile="$1"
     mkdir -p "$INSTALL_DIR"
 
-    saved_soul=""
-    if [ -f "$INSTALL_DIR/soul.md" ]; then
-        saved_soul="$TMP_DIR/soul.md"
-        cp "$INSTALL_DIR/soul.md" "$saved_soul"
-    fi
-
     if [ -d "$source_profile" ]; then
-        cp -R "$source_profile"/. "$INSTALL_DIR"/
-    fi
-
-    if [ -n "$saved_soul" ]; then
-        cp "$saved_soul" "$INSTALL_DIR/soul.md"
+        (
+            cd "$source_profile"
+            find . -type d | while IFS= read -r directory; do
+                mkdir -p "$INSTALL_DIR/$directory"
+            done
+            find . -type f ! -name 'soul.md' | while IFS= read -r file; do
+                target="$INSTALL_DIR/$file"
+                if [ ! -e "$target" ]; then
+                    mkdir -p "$(dirname "$target")"
+                    cp "$file" "$target"
+                fi
+            done
+        )
     fi
 
     mkdir -p \
