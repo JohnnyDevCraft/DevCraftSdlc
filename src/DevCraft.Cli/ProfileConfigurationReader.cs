@@ -39,6 +39,12 @@ public static class ProfileConfigurationReader
             configuration.Templates ?? [],
             configuration.ProjectTypes ?? [],
             configuration.FeatureStorageTypes ?? [],
-            configuration.SupportedClients ?? []);
+            configuration.SupportedClients ?? [],
+            configuration.SituationEnabled,
+            SituationScale.Normalize(configuration.SituationScale),
+            SituationStorage.Normalize(configuration.SituationStorage),
+            string.IsNullOrWhiteSpace(configuration.SituationConnection)
+                ? null
+                : configuration.SituationConnection.Trim());
     }
 }

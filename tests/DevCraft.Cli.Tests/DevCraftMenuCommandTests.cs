@@ -282,6 +282,58 @@ public sealed class DevCraftMenuCommandTests : IDisposable
     }
 
     [Fact]
+    public void RunConfigureSituationalAwarenessDatabaseShowsMongoDockerInstructions()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        using TestDirectory sourceRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        ProfileStructureInitializer.Ensure(profile, sourceRoot.Path);
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new(
+            ["mongodb://localhost:27017/DevCraft"],
+            ["Configure DevCraft", "Configure Situational Awareness", "Yes", "Months & Weeks", "Database", "Exit"]);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        DevCraftProfileConfiguration configuration = ProfileConfigurationReader.Read(profile);
+        Assert.True(configuration.SituationEnabled);
+        Assert.Equal("weeks", configuration.SituationScale);
+        Assert.Equal("database", configuration.SituationStorage);
+        Assert.Equal("mongodb://localhost:27017/DevCraft", configuration.SituationConnection);
+        Assert.Contains(console.StatusMessages, message => message.Contains("docker run --name devcraft-mongo", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void RunLoggingMenuAddsPerson()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        DevCraftProfileConfigurationWriter.Write(profile, new DevCraftProfileConfiguration([], [], [], [], [], [], [], true));
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new(
+            ["Ada", "Lovelace", "ada@example.com", "555-0100", "Advisor", "Active"],
+            ["Logging", "Add Person", "Exit"]);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        SituationPerson person = Assert.Single(new FileSituationStore(profile).Read(false).People);
+        Assert.Equal("Ada", person.FirstName);
+        Assert.Equal("Advisor", person.Relation);
+    }
+
+    [Fact]
     public void RunFeatureMenuBackReturnsToMainMenu()
     {
         using TestDirectory root = new();

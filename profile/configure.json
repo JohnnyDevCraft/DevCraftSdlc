@@ -287,5 +287,9 @@
         ]
       }
     }
-  ]
+  ],
+  "SituationEnabled": false,
+  "SituationScale": "weeks",
+  "SituationStorage": "file",
+  "SituationConnection": null
 }

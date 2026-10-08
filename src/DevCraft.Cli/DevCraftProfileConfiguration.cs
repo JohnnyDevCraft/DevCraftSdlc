@@ -7,4 +7,8 @@ public sealed record DevCraftProfileConfiguration(
     IReadOnlyList<ProfileCatalogDocument> Templates,
     IReadOnlyList<ProfileCatalogDocument> ProjectTypes,
     IReadOnlyList<ProfileCatalogDocument> FeatureStorageTypes,
-    IReadOnlyList<SupportedTerminalClient> SupportedClients);
+    IReadOnlyList<SupportedTerminalClient> SupportedClients,
+    bool SituationEnabled = false,
+    string SituationScale = "weeks",
+    string SituationStorage = "file",
+    string? SituationConnection = null);

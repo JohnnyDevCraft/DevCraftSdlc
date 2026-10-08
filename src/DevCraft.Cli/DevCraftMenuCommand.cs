@@ -9,6 +9,7 @@ public static class DevCraftMenuCommand
     private const string ProjectTheme = "Project theme";
     private const string ProjectSetup = "Project setup";
     private const string CreateProject = "Create Project";
+    private const string Logging = "Logging";
     private const string Features = "Features";
     private const string Skills = "Skills";
     private const string ConfigureDevCraft = "Configure DevCraft";
@@ -22,12 +23,22 @@ public static class DevCraftMenuCommand
     private const string CreateStandards = "Create Standards";
     private const string CreateArchitecture = "Create Architecture";
     private const string CreateProjectType = "Create Project Type";
+    private const string ConfigureSituationalAwareness = "Configure Situational Awareness";
+    private const string AddDevCraftToDesktopAgent = "Add DevCraft To Desktop Agent";
+    private const string AddPerson = "Add Person";
+    private const string AddLogEntry = "Add Log Entry";
+    private const string CompressWeek = "Compress Week";
+    private const string CompressSprint = "Compress Sprint";
+    private const string CompressMonth = "Compress Month";
+    private const string CompressQuarter = "Compress Quarter";
+    private const string CompressYear = "Compress Year";
 
     public static void Run(
         StartupContext context,
         IConsoleInteraction console,
         IDevCraftAiSessionLauncher launcher,
-        IFeatureAiSessionLauncher featureLauncher)
+        IFeatureAiSessionLauncher featureLauncher,
+        ISituationSummaryGenerator? summaryGenerator = null)
     {
         ProjectDevCraftConfiguration? projectConfiguration = ProjectDevCraftConfigurationReader.Read(context.CurrentDirectory);
 
@@ -54,7 +65,7 @@ public static class DevCraftMenuCommand
             notice = null;
             string selected = console.Select(
                 title,
-                [ProjectDiscovery, ProjectDesign, ProjectTheme, ProjectSetup, CreateProject, Features, Skills, ConfigureDevCraft, Exit]);
+                [ProjectDiscovery, ProjectDesign, ProjectTheme, ProjectSetup, CreateProject, Logging, Features, Skills, ConfigureDevCraft, Exit]);
 
             switch (selected)
             {
@@ -101,6 +112,9 @@ public static class DevCraftMenuCommand
                     }
 
                     notice = createProjectNotice;
+                    break;
+                case Logging:
+                    notice = RunLoggingMenu(context, console, summaryGenerator ?? new TerminalSituationSummaryGenerator());
                     break;
                 case Features:
                     notice = LaunchClient(() => RunFeatureMenu(context, console, featureLauncher));
@@ -173,7 +187,7 @@ public static class DevCraftMenuCommand
         console.ShowMenuShell();
         string selected = console.Select(
             "Configure DevCraft",
-            [ImportSettings, ChangeFeatureStorage, CreateSkill, CreateStandards, CreateArchitecture, CreateProjectType, Back]);
+            [ImportSettings, ChangeFeatureStorage, ConfigureSituationalAwareness, AddDevCraftToDesktopAgent, CreateSkill, CreateStandards, CreateArchitecture, CreateProjectType, Back]);
 
         switch (selected)
         {
@@ -184,6 +198,12 @@ public static class DevCraftMenuCommand
                 break;
             case ChangeFeatureStorage:
                 FeatureStorageSelector.Change(context, console, projectConfiguration);
+                break;
+            case ConfigureSituationalAwareness:
+                RunConfigureSituationalAwareness(context, console);
+                break;
+            case AddDevCraftToDesktopAgent:
+                ShowDesktopAgentInstructions(context, console);
                 break;
             case CreateSkill:
                 LaunchProfileCreationSkill(
@@ -230,6 +250,156 @@ public static class DevCraftMenuCommand
                     "Design a new DevCraft project type with the user, write it to the profile project-types folder, and update profile configure.json.");
                 break;
         }
+    }
+
+    private static string? RunLoggingMenu(
+        StartupContext context,
+        IConsoleInteraction console,
+        ISituationSummaryGenerator summaryGenerator)
+    {
+        DevCraftProfileConfiguration configuration = ProfileConfigurationReader.Read(context.ProfileDirectory);
+
+        if (!configuration.SituationEnabled)
+        {
+            return "Situational awareness is currently disabled. Use Configure DevCraft > Configure Situational Awareness to enable it.";
+        }
+
+        ISituationStore store;
+
+        try
+        {
+            store = SituationStoreFactory.Create(context.ProfileDirectory, configuration);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return exception.Message;
+        }
+
+        List<string> choices = [AddPerson, AddLogEntry];
+
+        if (configuration.SituationScale == SituationScale.Weeks)
+        {
+            choices.Add(CompressWeek);
+            choices.Add(CompressMonth);
+        }
+        else
+        {
+            choices.Add(CompressSprint);
+        }
+
+        choices.Add(CompressQuarter);
+        choices.Add(CompressYear);
+        choices.Add(Back);
+
+        console.ShowMenuShell();
+        string selected = console.Select("Logging", choices);
+
+        if (selected == Back)
+        {
+            return null;
+        }
+
+        if (selected == AddPerson)
+        {
+            store.AddPerson(new SituationPerson(
+                Guid.NewGuid().ToString("N"),
+                console.Ask("First name"),
+                console.Ask("Last name"),
+                console.Ask("Email"),
+                console.Ask("Phone"),
+                console.Ask("Relation"),
+                console.Ask("Status")));
+
+            return "Person added to situational awareness.";
+        }
+
+        if (selected == AddLogEntry)
+        {
+            string logData = console.Ask("Log entry");
+
+            if (string.IsNullOrWhiteSpace(logData))
+            {
+                return "Empty log entries are ignored.";
+            }
+
+            store.AddLogEntry(new SituationLogEntry(Guid.NewGuid().ToString("N"), DateTimeOffset.Now, logData.Trim(), false));
+
+            return "Log entry added to situational awareness.";
+        }
+
+        string type = selected switch
+        {
+            CompressWeek => "week",
+            CompressSprint => "sprint",
+            CompressMonth => "month",
+            CompressQuarter => "quarter",
+            CompressYear => "year",
+            _ => throw new InvalidOperationException($"Unsupported logging option: {selected}."),
+        };
+
+        try
+        {
+            return new SituationCompressionService(store, summaryGenerator)
+                .Compress(context, SelectAiClient(context, console), configuration, type);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return exception.Message;
+        }
+    }
+
+    private static void RunConfigureSituationalAwareness(StartupContext context, IConsoleInteraction console)
+    {
+        DevCraftProfileConfiguration oldConfiguration = ProfileConfigurationReader.Read(context.ProfileDirectory);
+        bool enabled = console.Select("Enable Situational Awareness", ["No", "Yes"]) == "Yes";
+        string scale = oldConfiguration.SituationScale;
+        string storage = oldConfiguration.SituationStorage;
+        string? connection = oldConfiguration.SituationConnection;
+
+        if (enabled)
+        {
+            scale = console.Select("Use Sprints or Months & Weeks", ["Months & Weeks", "Sprints"]) == "Sprints"
+                ? SituationScale.Sprint
+                : SituationScale.Weeks;
+            storage = console.Select("Use File or Database", ["File", "Database"]) == "Database"
+                ? SituationStorage.Database
+                : SituationStorage.File;
+
+            if (storage == SituationStorage.Database)
+            {
+                console.WriteStatus(MongoDockerInstructions.Text);
+                connection = console.Ask("Enter Database Connection String");
+            }
+            else
+            {
+                connection = null;
+            }
+        }
+
+        DevCraftProfileConfiguration newConfiguration = oldConfiguration with
+        {
+            SituationEnabled = enabled,
+            SituationScale = SituationScale.Normalize(scale),
+            SituationStorage = SituationStorage.Normalize(storage),
+            SituationConnection = string.IsNullOrWhiteSpace(connection) ? null : connection.Trim(),
+        };
+
+        SituationMigrationService.Migrate(context.ProfileDirectory, oldConfiguration, newConfiguration);
+        DevCraftProfileConfigurationWriter.Write(context.ProfileDirectory, newConfiguration);
+        console.WriteStatus("Situational awareness configuration updated.");
+    }
+
+    private static void ShowDesktopAgentInstructions(StartupContext context, IConsoleInteraction console)
+    {
+        string path = Path.Combine(context.ProfileDirectory, "desktop-agent-instructions.txt");
+
+        if (!File.Exists(path))
+        {
+            ProfileStructureInitializer.Ensure(context.ProfileDirectory);
+        }
+
+        console.WriteStatus("Copy and paste this text into your desktop agent's instructions:");
+        console.WriteStatus(File.ReadAllText(path));
     }
 
     private static void RunImportSettings(

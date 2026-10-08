@@ -18,7 +18,12 @@ public sealed class TerminalAiProjectScanner : IAiProjectScanner
         string prompt = ProjectScanPromptBuilder.Build(directoryPath);
         string output = RunAgent(directoryPath, defaultAgent, prompt);
 
-        return ProjectScanJsonParser.Parse(ExtractJsonPayload(output, defaultAgent));
+        SupportedTerminalClient client = SupportedTerminalClientCatalog
+            .Create()
+            .FirstOrDefault(client => client.Name.Equals(defaultAgent, StringComparison.OrdinalIgnoreCase))
+            ?? SupportedTerminalClientCatalog.Create()[0];
+
+        return ProjectScanJsonParser.Parse(TerminalClientOutputExtractor.ExtractResponse(output, client));
     }
 
     private static string RunAgent(string directoryPath, string defaultAgent, string prompt)
@@ -79,44 +84,4 @@ public sealed class TerminalAiProjectScanner : IAiProjectScanner
         return startInfo;
     }
 
-    private static string ExtractJsonPayload(string output, string defaultAgent)
-    {
-        if (!defaultAgent.Equals("Codex", StringComparison.OrdinalIgnoreCase))
-        {
-            return output;
-        }
-
-        string? agentMessage = output
-            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
-            .Select(TryReadAgentMessage)
-            .Where(message => !string.IsNullOrWhiteSpace(message))
-            .LastOrDefault();
-
-        return agentMessage ?? output;
-    }
-
-    private static string? TryReadAgentMessage(string line)
-    {
-        try
-        {
-            using JsonDocument document = JsonDocument.Parse(line);
-            JsonElement root = document.RootElement;
-
-            if (!root.TryGetProperty("type", out JsonElement typeElement) ||
-                typeElement.GetString() != "item.completed" ||
-                !root.TryGetProperty("item", out JsonElement itemElement) ||
-                !itemElement.TryGetProperty("type", out JsonElement itemTypeElement) ||
-                itemTypeElement.GetString() != "agent_message" ||
-                !itemElement.TryGetProperty("text", out JsonElement textElement))
-            {
-                return null;
-            }
-
-            return textElement.GetString();
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
-    }
 }

@@ -73,6 +73,7 @@ public sealed class FeatureAiSessionLauncher : IFeatureAiSessionLauncher, IDevCr
                 - Short description: {feature.ShortDescription}
                 - Folder name: {feature.FolderName}
                 """;
+        string situationContext = SituationPromptContextBuilder.Build(profileDirectory);
 
         return $"""
             You are running DevCraft for this repository.
@@ -92,6 +93,8 @@ public sealed class FeatureAiSessionLauncher : IFeatureAiSessionLauncher, IDevCr
             - Feature storage: {projectConfiguration.SelectedFeatureStorage ?? "Not selected"}
 
             {featureText}
+
+            {situationContext}
 
             Operate in DevCraft mode.
             """;

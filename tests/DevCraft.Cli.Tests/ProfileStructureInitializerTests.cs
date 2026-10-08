@@ -21,8 +21,9 @@ public sealed class ProfileStructureInitializerTests
         Assert.True(Directory.Exists(Path.Combine(profile, "project-types")));
         Assert.True(Directory.Exists(Path.Combine(profile, "feature-storage")));
         Assert.True(Directory.Exists(Path.Combine(profile, "features")));
+        Assert.True(Directory.Exists(Path.Combine(profile, "situation")));
         Assert.True(File.Exists(Path.Combine(profile, "features", "projects.json")));
-        Assert.Equal(7, result.CreatedDirectories.Count);
+        Assert.Equal(8, result.CreatedDirectories.Count);
     }
 
     [Fact]
@@ -38,6 +39,7 @@ public sealed class ProfileStructureInitializerTests
         Directory.CreateDirectory(Path.Combine(profile, "project-types"));
         Directory.CreateDirectory(Path.Combine(profile, "feature-storage"));
         Directory.CreateDirectory(Path.Combine(profile, "features"));
+        Directory.CreateDirectory(Path.Combine(profile, "situation"));
         File.WriteAllText(Path.Combine(profile, "features", "projects.json"), "{ \"Projects\": [] }");
 
         ProfileStructureResult result = ProfileStructureInitializer.Ensure(profile, sourceRoot.Path);
@@ -133,6 +135,7 @@ public sealed class ProfileStructureInitializerTests
         Assert.True(File.Exists(Path.Combine(profile, "templates", "standard-template.md")));
         Assert.True(File.Exists(Path.Combine(profile, "DevCraft.md")));
         Assert.True(File.Exists(Path.Combine(profile, "initialized.md")));
+        Assert.True(File.Exists(Path.Combine(profile, "desktop-agent-instructions.txt")));
         Assert.True(File.Exists(Path.Combine(profile, "features", "projects.json")));
         Assert.True(File.Exists(Path.Combine(profile, "standards", "CSharp.md")));
         Assert.True(File.Exists(Path.Combine(profile, "architectures", "SwiftUI-App.md")));
@@ -168,6 +171,10 @@ public sealed class ProfileStructureInitializerTests
         Assert.DoesNotContain("\"SelectedFeatureStorage\"", configureJson);
         Assert.Contains("\"ado-work-item\"", configureJson);
         Assert.Contains("\"SupportedClients\"", configureJson);
+        Assert.Contains("\"SituationEnabled\": false", configureJson);
+        Assert.Contains("\"SituationScale\": \"weeks\"", configureJson);
+        Assert.Contains("\"SituationStorage\": \"file\"", configureJson);
+        Assert.Contains("\"SituationConnection\": null", configureJson);
         Assert.Contains("\"Scan\"", configureJson);
         Assert.Contains("\"Session\"", configureJson);
         Assert.Contains("\"Arguments\"", configureJson);

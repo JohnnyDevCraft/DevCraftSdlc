@@ -1,0 +1,9 @@
+Load DevCraft before doing meaningful work.
+
+Read and follow these files first:
+- ~/.DevCraft/soul.md
+- ~/.DevCraft/initialized.md
+- ~/.DevCraft/DevCraft.md
+- ~/.DevCraft/configure.json
+
+When the current repository contains a .devcraft folder, operate in DevCraft mode. Read .devcraft/AGENT.md and the active feature artifacts before editing code. Only write application code when the active DevCraft feature state is Implementation.

@@ -6,7 +6,7 @@ public sealed class SpectreConsoleInteraction : IConsoleInteraction
 {
     public void WriteStatus(string message)
     {
-        _ = message;
+        AnsiConsole.WriteLine(message);
     }
 
     public void ShowStartupStage(string message)

@@ -11,6 +11,7 @@ public static class CliLogoRenderer
         IReadOnlyList<string> devLines = Render(CliBranding.ProductNamePrefix);
         IReadOnlyList<string> craftLines = Render(CliBranding.ProductNameSuffix);
         int lineCount = Math.Max(devLines.Count, craftLines.Count);
+        int devWidth = devLines.Count == 0 ? 0 : devLines.Max(line => line.Length) + 2;
 
         List<CliLogoLine> lines = [];
 
@@ -19,7 +20,7 @@ public static class CliLogoRenderer
             string devSegment = GetLine(devLines, index);
             string craftSegment = GetLine(craftLines, index);
 
-            lines.Add(new CliLogoLine(devSegment, craftSegment));
+            lines.Add(new CliLogoLine(devSegment.PadRight(devWidth), craftSegment));
         }
 
         return new CliLogo(
@@ -44,11 +45,15 @@ public static class CliLogoRenderer
 
     private static string GetVersion()
     {
-        return typeof(CliLogoRenderer)
+        string version = typeof(CliLogoRenderer)
             .Assembly
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
             .InformationalVersion
             ?? typeof(CliLogoRenderer).Assembly.GetName().Version?.ToString()
             ?? "unknown";
+
+        int metadataIndex = version.IndexOf('+', StringComparison.Ordinal);
+
+        return metadataIndex >= 0 ? version[..metadataIndex] : version;
     }
 }

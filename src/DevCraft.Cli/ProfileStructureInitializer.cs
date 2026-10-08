@@ -13,6 +13,7 @@ public static class ProfileStructureInitializer
         "project-types",
         "feature-storage",
         "features",
+        "situation",
     ];
 
     public static ProfileStructureResult Ensure(string profileDirectory)
@@ -57,6 +58,7 @@ public static class ProfileStructureInitializer
         EnsureStandardTemplate(profileDirectory, createdFiles);
         CopyDevCraftRules(sharedGuidanceRoot, profileDirectory, createdFiles);
         EnsureInitializedFile(profileDirectory, createdFiles);
+        EnsureDesktopAgentInstructions(profileDirectory, createdFiles);
         EnsureSystemCentralProjectIndex(profileDirectory, createdDirectories, createdFiles);
         WriteConfiguration(profileDirectory, createdFiles, updatedFiles);
 
@@ -720,6 +722,7 @@ public static class ProfileStructureInitializer
         List<string> updatedFiles)
     {
         string configurePath = Path.Combine(profileDirectory, "configure.json");
+        DevCraftProfileConfiguration existing = ProfileConfigurationReader.Read(profileDirectory);
         DevCraftProfileConfiguration configuration = new(
             ProfileDocumentCatalogBuilder.Build(profileDirectory, "skills"),
             ProfileDocumentCatalogBuilder.Build(profileDirectory, "standards"),
@@ -727,7 +730,11 @@ public static class ProfileStructureInitializer
             ProfileDocumentCatalogBuilder.Build(profileDirectory, "templates"),
             ProfileDocumentCatalogBuilder.Build(profileDirectory, "project-types"),
             ProfileDocumentCatalogBuilder.Build(profileDirectory, "feature-storage"),
-            SupportedTerminalClientCatalog.Create());
+            SupportedTerminalClientCatalog.Create(),
+            existing.SituationEnabled,
+            existing.SituationScale,
+            existing.SituationStorage,
+            existing.SituationConnection);
 
         if (File.Exists(configurePath))
         {
@@ -739,5 +746,30 @@ public static class ProfileStructureInitializer
         }
 
         DevCraftProfileConfigurationWriter.Write(profileDirectory, configuration);
+    }
+
+    private static void EnsureDesktopAgentInstructions(string profileDirectory, List<string> createdFiles)
+    {
+        string targetFile = Path.Combine(profileDirectory, "desktop-agent-instructions.txt");
+        string content =
+            """
+            Load DevCraft before doing meaningful work.
+
+            Read and follow these files first:
+            - ~/.DevCraft/soul.md
+            - ~/.DevCraft/initialized.md
+            - ~/.DevCraft/DevCraft.md
+            - ~/.DevCraft/configure.json
+
+            When the current repository contains a .devcraft folder, operate in DevCraft mode. Read .devcraft/AGENT.md and the active feature artifacts before editing code. Only write application code when the active DevCraft feature state is Implementation.
+            """;
+
+        if (File.Exists(targetFile) && File.ReadAllText(targetFile) == content)
+        {
+            return;
+        }
+
+        File.WriteAllText(targetFile, content);
+        createdFiles.Add(targetFile);
     }
 }
