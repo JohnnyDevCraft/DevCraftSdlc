@@ -22,6 +22,12 @@ public static class DevCraftCli
             return;
         }
 
+        if (args.Length > 0 && args[0].Equals("merge", StringComparison.OrdinalIgnoreCase))
+        {
+            CatalogMergeCommand.Run(context, args.Skip(1).ToList());
+            return;
+        }
+
         IConsoleInteraction console = new SpectreConsoleInteraction();
         FeatureAiSessionLauncher sessionLauncher = new();
         StartupFlow startupFlow = new(

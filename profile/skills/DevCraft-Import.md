@@ -63,4 +63,5 @@ If the imported item is genuinely new and its generated slug conflicts with an u
 - Every imported item has a stable slug, readable name, description, and profile-relative path.
 - Existing profile files at matching target paths are replaced by the imported versions.
 - Existing catalog entries for matching paths or slugs are refreshed rather than duplicated.
+- If a documentation repository provides a DevCraft catalog JSON file, `devcraft merge <file>` can be used to merge `Skills`, `Standards`, `Architectures`, and `ProjectTypes` into the profile catalog by slug.
 - The operator receives a concise import summary with imported, replaced, skipped, and collision-handled files.

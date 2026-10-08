@@ -34,6 +34,22 @@ Open a new PowerShell window after installation, then run:
 devcraft
 ```
 
+## Commands
+
+List the installed profile catalog:
+
+```sh
+devcraft list
+```
+
+Merge another DevCraft catalog into the profile catalog:
+
+```sh
+devcraft merge ./configure.json
+```
+
+The merge command reads `Skills`, `Standards`, `Architectures`, and `ProjectTypes` from the supplied JSON file and merges them into `~/.DevCraft/configure.json`. Existing entries with the same slug are replaced, and new slugs are appended.
+
 ## Release
 
 DevCraft releases are published from Git tags.
