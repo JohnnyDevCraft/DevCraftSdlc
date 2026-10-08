@@ -218,7 +218,6 @@
       "Path": "feature-storage/system-central.md"
     }
   ],
-  "SelectedFeatureStorage": "repo-central",
   "SupportedClients": [
     {
       "Slug": "codex",

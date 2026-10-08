@@ -99,7 +99,7 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
         ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
-        FakeConsoleInteraction console = new(["Menu Feature"], ["Features", "Create new feature", "OpenAI Codex (codex)", "Exit"]);
+        FakeConsoleInteraction console = new(["Menu Feature"], ["Features", "Create new feature", "repo central (repo-central)", "OpenAI Codex (codex)", "Exit"]);
         FakeDevCraftAiSessionLauncher launcher = new();
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
@@ -227,6 +227,32 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         Assert.Contains("Profile DevCraft folder", instruction);
         Assert.Contains(Path.Combine(profile, "configure.json"), instruction);
         Assert.Contains(ProjectDevCraftConfigurationStore.PathFor(root.Path), instruction);
+        Assert.Empty(featureLauncher.Launches);
+    }
+
+    [Fact]
+    public void RunConfigureDevCraftChangeFeatureStorageUpdatesRepositoryOnly()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        using TestDirectory sourceRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        ProfileStructureInitializer.Ensure(profile, sourceRoot.Path);
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Configure DevCraft", "Change Feature Storage", "system central (system-central)", "Exit"]);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        ProjectDevCraftConfiguration repositoryConfiguration = ProjectDevCraftConfigurationReader.Read(root.Path)!;
+        DevCraftProfileConfiguration profileConfiguration = ProfileConfigurationReader.Read(profile);
+        Assert.Equal("system-central", repositoryConfiguration.SelectedFeatureStorage);
+        Assert.DoesNotContain("\"SelectedFeatureStorage\"", File.ReadAllText(Path.Combine(profile, "configure.json")));
+        Assert.Empty(launcher.Instructions);
         Assert.Empty(featureLauncher.Launches);
     }
 

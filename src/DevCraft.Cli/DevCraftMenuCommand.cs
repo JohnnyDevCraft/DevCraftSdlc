@@ -17,6 +17,7 @@ public static class DevCraftMenuCommand
     private const string ListFeatures = "List features";
     private const string NewFeature = "Create new feature";
     private const string ImportSettings = "Import Settings";
+    private const string ChangeFeatureStorage = "Change Feature Storage";
     private const string CreateSkill = "Create Skill";
     private const string CreateStandards = "Create Standards";
     private const string CreateArchitecture = "Create Architecture";
@@ -39,6 +40,13 @@ public static class DevCraftMenuCommand
 
         while (true)
         {
+            projectConfiguration = ProjectDevCraftConfigurationReader.Read(context.CurrentDirectory);
+
+            if (projectConfiguration is null)
+            {
+                return;
+            }
+
             console.ShowMenuShell();
             string title = notice is null
                 ? "What do you want to work on?"
@@ -165,7 +173,7 @@ public static class DevCraftMenuCommand
         console.ShowMenuShell();
         string selected = console.Select(
             "Configure DevCraft",
-            [ImportSettings, CreateSkill, CreateStandards, CreateArchitecture, CreateProjectType, Back]);
+            [ImportSettings, ChangeFeatureStorage, CreateSkill, CreateStandards, CreateArchitecture, CreateProjectType, Back]);
 
         switch (selected)
         {
@@ -173,6 +181,9 @@ public static class DevCraftMenuCommand
                 return;
             case ImportSettings:
                 RunImportSettings(context, console, launcher, projectConfiguration);
+                break;
+            case ChangeFeatureStorage:
+                FeatureStorageSelector.Change(context, console, projectConfiguration);
                 break;
             case CreateSkill:
                 LaunchProfileCreationSkill(
@@ -308,12 +319,28 @@ public static class DevCraftMenuCommand
 
         if (selected == ListFeatures)
         {
+            ProjectDevCraftConfiguration? projectConfiguration = ProjectDevCraftConfigurationReader.Read(context.CurrentDirectory);
+
+            if (projectConfiguration is null)
+            {
+                return;
+            }
+
+            FeatureStorageSelector.EnsureSelected(context, console, projectConfiguration);
             FeatureCommand.Run(context, ["list"], console, featureLauncher, SelectAiClient(context, console));
             return;
         }
 
         console.ShowMenuShell();
         string featureName = console.Ask("What is the feature name?");
+        ProjectDevCraftConfiguration? configuration = ProjectDevCraftConfigurationReader.Read(context.CurrentDirectory);
+
+        if (configuration is null)
+        {
+            return;
+        }
+
+        FeatureStorageSelector.EnsureSelected(context, console, configuration);
         FeatureCommand.Run(context, ["new", featureName], console, featureLauncher, SelectAiClient(context, console));
     }
 

@@ -165,8 +165,7 @@ public sealed class ProfileStructureInitializerTests
         Assert.Contains("\"standard-template\"", configureJson);
         Assert.Contains("\"ProjectTypes\"", configureJson);
         Assert.Contains("\"FeatureStorageTypes\"", configureJson);
-        Assert.Contains("\"SelectedFeatureStorage\"", configureJson);
-        Assert.Contains("\"repo-central\"", configureJson);
+        Assert.DoesNotContain("\"SelectedFeatureStorage\"", configureJson);
         Assert.Contains("\"ado-work-item\"", configureJson);
         Assert.Contains("\"SupportedClients\"", configureJson);
         Assert.Contains("\"Scan\"", configureJson);

@@ -15,7 +15,7 @@ public static class ProjectDevCraftConfigurationWriter
 
         ProjectDevCraftConfiguration configuration = new(
             Guid.NewGuid().ToString(),
-            "repo-central",
+            null,
             "features.json",
             profile,
             []);

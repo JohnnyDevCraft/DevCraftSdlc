@@ -98,6 +98,14 @@ Feature work lives under:
 
 Only create the feature files that are needed for the feature's current state, except `spec.md`, which always exists first.
 
+Repository configuration lives in `.devcraft/configure.json`.
+
+- `ProjectKey` identifies the repository project and links it to profile-level System Central feature storage when that mode is selected.
+- `SelectedFeatureStorage` is the feature storage mechanism for this repository only.
+- `Features` is the local index of DevCraft features used by this repository, including external work item or issue links when applicable.
+
+Feature storage selection is repository-scoped. The profile `.DevCraft/configure.json` catalogs available feature storage types, but it must not store the selected feature storage for every repository. If `.devcraft/configure.json` does not have a `SelectedFeatureStorage` value when a user lists or creates features, DevCraft must ask the user to choose one and save that choice back to the current repository's `.devcraft/configure.json`. Changing feature storage from Configure DevCraft updates only the current repository.
+
 ## Project Status
 
 Valid DevCraft project statuses are:

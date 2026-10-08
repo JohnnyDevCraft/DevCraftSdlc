@@ -19,7 +19,7 @@ public sealed class DevCraftInstallerTests
         string configureJson = File.ReadAllText(configurePath);
         Assert.Contains("\"ProjectKey\"", configureJson);
         Assert.Contains("\"SelectedFeatureStorage\"", configureJson);
-        Assert.Contains("\"repo-central\"", configureJson);
+        Assert.Contains("\"SelectedFeatureStorage\": null", configureJson);
         Assert.Contains("\"FeaturesIndexPath\"", configureJson);
         Assert.Contains("\"features.json\"", configureJson);
         Assert.Contains("\"Features\"", configureJson);

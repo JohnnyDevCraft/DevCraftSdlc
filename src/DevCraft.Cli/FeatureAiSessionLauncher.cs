@@ -89,7 +89,7 @@ public sealed class FeatureAiSessionLauncher : IFeatureAiSessionLauncher, IDevCr
             Project:
             - Key: {projectConfiguration.ProjectKey}
             - Name: {projectConfiguration.ProjectProfile.Name}
-            - Feature storage: {projectConfiguration.SelectedFeatureStorage}
+            - Feature storage: {projectConfiguration.SelectedFeatureStorage ?? "Not selected"}
 
             {featureText}
 

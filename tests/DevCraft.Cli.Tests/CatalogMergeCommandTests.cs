@@ -26,7 +26,6 @@ public sealed class CatalogMergeCommandTests
             [
                 new ProfileCatalogDocument("repo-central", "Repo Central", "Storage.", "feature-storage/repo-central.md"),
             ],
-            "repo-central",
             [
                 new SupportedTerminalClient(
                     "codex",
@@ -54,7 +53,6 @@ public sealed class CatalogMergeCommandTests
                 new ProfileCatalogDocument("console-app", "Console App", "Console project type.", "project-types/Console-App.md"),
             ],
             [],
-            "system-central",
             []);
 
         (DevCraftProfileConfiguration configuration, CatalogMergeResult result) = CatalogMergeCommand.Merge(target, source);
@@ -71,7 +69,6 @@ public sealed class CatalogMergeCommandTests
         Assert.Equal("console-app", configuration.ProjectTypes[1].Slug);
         Assert.Single(configuration.Templates);
         Assert.Equal("skill-template", configuration.Templates[0].Slug);
-        Assert.Equal("repo-central", configuration.SelectedFeatureStorage);
         Assert.Single(configuration.SupportedClients);
     }
 
@@ -93,7 +90,6 @@ public sealed class CatalogMergeCommandTests
                 [],
                 [],
                 [],
-                "repo-central",
                 []));
         string sourcePath = Path.Combine(sourceRoot.Path, "catalog.json");
         Directory.CreateDirectory(Path.Combine(sourceRoot.Path, "skills"));
@@ -123,7 +119,6 @@ public sealed class CatalogMergeCommandTests
                     new ProfileCatalogDocument("project-type-one", "Project Type One", "Added project type.", "project-types/Project-Type-One.md"),
                 ],
                 [],
-                "repo-central",
                 []));
         File.Move(Path.Combine(sourceRoot.Path, "configure.json"), sourcePath);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
@@ -150,7 +145,7 @@ public sealed class CatalogMergeCommandTests
         Directory.CreateDirectory(profile);
         DevCraftProfileConfigurationWriter.Write(
             profile,
-            new DevCraftProfileConfiguration([], [], [], [], [], [], "repo-central", []));
+            new DevCraftProfileConfiguration([], [], [], [], [], [], []));
         Directory.CreateDirectory(Path.Combine(sourceRoot.Path, "skills"));
         File.WriteAllText(Path.Combine(sourceRoot.Path, "skills", "Present.md"), "# Present Skill");
         string sourcePath = Path.Combine(sourceRoot.Path, "catalog.json");
@@ -168,7 +163,6 @@ public sealed class CatalogMergeCommandTests
                 [],
                 [],
                 [],
-                "repo-central",
                 []));
         File.Move(Path.Combine(sourceRoot.Path, "configure.json"), sourcePath);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));

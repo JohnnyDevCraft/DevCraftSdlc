@@ -7,5 +7,4 @@ public sealed record DevCraftProfileConfiguration(
     IReadOnlyList<ProfileCatalogDocument> Templates,
     IReadOnlyList<ProfileCatalogDocument> ProjectTypes,
     IReadOnlyList<ProfileCatalogDocument> FeatureStorageTypes,
-    string SelectedFeatureStorage,
     IReadOnlyList<SupportedTerminalClient> SupportedClients);

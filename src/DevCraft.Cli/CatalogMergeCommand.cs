@@ -60,7 +60,6 @@ public static class CatalogMergeCommand
             target.Templates,
             projectTypes,
             target.FeatureStorageTypes,
-            target.SelectedFeatureStorage,
             target.SupportedClients);
 
         return (
@@ -97,7 +96,6 @@ public static class CatalogMergeCommand
                 source.Templates,
                 projectTypes,
                 source.FeatureStorageTypes,
-                source.SelectedFeatureStorage,
                 source.SupportedClients),
             new CatalogMergeResult(
                 0,

@@ -727,7 +727,6 @@ public static class ProfileStructureInitializer
             ProfileDocumentCatalogBuilder.Build(profileDirectory, "templates"),
             ProfileDocumentCatalogBuilder.Build(profileDirectory, "project-types"),
             ProfileDocumentCatalogBuilder.Build(profileDirectory, "feature-storage"),
-            "repo-central",
             SupportedTerminalClientCatalog.Create());
 
         if (File.Exists(configurePath))

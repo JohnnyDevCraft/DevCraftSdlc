@@ -33,7 +33,6 @@ public static class ConsoleCatalogWriter
 
         if (category is CatalogCategory.All or CatalogCategory.FeatureStorageTypes)
         {
-            AnsiConsole.MarkupLine($"[grey]Selected feature storage: {Markup.Escape(configuration.SelectedFeatureStorage)}[/]");
             WriteCategory("Feature Storage Types", configuration.FeatureStorageTypes);
         }
 

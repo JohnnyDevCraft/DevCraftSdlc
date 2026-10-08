@@ -26,6 +26,7 @@ public static class FeatureCommand
 
         if (args[0].Equals("list", StringComparison.OrdinalIgnoreCase))
         {
+            projectConfiguration = FeatureStorageSelector.EnsureSelected(context, console, projectConfiguration);
             ListFeatures(context, projectConfiguration, console, launcher, client ?? SelectFallbackClient(context));
             return;
         }
@@ -40,6 +41,7 @@ public static class FeatureCommand
                 return;
             }
 
+            projectConfiguration = FeatureStorageSelector.EnsureSelected(context, console, projectConfiguration);
             CreateFeature(context, projectConfiguration, featureName, console, launcher, client ?? SelectFallbackClient(context));
             return;
         }
@@ -78,13 +80,15 @@ public static class FeatureCommand
         IFeatureAiSessionLauncher launcher,
         SupportedTerminalClient client)
     {
+        string storageType = projectConfiguration.SelectedFeatureStorage
+            ?? throw new InvalidOperationException("Feature storage must be selected before creating a feature.");
         string slug = UniqueSlug(SlugGenerator.Create(featureName), projectConfiguration.Features);
         DevCraftFeature feature = new(
             featureName,
             slug,
             "Pending.",
             Guid.NewGuid().ToString(),
-            projectConfiguration.SelectedFeatureStorage,
+            storageType,
             null);
         ProjectDevCraftConfiguration updatedConfiguration = projectConfiguration with
         {
@@ -93,11 +97,11 @@ public static class FeatureCommand
 
         ProjectDevCraftConfigurationStore.Write(context.CurrentDirectory, updatedConfiguration);
 
-        if (updatedConfiguration.SelectedFeatureStorage.Equals(FeatureStorageMode.SystemCentral, StringComparison.OrdinalIgnoreCase))
+        if (storageType.Equals(FeatureStorageMode.SystemCentral, StringComparison.OrdinalIgnoreCase))
         {
             AddSystemCentralFeature(context, updatedConfiguration, feature);
         }
-        else if (updatedConfiguration.SelectedFeatureStorage.Equals(FeatureStorageMode.RepoCentral, StringComparison.OrdinalIgnoreCase))
+        else if (storageType.Equals(FeatureStorageMode.RepoCentral, StringComparison.OrdinalIgnoreCase))
         {
             Directory.CreateDirectory(Path.Combine(context.CurrentDirectory, ".devcraft", "features", feature.FolderName));
         }

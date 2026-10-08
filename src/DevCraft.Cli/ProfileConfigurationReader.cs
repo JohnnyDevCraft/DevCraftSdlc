@@ -10,7 +10,7 @@ public static class ProfileConfigurationReader
 
         if (!File.Exists(path))
         {
-            return new DevCraftProfileConfiguration([], [], [], [], [], [], "repo-central", []);
+            return new DevCraftProfileConfiguration([], [], [], [], [], [], []);
         }
 
         return ReadFile(path);
@@ -26,7 +26,7 @@ public static class ProfileConfigurationReader
             });
 
         return configuration is null
-            ? new DevCraftProfileConfiguration([], [], [], [], [], [], "repo-central", [])
+            ? new DevCraftProfileConfiguration([], [], [], [], [], [], [])
             : Normalize(configuration);
     }
 
@@ -39,9 +39,6 @@ public static class ProfileConfigurationReader
             configuration.Templates ?? [],
             configuration.ProjectTypes ?? [],
             configuration.FeatureStorageTypes ?? [],
-            string.IsNullOrWhiteSpace(configuration.SelectedFeatureStorage)
-                ? "repo-central"
-                : configuration.SelectedFeatureStorage,
             configuration.SupportedClients ?? []);
     }
 }
