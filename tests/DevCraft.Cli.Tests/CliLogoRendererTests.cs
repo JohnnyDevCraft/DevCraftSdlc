@@ -37,13 +37,22 @@ public sealed class CliLogoRendererTests
     }
 
     [Fact]
+    public void CreateIncludesVersion()
+    {
+        CliLogo logo = CliLogoRenderer.Create();
+
+        string output = logo.ToPlainText();
+
+        Assert.Contains("Version 1.0.0-alpha.3", output);
+    }
+
+    [Fact]
     public void CreateDoesNotIncludeUnrelatedWelcomeContent()
     {
         CliLogo logo = CliLogoRenderer.Create();
 
         string output = logo.ToPlainText();
 
-        Assert.DoesNotContain("version", output, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("status", output, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("next action", output, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("dashboard", output, StringComparison.OrdinalIgnoreCase);

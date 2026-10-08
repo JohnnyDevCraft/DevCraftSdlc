@@ -9,6 +9,7 @@ public static class DevCraftMenuCommand
     private const string CreateProject = "Create Project";
     private const string Features = "Features";
     private const string ConfigureDevCraft = "Configure DevCraft";
+    private const string Exit = "Exit";
     private const string ListFeatures = "List features";
     private const string NewFeature = "Create new feature";
     private const string ImportSettings = "Import Settings";
@@ -30,54 +31,70 @@ public static class DevCraftMenuCommand
             return;
         }
 
-        console.ShowMenuShell();
-        string selected = console.Select(
-            "What do you want to work on?",
-            [ProjectDiscovery, ProjectDesign, ProjectTheme, ProjectSetup, CreateProject, Features, ConfigureDevCraft]);
+        string? notice = null;
 
-        switch (selected)
+        while (true)
         {
-            case ProjectDiscovery:
-                launcher.Launch(
-                    context,
-                    projectConfiguration,
-                    SelectAiClient(context, console),
-                    "Work on project discovery. Use and maintain the repository DevCraft discovery artifact for this project.");
-                break;
-            case ProjectDesign:
-                launcher.Launch(
-                    context,
-                    projectConfiguration,
-                    SelectAiClient(context, console),
-                    "Work on project design and component design. Use and maintain the repository DevCraft design artifact for this project.");
-                break;
-            case ProjectTheme:
-                launcher.Launch(
-                    context,
-                    projectConfiguration,
-                    SelectAiClient(context, console),
-                    "Work on project theme. Use and maintain the repository DevCraft theme artifact for this project.");
-                break;
-            case ProjectSetup:
-                launcher.Launch(
-                    context,
-                    projectConfiguration,
-                    SelectAiClient(context, console),
-                    "Work on project setup. Use and maintain the repository DevCraft setup context for this project.");
-                break;
-            case CreateProject:
-                RunCreateProject(context, console, launcher, projectConfiguration);
-                break;
-            case Features:
-                RunFeatureMenu(context, console, featureLauncher);
-                break;
-            case ConfigureDevCraft:
-                RunConfigureDevCraft(context, console, launcher, projectConfiguration);
-                break;
+            console.ShowMenuShell();
+            string title = notice is null
+                ? "What do you want to work on?"
+                : $"{notice}{Environment.NewLine}{Environment.NewLine}What do you want to work on?";
+            notice = null;
+            string selected = console.Select(
+                title,
+                [ProjectDiscovery, ProjectDesign, ProjectTheme, ProjectSetup, CreateProject, Features, ConfigureDevCraft, Exit]);
+
+            switch (selected)
+            {
+                case Exit:
+                    return;
+                case ProjectDiscovery:
+                    launcher.Launch(
+                        context,
+                        projectConfiguration,
+                        SelectAiClient(context, console),
+                        "Work on project discovery. Use and maintain the repository DevCraft discovery artifact for this project.");
+                    break;
+                case ProjectDesign:
+                    launcher.Launch(
+                        context,
+                        projectConfiguration,
+                        SelectAiClient(context, console),
+                        "Work on project design and component design. Use and maintain the repository DevCraft design artifact for this project.");
+                    break;
+                case ProjectTheme:
+                    launcher.Launch(
+                        context,
+                        projectConfiguration,
+                        SelectAiClient(context, console),
+                        "Work on project theme. Use and maintain the repository DevCraft theme artifact for this project.");
+                    break;
+                case ProjectSetup:
+                    launcher.Launch(
+                        context,
+                        projectConfiguration,
+                        SelectAiClient(context, console),
+                        "Work on project setup. Use and maintain the repository DevCraft setup context for this project.");
+                    break;
+                case CreateProject:
+                    if (RunCreateProject(context, console, launcher, projectConfiguration))
+                    {
+                        break;
+                    }
+
+                    notice = "There are no project types in the catalog. Please add a project type and try again.";
+                    break;
+                case Features:
+                    RunFeatureMenu(context, console, featureLauncher);
+                    break;
+                case ConfigureDevCraft:
+                    RunConfigureDevCraft(context, console, launcher, projectConfiguration);
+                    break;
+            }
         }
     }
 
-    private static void RunCreateProject(
+    private static bool RunCreateProject(
         StartupContext context,
         IConsoleInteraction console,
         IDevCraftAiSessionLauncher launcher,
@@ -87,8 +104,7 @@ public static class DevCraftMenuCommand
 
         if (profileConfiguration.ProjectTypes.Count == 0)
         {
-            console.WriteStatus("No project types are configured.");
-            return;
+            return false;
         }
 
         console.ShowMenuShell();
@@ -113,6 +129,8 @@ public static class DevCraftMenuCommand
 
             Read the selected project type Markdown file before making recommendations or creating project files.
             """);
+
+        return true;
     }
 
     private static string ProjectTypeChoice(ProfileCatalogDocument projectType)

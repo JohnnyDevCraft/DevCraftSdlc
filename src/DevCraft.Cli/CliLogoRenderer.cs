@@ -1,5 +1,6 @@
 using Figgle;
 using Figgle.Fonts;
+using System.Reflection;
 
 namespace DevCraft.Cli;
 
@@ -24,7 +25,8 @@ public static class CliLogoRenderer
         return new CliLogo(
             lines,
             CliBranding.CopyrightLine,
-            CliBranding.CreatorLine);
+            CliBranding.CreatorLine,
+            $"Version {GetVersion()}");
     }
 
     private static IReadOnlyList<string> Render(string text)
@@ -38,5 +40,15 @@ public static class CliLogoRenderer
     private static string GetLine(IReadOnlyList<string> lines, int index)
     {
         return index < lines.Count ? lines[index] : string.Empty;
+    }
+
+    private static string GetVersion()
+    {
+        return typeof(CliLogoRenderer)
+            .Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion
+            ?? typeof(CliLogoRenderer).Assembly.GetName().Version?.ToString()
+            ?? "unknown";
     }
 }

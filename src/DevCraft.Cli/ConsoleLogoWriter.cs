@@ -17,6 +17,6 @@ public static class ConsoleLogoWriter
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine($"[grey]{Markup.Escape(logo.CopyrightLine)}[/]");
         AnsiConsole.MarkupLine($"[grey]{Markup.Escape(logo.CreatorLine)}[/]");
+        AnsiConsole.MarkupLine($"[grey]{Markup.Escape(logo.VersionLine)}[/]");
     }
 }
-

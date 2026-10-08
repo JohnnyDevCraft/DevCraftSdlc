@@ -17,6 +17,8 @@ public sealed class FakeConsoleInteraction : IConsoleInteraction
 
     public List<string> StartupStages { get; } = [];
 
+    public List<string> SelectTitles { get; } = [];
+
     public int MenuShellCount { get; private set; }
 
     public void WriteStatus(string message)
@@ -41,6 +43,8 @@ public sealed class FakeConsoleInteraction : IConsoleInteraction
 
     public string Select(string title, IReadOnlyList<string> choices)
     {
+        SelectTitles.Add(title);
+
         if (selections.Count > 0)
         {
             return selections.Dequeue();

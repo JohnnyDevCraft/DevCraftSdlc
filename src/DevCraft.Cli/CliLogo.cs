@@ -3,7 +3,8 @@ namespace DevCraft.Cli;
 public sealed record CliLogo(
     IReadOnlyList<CliLogoLine> Lines,
     string CopyrightLine,
-    string CreatorLine)
+    string CreatorLine,
+    string VersionLine)
 {
     public string ToPlainText()
     {
@@ -13,7 +14,7 @@ public sealed record CliLogo(
             Environment.NewLine,
             logoLines
                 .Append(CopyrightLine)
-                .Append(CreatorLine));
+                .Append(CreatorLine)
+                .Append(VersionLine));
     }
 }
-

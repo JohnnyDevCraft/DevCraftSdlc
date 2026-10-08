@@ -19,7 +19,7 @@ public sealed class DevCraftMenuCommandTests
         Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
         ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
-        FakeConsoleInteraction console = new([], ["Project discovery"]);
+        FakeConsoleInteraction console = new([], ["Project discovery", "OpenAI Codex (codex)", "Exit"]);
         FakeDevCraftAiSessionLauncher launcher = new();
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
@@ -41,7 +41,7 @@ public sealed class DevCraftMenuCommandTests
         Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
         ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
-        FakeConsoleInteraction console = new(["Menu Feature"], ["Features", "Create new feature"]);
+        FakeConsoleInteraction console = new(["Menu Feature"], ["Features", "Create new feature", "OpenAI Codex (codex)", "Exit"]);
         FakeDevCraftAiSessionLauncher launcher = new();
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
@@ -76,7 +76,7 @@ public sealed class DevCraftMenuCommandTests
         ProfileStructureInitializer.Ensure(profile, sourceRoot.Path);
         ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
-        FakeConsoleInteraction console = new([], ["Create Project", "Web API (web-api)"]);
+        FakeConsoleInteraction console = new([], ["Create Project", "Web API (web-api)", "OpenAI Codex (codex)", "Exit"]);
         FakeDevCraftAiSessionLauncher launcher = new();
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
@@ -86,6 +86,32 @@ public sealed class DevCraftMenuCommandTests
         Assert.Contains("create a project", instruction, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Web API", instruction);
         Assert.Contains(Path.Combine(profile, "project-types", "web-api.md"), instruction);
+        Assert.Empty(featureLauncher.Launches);
+    }
+
+    [Fact]
+    public void RunCreateProjectWithoutProjectTypesReturnsToWorkMenu()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        using TestDirectory sourceRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        ProfileStructureInitializer.Ensure(profile, sourceRoot.Path);
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Create Project", "Project discovery", "OpenAI Codex (codex)", "Exit"]);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        Assert.Contains(
+            console.SelectTitles,
+            title => title.Contains("There are no project types in the catalog", StringComparison.OrdinalIgnoreCase));
+        string instruction = Assert.Single(launcher.Instructions);
+        Assert.Contains("project discovery", instruction, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(featureLauncher.Launches);
     }
 
@@ -102,7 +128,7 @@ public sealed class DevCraftMenuCommandTests
         ProfileStructureInitializer.Ensure(profile, sourceRoot.Path);
         ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
-        FakeConsoleInteraction console = new([importRoot.Path], ["Configure DevCraft", "Import Settings"]);
+        FakeConsoleInteraction console = new([importRoot.Path], ["Configure DevCraft", "Import Settings", "OpenAI Codex (codex)", "Exit"]);
         FakeDevCraftAiSessionLauncher launcher = new();
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
@@ -127,7 +153,7 @@ public sealed class DevCraftMenuCommandTests
         ProfileStructureInitializer.Ensure(profile, sourceRoot.Path);
         ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
-        FakeConsoleInteraction console = new([], ["Configure DevCraft", "Create Skill"]);
+        FakeConsoleInteraction console = new([], ["Configure DevCraft", "Create Skill", "OpenAI Codex (codex)", "Exit"]);
         FakeDevCraftAiSessionLauncher launcher = new();
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
