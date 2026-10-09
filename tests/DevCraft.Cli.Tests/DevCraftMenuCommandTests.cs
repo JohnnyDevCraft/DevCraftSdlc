@@ -387,7 +387,7 @@ public sealed class DevCraftMenuCommandTests : IDisposable
     }
 
     [Fact]
-    public void RunLoggingMenuAddsPerson()
+    public void RunManagePeopleAddsPersonAndReturnsToManagePeopleMenu()
     {
         using TestDirectory root = new();
         using TestDirectory profileRoot = new();
@@ -398,8 +398,8 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
         FakeConsoleInteraction console = new(
-            ["Ada", "Lovelace", "ada@example.com", "555-0100", "Advisor", "Active"],
-            ["Logging", "Add Person", "Exit"]);
+            ["Ada", "Lovelace", "ada@example.com", "555-0100", "Principal Engineer", "Platform", "Analytical Engines", "Trusted collaborator"],
+            ["Logging", "Manage People", "Add Person", "ACTIVE", "Back", "Exit"]);
         FakeDevCraftAiSessionLauncher launcher = new();
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
@@ -407,7 +407,107 @@ public sealed class DevCraftMenuCommandTests : IDisposable
 
         SituationPerson person = Assert.Single(new FileSituationStore(profile).Read(false).People);
         Assert.Equal("Ada", person.FirstName);
-        Assert.Equal("Advisor", person.Relation);
+        Assert.Equal("Principal Engineer", person.JobTitle);
+        Assert.Equal("Platform", person.AssignedTeam);
+        Assert.Equal("Analytical Engines", person.Organization);
+        Assert.Equal("Trusted collaborator", person.Relation);
+        Assert.Equal("ACTIVE", person.Status);
+        Assert.Contains("Manage People", console.SelectTitles);
+        Assert.Equal(2, console.SelectTitles.Count(title => title == "Manage People"));
+    }
+
+    [Fact]
+    public void RunManagePeopleListsPeopleSortedWithGoBackFirst()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        DevCraftProfileConfigurationWriter.Write(profile, new DevCraftProfileConfiguration([], [], [], [], [], [], [], true));
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        FileSituationStore store = new(profile);
+        store.AddPerson(new SituationPerson("person-2", "Grace", "Hopper", "grace@example.com", "555-0101", "Mentor", "ACTIVE", "Admiral", "Compiler", "Navy", null));
+        store.AddPerson(new SituationPerson("person-1", "Ada", "Lovelace", "ada@example.com", "555-0100", "Advisor", "ACTIVE", "Architect", "Math", "Analytical Engines", null));
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Logging", "Manage People", "List People", "Go Back", "Back", "Exit"]);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        int listIndex = console.SelectTitles.FindIndex(title => title == "List People");
+        Assert.Equal("Go Back", console.SelectChoices[listIndex][0]);
+        Assert.Equal("Ada Lovelace (ada@example.com) | Architect | Math | Analytical Engines", console.SelectChoices[listIndex][1]);
+        Assert.Equal("Grace Hopper (grace@example.com) | Admiral | Compiler | Navy", console.SelectChoices[listIndex][2]);
+    }
+
+    [Fact]
+    public void RunManagePeopleEditsPersonAndTogglesInactiveDate()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        DevCraftProfileConfigurationWriter.Write(profile, new DevCraftProfileConfiguration([], [], [], [], [], [], [], true));
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        FileSituationStore store = new(profile);
+        store.AddPerson(new SituationPerson("person-1", "Ada", "Lovelace", "ada@example.com", "555-0100", "Advisor", "ACTIVE", "Architect", "Math", "Analytical Engines", null));
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new(
+            ["Ada", "Byron", "2/2/2026"],
+            ["Logging", "Manage People", "List People", "Ada Lovelace (ada@example.com) | Architect | Math | Analytical Engines", "Edit Name", "Make Inactive", "Go Back", "Go Back", "Back", "Exit"]);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        SituationPerson person = Assert.Single(new FileSituationStore(profile).Read(false).People);
+        Assert.Equal("person-1", person.RowId);
+        Assert.Equal("Ada", person.FirstName);
+        Assert.Equal("Byron", person.LastName);
+        Assert.Equal("INACTIVE", person.Status);
+        Assert.Equal(new DateTimeOffset(2026, 2, 2, 0, 0, 0, TimeSpan.Zero), person.InactiveDate);
+        Assert.Contains(console.StatusMessages, message => message.Contains("INACTIVE (2/2/2026)", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void RunManagePeopleMakesInactivePersonActiveAndClearsInactiveDate()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        DevCraftProfileConfigurationWriter.Write(profile, new DevCraftProfileConfiguration([], [], [], [], [], [], [], true));
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        FileSituationStore store = new(profile);
+        store.AddPerson(new SituationPerson(
+            "person-1",
+            "Ada",
+            "Byron",
+            "ada@example.com",
+            "555-0100",
+            "Advisor",
+            "INACTIVE",
+            "Architect",
+            "Math",
+            "Analytical Engines",
+            new DateTimeOffset(2026, 2, 2, 0, 0, 0, TimeSpan.Zero)));
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new(
+            [],
+            ["Logging", "Manage People", "List People", "Ada Byron (ada@example.com) | Architect | Math | Analytical Engines", "Make Active", "Go Back", "Go Back", "Back", "Exit"]);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        SituationPerson person = Assert.Single(new FileSituationStore(profile).Read(false).People);
+        Assert.Equal("person-1", person.RowId);
+        Assert.Equal("ACTIVE", person.Status);
+        Assert.Null(person.InactiveDate);
     }
 
     [Fact]

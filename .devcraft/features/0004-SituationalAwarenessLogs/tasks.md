@@ -243,3 +243,7 @@
 - [x] VAL-025 RED: Prove profile `projects.json` lacks conversational tracking status/schema support and the conversation handoff lacks tracking guidance.
 - [x] VAL-026 GREEN: Add profile-only `projects.json` tracking shape with canonical DevCraft feature statuses and situational conversation guidance.
 - [x] VAL-027 Bump DevCraft release metadata, docs, and tests to `1.0.0-beta.7`.
+- [x] VAL-028 RED: Prove the current people model/menu cannot satisfy Beta 8 Manage People, position fields, inactive dates, or upsert editing.
+- [x] VAL-029 GREEN: Add Manage People list/add/edit/status flows, new people fields, legacy normalization, and storage upsert behavior.
+- [x] VAL-030 Run full Beta 8 local validation: package audit, tests, build, installer selection, publish, and codesign.
+- [x] VAL-031 Bump DevCraft release metadata, docs, and tests to `1.0.0-beta.8`.

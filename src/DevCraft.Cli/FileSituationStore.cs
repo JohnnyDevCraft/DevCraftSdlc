@@ -15,7 +15,7 @@ public sealed class FileSituationStore : ISituationStore
 
     public SituationSnapshot Read(bool uncompressedOnly)
     {
-        IReadOnlyList<SituationPerson> people = ReadList<SituationPerson>(PeoplePath);
+        IReadOnlyList<SituationPerson> people = ReadList<SituationPerson>(PeoplePath).Select(NormalizePerson).ToList();
         IReadOnlyList<SituationLogEntry> logEntries = ReadList<SituationLogEntry>(LogEntriesPath);
         IReadOnlyList<SituationSummary> summaries = ReadList<SituationSummary>(SummariesPath);
 
@@ -34,6 +34,23 @@ public sealed class FileSituationStore : ISituationStore
     {
         List<SituationPerson> people = ReadList<SituationPerson>(PeoplePath).ToList();
         people.Add(person);
+        WriteList(PeoplePath, people);
+    }
+
+    public void UpsertPerson(SituationPerson person)
+    {
+        List<SituationPerson> people = ReadList<SituationPerson>(PeoplePath).ToList();
+        int index = people.FindIndex(existing => existing.RowId.Equals(person.RowId, StringComparison.OrdinalIgnoreCase));
+
+        if (index >= 0)
+        {
+            people[index] = person;
+        }
+        else
+        {
+            people.Add(person);
+        }
+
         WriteList(PeoplePath, people);
     }
 
@@ -104,5 +121,21 @@ public sealed class FileSituationStore : ISituationStore
     private static void WriteList<T>(string path, IReadOnlyList<T> values)
     {
         File.WriteAllText(path, JsonSerializer.Serialize(values, JsonOptions));
+    }
+
+    private static SituationPerson NormalizePerson(SituationPerson person)
+    {
+        string status = (person.Status ?? string.Empty).Trim();
+
+        if (status.Equals("Active", StringComparison.OrdinalIgnoreCase))
+        {
+            status = "ACTIVE";
+        }
+        else if (status.Equals("Inactive", StringComparison.OrdinalIgnoreCase))
+        {
+            status = "INACTIVE";
+        }
+
+        return person with { Status = status };
     }
 }

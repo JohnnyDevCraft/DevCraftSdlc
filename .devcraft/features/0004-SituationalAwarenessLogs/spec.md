@@ -23,7 +23,7 @@ DevCraft needs situational awareness so AI agents can understand ongoing work, r
 
 The feature adds profile-level situational awareness data for people, log entries, and summaries. Operators can add people and log entries through a new Logging menu. Operators can also compress uncompressed lower-level records into higher-level summaries using an AI client.
 
-People records track `RowId`, `FirstName`, `LastName`, `Email`, `Phone`, `Relation`, and `Status`. DevCraft can pass this people data into AI prompts as consumable structured data.
+People records track `RowId`, `FirstName`, `LastName`, `Email`, `Phone`, `JobTitle`, `AssignedTeam`, `Organization`, `Relation`, `Status`, and `InactiveDate`. DevCraft can pass this people data into AI prompts as consumable structured data.
 
 Log entry records track `RowId`, `DateTime`, `LogData`, and `IsCompressed`. Summary records track `RowId`, `DateTime`, `SummaryData`, `Type`, and `IsCompressed`, where `Type` is one of `week`, `sprint`, `month`, `quarter`, or `year`.
 
@@ -67,7 +67,7 @@ When `SituationStorage` is `file`, DevCraft stores situation data under the prof
 
 When `SituationStorage` is `database`, DevCraft uses MongoDB with three collections:
 
-- `People` with `RowId`, `FirstName`, `LastName`, `Email`, `Phone`, `Relation`, and `Status`.
+- `People` with `RowId`, `FirstName`, `LastName`, `Email`, `Phone`, `JobTitle`, `AssignedTeam`, `Organization`, `Relation`, `Status`, and `InactiveDate`.
 - `LogEntries` with `RowId`, `DateTime`, `LogData`, and `IsCompressed`.
 - `Summaries` with `RowId`, `DateTime`, `SummaryData`, `Type`, and `IsCompressed`.
 
@@ -77,7 +77,7 @@ When situational awareness is enabled and the operator changes storage mode, Dev
 
 The main menu includes `Logging`. The Logging menu allows the operator to:
 
-- Add a person.
+- Manage people.
 - Add a log entry.
 - Compress week.
 - Compress sprint.
@@ -86,13 +86,15 @@ The main menu includes `Logging`. The Logging menu allows the operator to:
 - Compress year.
 - Go back.
 
+The Manage People submenu includes `List People`, `Add Person`, and `Back`. `List People` starts with `Go Back`, then selectable people sorted by first name and last name in the format `FirstName LastName (Email) | JobTitle | Team | Org`. Selecting a person displays current values and supports editing name, contact, position, relationship details, and active/inactive status. Active and inactive states are stored separately from the inactive date so legacy status values can be normalized without losing existing records.
+
 ## Requirements
 
 - Requirement 1: DevCraft must create the `situation` folder when setting up the applicable DevCraft runtime structure.
 - Requirement 2: File storage must use profile `.DevCraft/situation/`.
 - Requirement 3: The main DevCraft menu must include a `Logging` option.
-- Requirement 4: The Logging menu must include options to add a person, add a log entry, compress week, compress sprint, compress month, compress quarter, compress year, and go back.
-- Requirement 5: Add Person must ask for first name, last name, email, phone, relation, and status.
+- Requirement 4: The Logging menu must include options to manage people, add a log entry, compress week, compress sprint, compress month, compress quarter, compress year, and go back.
+- Requirement 5: Manage People must include List People, Add Person, and Back.
 - Requirement 6: Add Log Entry must auto-set the entry date and ask the operator for entry data.
 - Requirement 7: Compress Week must be visible only when `SituationScale` is `weeks`.
 - Requirement 8: Compress Sprint must be visible only when `SituationScale` is `sprint`.
@@ -104,7 +106,7 @@ The main menu includes `Logging`. The Logging menu allows the operator to:
 - Requirement 14: Each compression handoff must include enough instruction for the AI client to produce a concise structured summary record.
 - Requirement 15: The AI client should receive relevant DevCraft context files when performing compression.
 - Requirement 16: Empty source logs should produce a clear message instead of launching an AI client.
-- Requirement 17: People data must support structured records with `RowId`, `FirstName`, `LastName`, `Email`, `Phone`, `Relation`, and `Status`.
+- Requirement 17: People data must support structured records with `RowId`, `FirstName`, `LastName`, `Email`, `Phone`, `JobTitle`, `AssignedTeam`, `Organization`, `Relation`, `Status`, and `InactiveDate`.
 - Requirement 18: Log entry data must support structured records with `RowId`, `DateTime`, `LogData`, and `IsCompressed`.
 - Requirement 19: Summary data must support structured records with `RowId`, `DateTime`, `SummaryData`, `Type`, and `IsCompressed`.
 - Requirement 20: The profile-level DevCraft `configure.json` must include `SituationEnabled`, `SituationScale`, `SituationStorage`, and `SituationConnection`.
@@ -135,6 +137,13 @@ The main menu includes `Logging`. The Logging menu allows the operator to:
 - Requirement 45: `Situational Conversation` must not silently enable situational awareness or change situation storage/preferences. If situational awareness is disabled, DevCraft must return to the main menu with a clear configuration notice.
 - Requirement 46: The profile feature tracking index at `.DevCraft/features/projects.json` must support conversational tracking fields: project `id`, `name`, `repo-location`, `repo-name`, and features with `id`, `feature-name`, `description`, `work-item-id`, and canonical DevCraft `status`.
 - Requirement 47: The canonical feature status values for conversational tracking must match DevCraft feature states: `Discovery`, `Clarification`, `Research`, `Planning`, `Analysis`, `Implementation`, and `Complete`.
+- Requirement 48: Add Person must ask for first name, last name, email, phone, job title, assigned team, organization, relationship details, and status. If status is inactive, it must ask for an inactive date.
+- Requirement 49: List People must start with `Go Back`, then show people sorted by first name and last name in the format `FirstName LastName (Email) | JobTitle | Team | Org`.
+- Requirement 50: Selecting a person must display current values and allow Edit Name, Edit Contact, Edit Position, Edit Relationship, Make Inactive or Make Active, and Go Back.
+- Requirement 51: Editing a person must preserve `RowId`, update the existing record in the active storage provider, and avoid duplicate rows.
+- Requirement 52: Make Inactive must set status to `INACTIVE` and store an inactive date. Make Active must set status to `ACTIVE` and clear the inactive date.
+- Requirement 53: Legacy people records without position fields or inactive dates must still load, and recognized active/inactive status values should normalize to `ACTIVE` or `INACTIVE`.
+- Requirement 54: AI handoff guidance must describe the new people fields, include all people as source data, and keep uncompressed-only filtering limited to log entries and summaries.
 
 ## Open Questions
 

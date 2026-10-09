@@ -28,7 +28,7 @@ public static class SituationPromptContextBuilder
             - Storage: file
             - Scale: {configuration.SituationScale}
             - Situation folder: {situationDirectory}
-            - {Path.Combine(situationDirectory, "people.json")}: relationship/contact records for tracked people. Read all records.
+            - {Path.Combine(situationDirectory, "people.json")}: relationship/contact records for tracked people. Read all records. Fields include RowId, FirstName, LastName, Email, Phone, JobTitle, AssignedTeam, Organization, Relation, Status, and InactiveDate.
             - {Path.Combine(situationDirectory, "log-entries.json")}: individual entries. Use only records where IsCompressed=false.
             - {Path.Combine(situationDirectory, "summaries.json")}: summary records. Use only records where IsCompressed=false.
             - Summary Type values:
@@ -55,7 +55,7 @@ public static class SituationPromptContextBuilder
             - Profile configuration: {configurationPath}
             - Read SituationConnection from the local profile configuration when you need to connect. Do not echo, summarize, or paste the connection string into the conversation.
             - Database name: {databaseName}
-            - Collection People: relationship/contact records for tracked people. Read all documents. Fields: RowId, FirstName, LastName, Email, Phone, Relation, Status.
+            - Collection People: relationship/contact records for tracked people. Read all documents. Fields: RowId, FirstName, LastName, Email, Phone, JobTitle, AssignedTeam, Organization, Relation, Status, InactiveDate.
             - Collection LogEntries: individual entries. Read only documents where IsCompressed=false. Fields: RowId, DateTime, LogData, IsCompressed.
             - Collection Summaries: summary records. Read only documents where IsCompressed=false. Fields: RowId, DateTime, SummaryData, Type, IsCompressed.
             - Summary Type values:

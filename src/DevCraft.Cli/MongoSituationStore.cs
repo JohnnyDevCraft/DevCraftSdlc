@@ -20,7 +20,7 @@ public sealed class MongoSituationStore : ISituationStore
 
     public SituationSnapshot Read(bool uncompressedOnly)
     {
-        IReadOnlyList<SituationPerson> peopleRecords = people.Find(_ => true).ToList();
+        IReadOnlyList<SituationPerson> peopleRecords = people.Find(_ => true).ToList().Select(NormalizePerson).ToList();
         IReadOnlyList<SituationLogEntry> entryRecords = uncompressedOnly
             ? logEntries.Find(entry => !entry.IsCompressed).ToList()
             : logEntries.Find(_ => true).ToList();
@@ -34,6 +34,14 @@ public sealed class MongoSituationStore : ISituationStore
     public void AddPerson(SituationPerson person)
     {
         people.InsertOne(person);
+    }
+
+    public void UpsertPerson(SituationPerson person)
+    {
+        people.ReplaceOne(
+            existing => existing.RowId == person.RowId,
+            person,
+            new ReplaceOptions { IsUpsert = true });
     }
 
     public void AddLogEntry(SituationLogEntry logEntry)
@@ -83,5 +91,21 @@ public sealed class MongoSituationStore : ISituationStore
         {
             summaries.InsertMany(snapshot.Summaries);
         }
+    }
+
+    private static SituationPerson NormalizePerson(SituationPerson person)
+    {
+        string status = (person.Status ?? string.Empty).Trim();
+
+        if (status.Equals("Active", StringComparison.OrdinalIgnoreCase))
+        {
+            status = "ACTIVE";
+        }
+        else if (status.Equals("Inactive", StringComparison.OrdinalIgnoreCase))
+        {
+            status = "INACTIVE";
+        }
+
+        return person with { Status = status };
     }
 }

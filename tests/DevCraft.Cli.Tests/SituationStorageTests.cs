@@ -42,7 +42,66 @@ public sealed class SituationStorageTests
         SituationPerson person = Assert.Single(snapshot.People);
         SituationLogEntry entry = Assert.Single(snapshot.LogEntries);
         Assert.Equal("Ada", person.FirstName);
+        Assert.Equal("ACTIVE", person.Status);
         Assert.Equal("Met with Ada.", entry.LogData);
+    }
+
+    [Fact]
+    public void FileStoreReadsLegacyPeopleWithDefaultPositionFields()
+    {
+        using TestDirectory root = new();
+        string situation = Path.Combine(root.Path, "situation");
+        Directory.CreateDirectory(situation);
+        File.WriteAllText(
+            Path.Combine(situation, "people.json"),
+            """
+            [
+              {
+                "RowId": "person-1",
+                "FirstName": "Ada",
+                "LastName": "Lovelace",
+                "Email": "ada@example.com",
+                "Phone": "555-0100",
+                "Relation": "Advisor",
+                "Status": "Active"
+              }
+            ]
+            """);
+
+        SituationPerson person = Assert.Single(new FileSituationStore(root.Path).Read(false).People);
+
+        Assert.Equal("Ada", person.FirstName);
+        Assert.Equal("", person.JobTitle);
+        Assert.Equal("", person.AssignedTeam);
+        Assert.Equal("", person.Organization);
+        Assert.Null(person.InactiveDate);
+    }
+
+    [Fact]
+    public void FileStoreUpsertsPersonWithoutChangingRowId()
+    {
+        using TestDirectory root = new();
+        FileSituationStore store = new(root.Path);
+        SituationPerson original = new(
+            "person-1",
+            "Ada",
+            "Lovelace",
+            "ada@example.com",
+            "555-0100",
+            "Advisor",
+            "ACTIVE",
+            "Principal Engineer",
+            "Platform",
+            "Analytical Engines",
+            null);
+        store.AddPerson(original);
+
+        store.UpsertPerson(original with { Email = "ada@work.example", JobTitle = "Architect" });
+
+        SituationPerson person = Assert.Single(store.Read(false).People);
+        Assert.Equal("person-1", person.RowId);
+        Assert.Equal("ada@work.example", person.Email);
+        Assert.Equal("Architect", person.JobTitle);
     }
 
     [Fact]

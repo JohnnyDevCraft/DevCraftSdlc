@@ -7,4 +7,8 @@ public sealed record SituationPerson(
     string Email,
     string Phone,
     string Relation,
-    string Status);
+    string Status,
+    string JobTitle = "",
+    string AssignedTeam = "",
+    string Organization = "",
+    DateTimeOffset? InactiveDate = null);

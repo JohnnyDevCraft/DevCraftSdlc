@@ -6,6 +6,8 @@ public interface ISituationStore
 
     void AddPerson(SituationPerson person);
 
+    void UpsertPerson(SituationPerson person);
+
     void AddLogEntry(SituationLogEntry logEntry);
 
     void AddSummary(SituationSummary summary);

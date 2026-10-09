@@ -36,6 +36,9 @@
 - Started post-beta-6 work for a main-menu `Situational Conversation` handoff that uses explicit installed-client selection and the existing storage-aware situational context guidance.
 - Added profile-only conversational project/feature tracking support in `.DevCraft/features/projects.json` with canonical DevCraft feature statuses.
 - Bumped the release to `1.0.0-beta.7` for Beta 7.
+- Added Beta 8 people management under Logging with a Manage People submenu, sorted selectable people, in-place person editing, active/inactive toggles, inactive dates, and position fields.
+- Added backwards-compatible legacy people loading with status normalization and default values for new fields.
+- Bumped the release to `1.0.0-beta.8` for Beta 8.
 
 ## Files Changed
 
@@ -92,6 +95,13 @@
 - `tests/DevCraft.Cli.Tests/FeatureCommandTests.cs` - Added profile index tests for the conversational tracking shape, default canonical status, and legacy index compatibility.
 - `src/DevCraft.Cli/DevCraft.Cli.csproj` and `tests/DevCraft.Cli.Tests/CliLogoRendererTests.cs` - Bumped the Beta 7 release version and displayed version expectation to `1.0.0-beta.7`.
 - `README.md`, `tests/installer-release-selection.sh`, and `tests/InstallerReleaseSelection.Tests.ps1` - Updated installer documentation and release-selection tests for `1.0.0-beta.7`.
+- `src/DevCraft.Cli/SituationPerson.cs` - Added job title, assigned team, organization, and inactive date fields while preserving defaults for legacy records.
+- `src/DevCraft.Cli/ISituationStore.cs`, `src/DevCraft.Cli/FileSituationStore.cs`, and `src/DevCraft.Cli/MongoSituationStore.cs` - Added person upsert support and normalized legacy active/inactive status values.
+- `src/DevCraft.Cli/DevCraftMenuCommand.cs` - Changed Logging from direct Add Person to Manage People, added sorted list/edit flows, active/inactive status changes, and expanded Add Person prompts.
+- `src/DevCraft.Cli/SituationPromptContextBuilder.cs` - Updated file and database guidance with the new people fields.
+- `tests/DevCraft.Cli.Tests/DevCraftMenuCommandTests.cs`, `tests/DevCraft.Cli.Tests/SituationStorageTests.cs`, and `tests/DevCraft.Cli.Tests/SituationPromptContextBuilderTests.cs` - Added focused Beta 8 coverage for Manage People, sorting, edit/upsert, inactive dates, legacy records, and prompt guidance.
+- `src/DevCraft.Cli/DevCraft.Cli.csproj` and `tests/DevCraft.Cli.Tests/CliLogoRendererTests.cs` - Bumped the Beta 8 release version and displayed version expectation to `1.0.0-beta.8`.
+- `README.md`, `tests/installer-release-selection.sh`, and `tests/InstallerReleaseSelection.Tests.ps1` - Updated installer documentation and release-selection tests for `1.0.0-beta.8`.
 
 ## TDD Evidence
 
@@ -125,6 +135,12 @@
 - Red: `dotnet test --filter "FullyQualifiedName~FeatureCommandTests|FullyQualifiedName~DevCraftMenuCommandTests|FullyQualifiedName~DevCraftInstallerTests"` failed to compile after adding focused expectations because profile project tracking had no `RepositoryName` or feature `Status` surface yet.
 - Green: `dotnet test --filter "FullyQualifiedName~FeatureCommandTests|FullyQualifiedName~DevCraftMenuCommandTests|FullyQualifiedName~DevCraftInstallerTests"` passed with 27 focused tests after adding profile-only `projects.json` schema output, legacy read support, canonical status defaults, and situational conversation tracking guidance.
 - Refactor: The implementation was narrowed from the initial broad schema direction to profile `.DevCraft/features/projects.json` only, preserving repository `.devcraft/configure.json` shape and current feature command semantics.
+
+### People Management
+
+- Red: `dotnet test --filter "FullyQualifiedName~SituationStorageTests|FullyQualifiedName~DevCraftMenuCommandTests|FullyQualifiedName~SituationPromptContextBuilderTests"` failed to compile because `SituationPerson` lacked Beta 8 people fields, the storage abstraction lacked person upsert support, and the menu still exposed only direct Add Person behavior.
+- Green: `dotnet test --filter "FullyQualifiedName~SituationStorageTests|FullyQualifiedName~DevCraftMenuCommandTests|FullyQualifiedName~SituationPromptContextBuilderTests"` passed with 33 focused tests after adding Manage People, sorted selectable people, edit flows, status toggles, inactive dates, storage upserts, legacy normalization, and updated handoff guidance.
+- Refactor: File and Mongo stores keep status normalization at the provider boundary, and person edits use the same `RowId` to avoid duplicate rows across storage modes.
 
 ## Validation
 
@@ -191,6 +207,15 @@
 - `file artifacts/publish/osx-arm64/DevCraft.Cli` reported a Mach-O 64-bit arm64 executable, and `codesign --verify --deep --strict --verbose=4 artifacts/publish/osx-arm64/DevCraft.Cli` passed after Beta 7 updates.
 - Local isolated package installation passed in a temporary `DEVCRAFT_HOME`: the installed binary inode changed, `codesign --verify --deep --strict --verbose=4` passed, and isolated startup displayed `Version 1.0.0-beta.7`.
 - PowerShell Core was not installed on the validation host, so `tests/InstallerReleaseSelection.Tests.ps1` was updated for Beta 7 but not executed locally.
+- `dotnet test --filter "FullyQualifiedName~SituationStorageTests|FullyQualifiedName~DevCraftMenuCommandTests|FullyQualifiedName~SituationPromptContextBuilderTests"` passed after the Beta 8 people management changes: 33 focused tests.
+- `dotnet test` passed after Beta 8 updates: 115 tests.
+- `dotnet build -c Release` passed with 0 warnings and 0 errors after Beta 8 updates.
+- `dotnet list package --vulnerable --include-transitive` passed with no vulnerable packages reported by the configured sources after Beta 8 updates.
+- `tests/installer-release-selection.sh` passed after Beta 8 release-selection updates.
+- `dotnet publish src/DevCraft.Cli/DevCraft.Cli.csproj -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/publish/osx-arm64` passed after Beta 8 updates.
+- `file artifacts/publish/osx-arm64/DevCraft.Cli` reported a Mach-O 64-bit arm64 executable, and `codesign --verify --deep --strict --verbose=4 artifacts/publish/osx-arm64/DevCraft.Cli` passed after Beta 8 updates.
+- Local published startup displayed `Version 1.0.0-beta.8`.
+- PowerShell Core was not installed on the validation host, so `tests/InstallerReleaseSelection.Tests.ps1` was updated for Beta 8 but not executed locally.
 
 ## Notes
 

@@ -35,6 +35,10 @@ public sealed class SituationPromptContextBuilderTests
         Assert.Contains("log-entries.json", context);
         Assert.Contains("summaries.json", context);
         Assert.Contains("relationship/contact records", context);
+        Assert.Contains("JobTitle", context);
+        Assert.Contains("AssignedTeam", context);
+        Assert.Contains("Organization", context);
+        Assert.Contains("InactiveDate", context);
         Assert.Contains("individual entries", context);
         Assert.Contains("IsCompressed=false", context);
         Assert.Contains("week", context);
@@ -64,6 +68,10 @@ public sealed class SituationPromptContextBuilderTests
         Assert.Contains("SituationConnection", context);
         Assert.Contains("DevCraft", context);
         Assert.Contains("People", context);
+        Assert.Contains("JobTitle", context);
+        Assert.Contains("AssignedTeam", context);
+        Assert.Contains("Organization", context);
+        Assert.Contains("InactiveDate", context);
         Assert.Contains("LogEntries", context);
         Assert.Contains("Summaries", context);
         Assert.Contains("IsCompressed=false", context);

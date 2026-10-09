@@ -26,8 +26,17 @@ public static class DevCraftMenuCommand
     private const string CreateProjectType = "Create Project Type";
     private const string ConfigureSituationalAwareness = "Configure Situational Awareness";
     private const string AddDevCraftToDesktopAgent = "Add DevCraft To Desktop Agent";
+    private const string ManagePeople = "Manage People";
+    private const string ListPeople = "List People";
     private const string AddPerson = "Add Person";
     private const string AddLogEntry = "Add Log Entry";
+    private const string GoBack = "Go Back";
+    private const string EditName = "Edit Name";
+    private const string EditContact = "Edit Contact";
+    private const string EditPosition = "Edit Position";
+    private const string EditRelationship = "Edit Relationship";
+    private const string MakeInactive = "Make Inactive";
+    private const string MakeActive = "Make Active";
     private const string CompressWeek = "Compress Week";
     private const string CompressSprint = "Compress Sprint";
     private const string CompressMonth = "Compress Month";
@@ -308,7 +317,7 @@ public static class DevCraftMenuCommand
             return exception.Message;
         }
 
-        List<string> choices = [AddPerson, AddLogEntry];
+        List<string> choices = [ManagePeople, AddLogEntry];
 
         if (configuration.SituationScale == SituationScale.Weeks)
         {
@@ -332,20 +341,6 @@ public static class DevCraftMenuCommand
             return null;
         }
 
-        if (selected == AddPerson)
-        {
-            store.AddPerson(new SituationPerson(
-                Guid.NewGuid().ToString("N"),
-                console.Ask("First name"),
-                console.Ask("Last name"),
-                console.Ask("Email"),
-                console.Ask("Phone"),
-                console.Ask("Relation"),
-                console.Ask("Status")));
-
-            return "Person added to situational awareness.";
-        }
-
         if (selected == AddLogEntry)
         {
             string logData = console.Ask("Log entry");
@@ -358,6 +353,11 @@ public static class DevCraftMenuCommand
             store.AddLogEntry(new SituationLogEntry(Guid.NewGuid().ToString("N"), DateTimeOffset.Now, logData.Trim(), false));
 
             return "Log entry added to situational awareness.";
+        }
+
+        if (selected == ManagePeople)
+        {
+            return RunManagePeopleMenu(console, store);
         }
 
         string type = selected switch
@@ -379,6 +379,217 @@ public static class DevCraftMenuCommand
         {
             return exception.Message;
         }
+    }
+
+    private static string? RunManagePeopleMenu(IConsoleInteraction console, ISituationStore store)
+    {
+        while (true)
+        {
+            console.ShowMenuShell();
+            string selected = console.Select("Manage People", [ListPeople, AddPerson, Back]);
+
+            if (selected == Back)
+            {
+                return null;
+            }
+
+            if (selected == AddPerson)
+            {
+                AddSituationPerson(console, store);
+                continue;
+            }
+
+            if (selected == ListPeople)
+            {
+                RunPeopleListMenu(console, store);
+            }
+        }
+    }
+
+    private static void AddSituationPerson(IConsoleInteraction console, ISituationStore store)
+    {
+        string firstName = console.Ask("First name");
+        string lastName = console.Ask("Last name");
+        string email = console.Ask("Email");
+        string phone = console.Ask("Phone");
+        string jobTitle = console.Ask("Job Title");
+        string assignedTeam = console.Ask("Assigned Team");
+        string organization = console.Ask("Organization");
+        string relation = console.Ask("Relationship details");
+        string status = console.Select("Status", ["ACTIVE", "INACTIVE"]);
+        DateTimeOffset? inactiveDate = null;
+
+        if (status == "INACTIVE")
+        {
+            inactiveDate = AskInactiveDate(console);
+
+            if (inactiveDate is null)
+            {
+                console.WriteStatus("Invalid inactive date. Person was not added.");
+                return;
+            }
+        }
+
+        store.AddPerson(new SituationPerson(
+            Guid.NewGuid().ToString("N"),
+            firstName,
+            lastName,
+            email,
+            phone,
+            relation,
+            status,
+            jobTitle,
+            assignedTeam,
+            organization,
+            inactiveDate));
+        console.WriteStatus("Person added to situational awareness.");
+    }
+
+    private static void RunPeopleListMenu(IConsoleInteraction console, ISituationStore store)
+    {
+        while (true)
+        {
+            IReadOnlyList<SituationPerson> people = store
+                .Read(false)
+                .People
+                .OrderBy(person => person.FirstName, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(person => person.LastName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (people.Count == 0)
+            {
+                console.WriteStatus("No people are tracked yet.");
+                return;
+            }
+
+            List<string> menuChoices = [GoBack];
+            menuChoices.AddRange(people.Select(PersonChoice));
+
+            console.ShowMenuShell();
+            string selected = console.Select(ListPeople, menuChoices);
+
+            if (selected == GoBack)
+            {
+                return;
+            }
+
+            int selectedIndex = menuChoices.IndexOf(selected) - 1;
+            RunPersonEditMenu(console, store, people[selectedIndex]);
+        }
+    }
+
+    private static void RunPersonEditMenu(IConsoleInteraction console, ISituationStore store, SituationPerson person)
+    {
+        while (true)
+        {
+            person = store.Read(false).People.First(current => current.RowId.Equals(person.RowId, StringComparison.OrdinalIgnoreCase));
+            console.WriteStatus(PersonDetails(person));
+            bool inactive = person.Status.Equals("INACTIVE", StringComparison.OrdinalIgnoreCase);
+            string statusAction = inactive ? MakeActive : MakeInactive;
+
+            console.ShowMenuShell();
+            string selected = console.Select(PersonChoice(person), [EditName, EditContact, EditPosition, EditRelationship, statusAction, GoBack]);
+
+            if (selected == GoBack)
+            {
+                return;
+            }
+
+            if (selected == EditName)
+            {
+                person = person with
+                {
+                    FirstName = console.Ask("First name"),
+                    LastName = console.Ask("Last name"),
+                };
+            }
+            else if (selected == EditContact)
+            {
+                person = person with
+                {
+                    Email = console.Ask("Email"),
+                    Phone = console.Ask("Phone"),
+                };
+            }
+            else if (selected == EditPosition)
+            {
+                person = person with
+                {
+                    JobTitle = console.Ask("Job Title"),
+                    AssignedTeam = console.Ask("Assigned Team"),
+                    Organization = console.Ask("Organization"),
+                };
+            }
+            else if (selected == EditRelationship)
+            {
+                person = person with
+                {
+                    Relation = console.Ask("Relationship details"),
+                };
+            }
+            else if (selected == MakeInactive)
+            {
+                DateTimeOffset? inactiveDate = AskInactiveDate(console);
+
+                if (inactiveDate is null)
+                {
+                    console.WriteStatus("Invalid inactive date. Person status was not changed.");
+                    continue;
+                }
+
+                person = person with
+                {
+                    Status = "INACTIVE",
+                    InactiveDate = inactiveDate,
+                };
+            }
+            else if (selected == MakeActive)
+            {
+                person = person with
+                {
+                    Status = "ACTIVE",
+                    InactiveDate = null,
+                };
+            }
+
+            store.UpsertPerson(person);
+            console.WriteStatus("Person updated.");
+        }
+    }
+
+    private static DateTimeOffset? AskInactiveDate(IConsoleInteraction console)
+    {
+        string value = console.Ask("Inactive date");
+
+        return DateTime.TryParse(value, out DateTime date)
+            ? new DateTimeOffset(DateTime.SpecifyKind(date.Date, DateTimeKind.Unspecified), TimeSpan.Zero)
+            : null;
+    }
+
+    private static string PersonChoice(SituationPerson person)
+    {
+        return $"{person.FirstName} {person.LastName} ({person.Email}) | {person.JobTitle} | {person.AssignedTeam} | {person.Organization}";
+    }
+
+    private static string PersonDetails(SituationPerson person)
+    {
+        return $"""
+            Name: {person.FirstName} {person.LastName}
+            Contact: {person.Email} | {person.Phone}
+            Position: {person.JobTitle} | {person.AssignedTeam} | {person.Organization}
+            Relationship: {person.Relation}
+            Status: {PersonStatusDisplay(person)}
+            """;
+    }
+
+    private static string PersonStatusDisplay(SituationPerson person)
+    {
+        if (person.Status.Equals("INACTIVE", StringComparison.OrdinalIgnoreCase) && person.InactiveDate is not null)
+        {
+            return $"INACTIVE ({person.InactiveDate.Value.Date:M/d/yyyy})";
+        }
+
+        return person.Status;
     }
 
     private static void RunConfigureSituationalAwareness(StartupContext context, IConsoleInteraction console)
