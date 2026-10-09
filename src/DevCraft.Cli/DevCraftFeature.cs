@@ -6,4 +6,5 @@ public sealed record DevCraftFeature(
     string ShortDescription,
     string FolderName,
     string StorageType,
-    string? ExternalReference);
+    string? ExternalReference,
+    string Status = "Discovery");

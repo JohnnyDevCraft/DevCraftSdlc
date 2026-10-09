@@ -130,6 +130,11 @@ The main menu includes `Logging`. The Logging menu allows the operator to:
 - Requirement 40: The default `SituationScale` value must be `weeks`.
 - Requirement 41: When database storage is selected, DevCraft must display practical copy/paste MongoDB Docker setup instructions and the resulting connection string format without running Docker automatically.
 - Requirement 42: AI responses parsed as JSON by situational awareness compression must support both raw JSON and Markdown fenced JSON.
+- Requirement 43: The main DevCraft menu must include a `Situational Conversation` option that launches a user-selected installed AI client for non-project planning and memory-oriented conversation when situational awareness is enabled.
+- Requirement 44: `Situational Conversation` must reuse the standard AI handoff context, including core soul, initialized instructions, DevCraft guidance, repository configuration, and the storage-aware situational-awareness access guidance.
+- Requirement 45: `Situational Conversation` must not silently enable situational awareness or change situation storage/preferences. If situational awareness is disabled, DevCraft must return to the main menu with a clear configuration notice.
+- Requirement 46: The profile feature tracking index at `.DevCraft/features/projects.json` must support conversational tracking fields: project `id`, `name`, `repo-location`, `repo-name`, and features with `id`, `feature-name`, `description`, `work-item-id`, and canonical DevCraft `status`.
+- Requirement 47: The canonical feature status values for conversational tracking must match DevCraft feature states: `Discovery`, `Clarification`, `Research`, `Planning`, `Analysis`, `Implementation`, and `Complete`.
 
 ## Open Questions
 
@@ -293,6 +298,21 @@ The main menu includes `Logging`. The Logging menu allows the operator to:
 
 ### Situational Logging
 
+#### Story 0: Start Situational Conversation
+
+- As an operator
+- I want to start a situational conversation from the main menu
+- So that an AI agent can help me plan the day and remember available context without starting project discovery or feature implementation
+
+##### Happy Path Tests
+
+- Test 1: The main menu includes `Situational Conversation`.
+- Test 2: `Situational Conversation` launches the selected installed AI client with planning and context-recall instructions.
+
+##### Edge Case Tests
+
+- Test 1: Disabled situational awareness shows a configuration notice and does not launch an AI client.
+
 #### Story 1: Add Daily Log Entry
 
 - As an operator
@@ -368,6 +388,10 @@ The main menu includes `Logging`. The Logging menu allows the operator to:
 - [ ] Configure DevCraft includes a Situational Awareness menu with a storage option.
 - [ ] Logging menu can add people.
 - [ ] Logging menu compression options are visible based on `SituationScale`.
+- [ ] Main menu includes `Situational Conversation`.
+- [ ] Situational Conversation launches the selected installed AI client with day-planning and context-recall instructions.
+- [ ] Situational Conversation gives a clear configuration notice instead of launching an AI client when situational awareness is disabled.
+- [ ] Profile `projects.json` tracks project and feature conversation context with canonical DevCraft feature statuses.
 - [ ] AI-agent handoffs include all people and uncompressed situation records when situation awareness is enabled.
 - [ ] The completed release is versioned as beta 1.
 - [ ] DevCraft ASCII header alignment is corrected.

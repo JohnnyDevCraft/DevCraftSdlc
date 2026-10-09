@@ -138,7 +138,62 @@ public sealed class FeatureCommandTests
         SystemCentralProjectsIndex index = SystemCentralProjectsStore.Read(profile);
         SystemCentralProject project = Assert.Single(index.Projects);
         Assert.Equal(projectKey, project.ProjectKey);
-        Assert.Equal("Central Feature", Assert.Single(project.Features).Name);
+        Assert.Equal(root.Path, project.RepositoryPath);
+        Assert.Equal(Path.GetFileName(root.Path), project.RepositoryName);
+        DevCraftFeature trackedFeature = Assert.Single(project.Features);
+        Assert.Equal("Central Feature", trackedFeature.Name);
+        Assert.Equal("Discovery", trackedFeature.Status);
+        string projectsJson = File.ReadAllText(Path.Combine(profile, "features", "projects.json"));
+        Assert.Contains("\"id\":", projectsJson);
+        Assert.Contains("\"repo-location\":", projectsJson);
+        Assert.Contains("\"repo-name\":", projectsJson);
+        Assert.Contains("\"feature-name\": \"Central Feature\"", projectsJson);
+        Assert.Contains("\"work-item-id\": null", projectsJson);
+        Assert.Contains("\"status\": \"Discovery\"", projectsJson);
         Assert.True(Directory.Exists(Path.Combine(profile, "features", feature.FolderName)));
+    }
+
+    [Fact]
+    public void ReadsLegacySystemCentralProjectIndexJson()
+    {
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(Path.Combine(profile, "features"));
+        string projectKey = Guid.NewGuid().ToString();
+        File.WriteAllText(
+            Path.Combine(profile, "features", "projects.json"),
+            $$"""
+            {
+              "Projects": [
+                {
+                  "ProjectKey": "{{projectKey}}",
+                  "Name": "Legacy Project",
+                  "Slug": "legacy-project",
+                  "RepositoryPath": "/tmp/legacy-project",
+                  "Features": [
+                    {
+                      "Name": "Legacy Feature",
+                      "Slug": "legacy-feature",
+                      "ShortDescription": "Legacy description.",
+                      "FolderName": "legacy-folder",
+                      "StorageType": "github-issue",
+                      "ExternalReference": "GH-99"
+                    }
+                  ]
+                }
+              ]
+            }
+            """);
+
+        SystemCentralProject project = Assert.Single(SystemCentralProjectsStore.Read(profile).Projects);
+
+        Assert.Equal(projectKey, project.ProjectKey);
+        Assert.Equal("/tmp/legacy-project", project.RepositoryPath);
+        Assert.Equal("legacy-project", project.RepositoryName);
+        DevCraftFeature feature = Assert.Single(project.Features);
+        Assert.Equal("Legacy Feature", feature.Name);
+        Assert.Equal("Legacy description.", feature.ShortDescription);
+        Assert.Equal("GH-99", feature.ExternalReference);
+        Assert.Equal("Discovery", feature.Status);
     }
 }

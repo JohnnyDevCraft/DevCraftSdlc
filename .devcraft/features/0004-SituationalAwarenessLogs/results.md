@@ -33,6 +33,9 @@
 - Added file-mode handoff guidance that points the AI agent to actual profile situation files and explains how to read only active records.
 - Added database-mode handoff guidance that tells the AI agent how to use local profile configuration to access MongoDB, read all people, and read only uncompressed log-entry and summary records without exposing the connection string in the prompt.
 - Bumped the release to `1.0.0-beta.6` for Beta 6.
+- Started post-beta-6 work for a main-menu `Situational Conversation` handoff that uses explicit installed-client selection and the existing storage-aware situational context guidance.
+- Added profile-only conversational project/feature tracking support in `.DevCraft/features/projects.json` with canonical DevCraft feature statuses.
+- Bumped the release to `1.0.0-beta.7` for Beta 7.
 
 ## Files Changed
 
@@ -82,6 +85,13 @@
 - `profile/DevCraft.md` - Documented situational-awareness AI handoff behavior for file and database storage modes.
 - `src/DevCraft.Cli/DevCraft.Cli.csproj` and `tests/DevCraft.Cli.Tests/CliLogoRendererTests.cs` - Bumped the Beta 6 release version and displayed version expectation to `1.0.0-beta.6`.
 - `README.md`, `tests/installer-release-selection.sh`, and `tests/InstallerReleaseSelection.Tests.ps1` - Updated installer documentation and release-selection tests for `1.0.0-beta.6`.
+- `.devcraft/features/0004-SituationalAwarenessLogs/spec.md`, `.devcraft/features/0004-SituationalAwarenessLogs/tasks.md`, and this file - Recorded the authorized `Situational Conversation` menu requirement and Red-Green-Refactor validation tasks.
+- `src/DevCraft.Cli/DevCraftMenuCommand.cs` - Added the exact `Situational Conversation` main-menu item, disabled-state notice, and explicit selected-client launch through the common DevCraft AI-session launcher.
+- `tests/DevCraft.Cli.Tests/DevCraftMenuCommandTests.cs` - Added focused red tests for main-menu visibility, enabled planning handoff, and disabled-state notice.
+- `src/DevCraft.Cli/SystemCentralProjectsStore.cs`, `src/DevCraft.Cli/SystemCentralProject.cs`, and `src/DevCraft.Cli/DevCraftFeature.cs` - Added profile `projects.json` read/write support for `id`, `repo-location`, `repo-name`, `feature-name`, `description`, `work-item-id`, and `status` while preserving legacy System Central reads and existing GUID folder mapping.
+- `tests/DevCraft.Cli.Tests/FeatureCommandTests.cs` - Added profile index tests for the conversational tracking shape, default canonical status, and legacy index compatibility.
+- `src/DevCraft.Cli/DevCraft.Cli.csproj` and `tests/DevCraft.Cli.Tests/CliLogoRendererTests.cs` - Bumped the Beta 7 release version and displayed version expectation to `1.0.0-beta.7`.
+- `README.md`, `tests/installer-release-selection.sh`, and `tests/InstallerReleaseSelection.Tests.ps1` - Updated installer documentation and release-selection tests for `1.0.0-beta.7`.
 
 ## TDD Evidence
 
@@ -103,6 +113,18 @@
 - Red: `dotnet test --filter "FullyQualifiedName~SituationPromptContextBuilderTests"` failed after adding tests for file/database read guidance because the builder still materialized a handoff snapshot and accepted an injected store.
 - Green: `dotnet test --filter "FullyQualifiedName~SituationPromptContextBuilderTests"` passed after file mode pointed at `people.json`, `log-entries.json`, and `summaries.json`, and database mode pointed at MongoDB collections and `IsCompressed=false` filters without embedding payloads or credentials.
 - Refactor: The unused handoff snapshot writer and fake situation store were removed after the user clarified database mode should not export a file snapshot.
+
+### Situational Conversation Menu
+
+- Red: `dotnet test --filter "FullyQualifiedName~DevCraftMenuCommandTests"` failed after adding expectations for `Situational Conversation`: the option was missing from the main menu, no planning handoff launched, and the disabled-state notice was absent.
+- Green: `dotnet test --filter "FullyQualifiedName~DevCraftMenuCommandTests"` passed with 19 focused menu tests after adding the main-menu option, disabled-state notice, and common-launcher handoff for a selected installed AI client.
+- Refactor: The handoff instruction was tightened so the conversation starts by asking what the user wants to accomplish today without framing the flow as repository discovery or feature work.
+
+### Profile Projects Conversation Tracking
+
+- Red: `dotnet test --filter "FullyQualifiedName~FeatureCommandTests|FullyQualifiedName~DevCraftMenuCommandTests|FullyQualifiedName~DevCraftInstallerTests"` failed to compile after adding focused expectations because profile project tracking had no `RepositoryName` or feature `Status` surface yet.
+- Green: `dotnet test --filter "FullyQualifiedName~FeatureCommandTests|FullyQualifiedName~DevCraftMenuCommandTests|FullyQualifiedName~DevCraftInstallerTests"` passed with 27 focused tests after adding profile-only `projects.json` schema output, legacy read support, canonical status defaults, and situational conversation tracking guidance.
+- Refactor: The implementation was narrowed from the initial broad schema direction to profile `.DevCraft/features/projects.json` only, preserving repository `.devcraft/configure.json` shape and current feature command semantics.
 
 ## Validation
 
@@ -154,6 +176,21 @@
 - `dotnet list package --vulnerable --include-transitive` passed with no vulnerable packages reported by the configured sources after Beta 6 updates.
 - `dotnet publish src/DevCraft.Cli/DevCraft.Cli.csproj -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/publish/osx-arm64` passed after Beta 6 updates.
 - Isolated Beta 5 to local Beta 6 upgrade validation passed: the installed macOS arm64 binary inode changed, `codesign --verify --deep --strict --verbose=4` passed, and seeded startup displayed `Version 1.0.0-beta.6`.
+- `dotnet test --filter "FullyQualifiedName~DevCraftMenuCommandTests"` passed after the `Situational Conversation` menu addition: 19 focused menu tests.
+- `dotnet test` passed after the `Situational Conversation` menu addition: 109 tests.
+- `dotnet build -c Release` passed with 0 warnings and 0 errors after the `Situational Conversation` menu addition.
+- `dotnet list package --vulnerable --include-transitive` passed with no vulnerable packages reported by the configured sources after the `Situational Conversation` menu addition.
+- `dotnet publish src/DevCraft.Cli/DevCraft.Cli.csproj -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/publish/osx-arm64` passed after the `Situational Conversation` menu addition.
+- `file artifacts/publish/osx-arm64/DevCraft.Cli` reported a Mach-O 64-bit arm64 executable, and `codesign --verify --deep --strict --verbose=4 artifacts/publish/osx-arm64/DevCraft.Cli` passed.
+- `dotnet test --filter "FullyQualifiedName~FeatureCommandTests|FullyQualifiedName~DevCraftMenuCommandTests|FullyQualifiedName~DevCraftInstallerTests"` passed after the profile projects tracking update: 27 focused tests.
+- `dotnet test` passed after Beta 7 updates: 110 tests.
+- `dotnet build -c Release` passed with 0 warnings and 0 errors after Beta 7 updates.
+- `dotnet list package --vulnerable --include-transitive` passed with no vulnerable packages reported by the configured sources after Beta 7 updates.
+- `tests/installer-release-selection.sh` passed after Beta 7 release-selection updates.
+- `dotnet publish src/DevCraft.Cli/DevCraft.Cli.csproj -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/publish/osx-arm64` passed after Beta 7 updates.
+- `file artifacts/publish/osx-arm64/DevCraft.Cli` reported a Mach-O 64-bit arm64 executable, and `codesign --verify --deep --strict --verbose=4 artifacts/publish/osx-arm64/DevCraft.Cli` passed after Beta 7 updates.
+- Local isolated package installation passed in a temporary `DEVCRAFT_HOME`: the installed binary inode changed, `codesign --verify --deep --strict --verbose=4` passed, and isolated startup displayed `Version 1.0.0-beta.7`.
+- PowerShell Core was not installed on the validation host, so `tests/InstallerReleaseSelection.Tests.ps1` was updated for Beta 7 but not executed locally.
 
 ## Notes
 

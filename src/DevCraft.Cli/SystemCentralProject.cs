@@ -5,5 +5,17 @@ public sealed record SystemCentralProject(
     string Name,
     string Slug,
     string RepositoryPath,
-    IReadOnlyList<DevCraftFeature> Features);
+    IReadOnlyList<DevCraftFeature> Features)
+{
+    public string RepositoryName
+    {
+        get
+        {
+            string path = RepositoryPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
+            return string.IsNullOrWhiteSpace(path)
+                ? string.Empty
+                : Path.GetFileName(path);
+        }
+    }
+}

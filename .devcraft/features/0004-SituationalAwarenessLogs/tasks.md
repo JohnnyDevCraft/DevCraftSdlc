@@ -237,3 +237,9 @@
 - [x] VAL-019 RED: Prove situational handoff no longer may embed records and must describe file/database read paths.
 - [x] VAL-020 GREEN: Change situational handoff to file-mode file guidance and database-mode Mongo read guidance with no connection string or record payload in the prompt.
 - [x] VAL-021 Bump DevCraft release metadata, docs, and tests to `1.0.0-beta.6`.
+- [x] VAL-022 RED: Prove the main menu lacks `Situational Conversation` and no planning handoff is launched.
+- [x] VAL-023 GREEN: Add `Situational Conversation` using explicit client selection, disabled-state notice, and the common storage-aware AI handoff.
+- [x] VAL-024 REFACTOR: Record validation evidence for the situational conversation menu flow without creating a release.
+- [x] VAL-025 RED: Prove profile `projects.json` lacks conversational tracking status/schema support and the conversation handoff lacks tracking guidance.
+- [x] VAL-026 GREEN: Add profile-only `projects.json` tracking shape with canonical DevCraft feature statuses and situational conversation guidance.
+- [x] VAL-027 Bump DevCraft release metadata, docs, and tests to `1.0.0-beta.7`.

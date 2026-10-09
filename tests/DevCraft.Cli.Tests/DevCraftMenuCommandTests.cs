@@ -174,6 +174,83 @@ public sealed class DevCraftMenuCommandTests : IDisposable
     }
 
     [Fact]
+    public void RunShowsSituationalConversationOnMainMenu()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        ProfileStructureInitializer.Ensure(profile);
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Exit"]);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        Assert.Contains("Situational Conversation", console.SelectChoices[0]);
+        Assert.Empty(launcher.Instructions);
+        Assert.Empty(featureLauncher.Launches);
+    }
+
+    [Fact]
+    public void RunSituationalConversationLaunchesSelectedAgentWithPlanningInstruction()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        DevCraftProfileConfigurationWriter.Write(profile, new DevCraftProfileConfiguration([], [], [], [], [], [], [], true));
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Situational Conversation", "OpenAI Codex (codex)", "Exit"]);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        (SupportedTerminalClient client, string instruction) = Assert.Single(launcher.Launches);
+        Assert.Equal("codex", client.Slug);
+        Assert.Contains("situational conversation", instruction, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("plan the day", instruction, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("remember past context", instruction, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ask the user what they want to accomplish", instruction, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("projects.json", instruction, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("update tracked project and feature information", instruction, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Discovery, Clarification, Research, Planning, Analysis, Implementation, and Complete", instruction, StringComparison.Ordinal);
+        Assert.Contains("does not authorize implementation", instruction, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("project discovery", instruction, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(featureLauncher.Launches);
+    }
+
+    [Fact]
+    public void RunSituationalConversationWhenDisabledReturnsConfigurationNotice()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        ProfileStructureInitializer.Ensure(profile);
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Situational Conversation", "Exit"]);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        Assert.Contains(
+            console.SelectTitles,
+            title => title.Contains("Situational awareness is currently disabled", StringComparison.OrdinalIgnoreCase));
+        Assert.Empty(launcher.Instructions);
+        Assert.Empty(featureLauncher.Launches);
+    }
+
+    [Fact]
     public void RunConfigureDevCraftImportSettingsLaunchesImportSkill()
     {
         using TestDirectory root = new();

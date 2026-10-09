@@ -10,6 +10,7 @@ public static class DevCraftMenuCommand
     private const string ProjectSetup = "Project setup";
     private const string CreateProject = "Create Project";
     private const string Logging = "Logging";
+    private const string SituationalConversation = "Situational Conversation";
     private const string Features = "Features";
     private const string Skills = "Skills";
     private const string ConfigureDevCraft = "Configure DevCraft";
@@ -65,7 +66,7 @@ public static class DevCraftMenuCommand
             notice = null;
             string selected = console.Select(
                 title,
-                [ProjectDiscovery, ProjectDesign, ProjectTheme, ProjectSetup, CreateProject, Logging, Features, Skills, ConfigureDevCraft, Exit]);
+                [ProjectDiscovery, ProjectDesign, ProjectTheme, ProjectSetup, CreateProject, Logging, SituationalConversation, Features, Skills, ConfigureDevCraft, Exit]);
 
             switch (selected)
             {
@@ -116,6 +117,9 @@ public static class DevCraftMenuCommand
                 case Logging:
                     notice = RunLoggingMenu(context, console, summaryGenerator ?? new TerminalSituationSummaryGenerator());
                     break;
+                case SituationalConversation:
+                    notice = RunSituationalConversation(context, console, launcher, projectConfiguration);
+                    break;
                 case Features:
                     notice = LaunchClient(() => RunFeatureMenu(context, console, featureLauncher));
                     break;
@@ -127,6 +131,35 @@ public static class DevCraftMenuCommand
                     break;
             }
         }
+    }
+
+    private static string? RunSituationalConversation(
+        StartupContext context,
+        IConsoleInteraction console,
+        IDevCraftAiSessionLauncher launcher,
+        ProjectDevCraftConfiguration projectConfiguration)
+    {
+        DevCraftProfileConfiguration configuration = ProfileConfigurationReader.Read(context.ProfileDirectory);
+
+        if (!configuration.SituationEnabled)
+        {
+            return "Situational awareness is currently disabled. Use Configure DevCraft > Configure Situational Awareness to enable it.";
+        }
+
+        return LaunchClient(
+            () => launcher.Launch(
+                context,
+                projectConfiguration,
+                SelectAiClient(context, console),
+                $"""
+                Start a situational conversation with the user.
+
+                This is not a repository implementation or feature workflow. Use it to help the user plan the day, remember past context that is available through situational awareness, and turn that context into a practical next-step conversation.
+
+                First, ask the user what they want to accomplish today. Use the situational-awareness guidance in the DevCraft handoff to read relevant people, log entries, and summaries directly when useful. Do not claim that situational awareness is loaded unless the records are actually available to you through the provided file or database access.
+
+                For conversational project and feature tracking, read the profile projects index at {Path.Combine(context.ProfileDirectory, "features", "projects.json")} when it is relevant. It tracks projects by id, name, repo-location, repo-name, and features with id, feature-name, description, work-item-id, and status. The canonical DevCraft feature statuses are Discovery, Clarification, Research, Planning, Analysis, Implementation, and Complete. Update tracked project and feature information only when the conversation establishes a real change; do not manufacture projects, features, work item IDs, or status changes just to fill the index. Setting a status records the actual DevCraft state only and does not authorize implementation or bypass DevCraft gates.
+                """));
     }
 
     private static string? RunCreateProject(
