@@ -61,10 +61,44 @@ public sealed class FileSituationStore : ISituationStore
         WriteList(LogEntriesPath, entries);
     }
 
+    public void UpsertLogEntry(SituationLogEntry logEntry)
+    {
+        List<SituationLogEntry> entries = ReadList<SituationLogEntry>(LogEntriesPath).ToList();
+        int index = entries.FindIndex(existing => existing.RowId.Equals(logEntry.RowId, StringComparison.OrdinalIgnoreCase));
+
+        if (index >= 0)
+        {
+            entries[index] = logEntry;
+        }
+        else
+        {
+            entries.Add(logEntry);
+        }
+
+        WriteList(LogEntriesPath, entries);
+    }
+
     public void AddSummary(SituationSummary summary)
     {
         List<SituationSummary> summaries = ReadList<SituationSummary>(SummariesPath).ToList();
         summaries.Add(summary);
+        WriteList(SummariesPath, summaries);
+    }
+
+    public void UpsertSummary(SituationSummary summary)
+    {
+        List<SituationSummary> summaries = ReadList<SituationSummary>(SummariesPath).ToList();
+        int index = summaries.FindIndex(existing => existing.RowId.Equals(summary.RowId, StringComparison.OrdinalIgnoreCase));
+
+        if (index >= 0)
+        {
+            summaries[index] = summary;
+        }
+        else
+        {
+            summaries.Add(summary);
+        }
+
         WriteList(SummariesPath, summaries);
     }
 

@@ -4,6 +4,7 @@ public static class DevCraftMenuCommand
 {
     public static Func<string, bool> CommandExists { get; set; } = CommandLocator.Exists;
 
+    private const string ProjectManagement = "Project Management";
     private const string ProjectDiscovery = "Project discovery";
     private const string ProjectDesign = "Project design";
     private const string ProjectTheme = "Project theme";
@@ -25,11 +26,17 @@ public static class DevCraftMenuCommand
     private const string CreateArchitecture = "Create Architecture";
     private const string CreateProjectType = "Create Project Type";
     private const string ConfigureSituationalAwareness = "Configure Situational Awareness";
+    private const string ConfigureSupportedClients = "Configure Supported Clients";
     private const string AddDevCraftToDesktopAgent = "Add DevCraft To Desktop Agent";
     private const string ManagePeople = "Manage People";
+    private const string ManageLogs = "Manage Logs";
     private const string ListPeople = "List People";
+    private const string ListLogEntries = "List Log Entries";
+    private const string ListSummaries = "List Summaries";
     private const string AddPerson = "Add Person";
     private const string AddLogEntry = "Add Log Entry";
+    private const string NewLogEntry = "New Log Entry";
+    private const string Edit = "Edit";
     private const string GoBack = "Go Back";
     private const string EditName = "Edit Name";
     private const string EditContact = "Edit Contact";
@@ -75,53 +82,14 @@ public static class DevCraftMenuCommand
             notice = null;
             string selected = console.Select(
                 title,
-                [ProjectDiscovery, ProjectDesign, ProjectTheme, ProjectSetup, CreateProject, Logging, SituationalConversation, Features, Skills, ConfigureDevCraft, Exit]);
+                [ProjectManagement, Logging, SituationalConversation, Features, Skills, ConfigureDevCraft, Exit]);
 
             switch (selected)
             {
                 case Exit:
                     return;
-                case ProjectDiscovery:
-                    notice = LaunchClient(
-                        () => launcher.Launch(
-                            context,
-                            projectConfiguration,
-                            SelectAiClient(context, console),
-                            "Work on project discovery. Use and maintain the repository DevCraft discovery artifact for this project."));
-                    break;
-                case ProjectDesign:
-                    notice = LaunchClient(
-                        () => launcher.Launch(
-                            context,
-                            projectConfiguration,
-                            SelectAiClient(context, console),
-                            "Work on project design and component design. Use and maintain the repository DevCraft design artifact for this project."));
-                    break;
-                case ProjectTheme:
-                    notice = LaunchClient(
-                        () => launcher.Launch(
-                            context,
-                            projectConfiguration,
-                            SelectAiClient(context, console),
-                            "Work on project theme. Use and maintain the repository DevCraft theme artifact for this project."));
-                    break;
-                case ProjectSetup:
-                    notice = LaunchClient(
-                        () => launcher.Launch(
-                            context,
-                            projectConfiguration,
-                            SelectAiClient(context, console),
-                            "Work on project setup. Use and maintain the repository DevCraft setup context for this project."));
-                    break;
-                case CreateProject:
-                    string? createProjectNotice = RunCreateProject(context, console, launcher, projectConfiguration);
-
-                    if (createProjectNotice is null)
-                    {
-                        break;
-                    }
-
-                    notice = createProjectNotice;
+                case ProjectManagement:
+                    notice = RunProjectManagementMenu(context, console, launcher, projectConfiguration);
                     break;
                 case Logging:
                     notice = RunLoggingMenu(context, console, summaryGenerator ?? new TerminalSituationSummaryGenerator());
@@ -140,6 +108,49 @@ public static class DevCraftMenuCommand
                     break;
             }
         }
+    }
+
+    private static string? RunProjectManagementMenu(
+        StartupContext context,
+        IConsoleInteraction console,
+        IDevCraftAiSessionLauncher launcher,
+        ProjectDevCraftConfiguration projectConfiguration)
+    {
+        console.ShowMenuShell();
+        string selected = console.Select(
+            ProjectManagement,
+            [ProjectDiscovery, ProjectDesign, ProjectTheme, ProjectSetup, CreateProject, Back]);
+
+        return selected switch
+        {
+            Back => null,
+            ProjectDiscovery => LaunchClient(
+                () => launcher.Launch(
+                    context,
+                    projectConfiguration,
+                    SelectAiClient(context, console),
+                    "Work on project discovery. Use and maintain the repository DevCraft discovery artifact for this project.")),
+            ProjectDesign => LaunchClient(
+                () => launcher.Launch(
+                    context,
+                    projectConfiguration,
+                    SelectAiClient(context, console),
+                    "Work on project design and component design. Use and maintain the repository DevCraft design artifact for this project.")),
+            ProjectTheme => LaunchClient(
+                () => launcher.Launch(
+                    context,
+                    projectConfiguration,
+                    SelectAiClient(context, console),
+                    "Work on project theme. Use and maintain the repository DevCraft theme artifact for this project.")),
+            ProjectSetup => LaunchClient(
+                () => launcher.Launch(
+                    context,
+                    projectConfiguration,
+                    SelectAiClient(context, console),
+                    "Work on project setup. Use and maintain the repository DevCraft setup context for this project.")),
+            CreateProject => RunCreateProject(context, console, launcher, projectConfiguration),
+            _ => throw new InvalidOperationException($"Unsupported project management option: {selected}."),
+        };
     }
 
     private static string? RunSituationalConversation(
@@ -229,7 +240,7 @@ public static class DevCraftMenuCommand
         console.ShowMenuShell();
         string selected = console.Select(
             "Configure DevCraft",
-            [ImportSettings, ChangeFeatureStorage, ConfigureSituationalAwareness, AddDevCraftToDesktopAgent, CreateSkill, CreateStandards, CreateArchitecture, CreateProjectType, Back]);
+            [ImportSettings, ChangeFeatureStorage, ConfigureSituationalAwareness, ConfigureSupportedClients, AddDevCraftToDesktopAgent, CreateSkill, CreateStandards, CreateArchitecture, CreateProjectType, Back]);
 
         switch (selected)
         {
@@ -243,6 +254,9 @@ public static class DevCraftMenuCommand
                 break;
             case ConfigureSituationalAwareness:
                 RunConfigureSituationalAwareness(context, console);
+                break;
+            case ConfigureSupportedClients:
+                RunConfigureSupportedClients(context, console);
                 break;
             case AddDevCraftToDesktopAgent:
                 ShowDesktopAgentInstructions(context, console);
@@ -317,7 +331,7 @@ public static class DevCraftMenuCommand
             return exception.Message;
         }
 
-        List<string> choices = [ManagePeople, AddLogEntry];
+        List<string> choices = [ManagePeople, ManageLogs];
 
         if (configuration.SituationScale == SituationScale.Weeks)
         {
@@ -341,23 +355,14 @@ public static class DevCraftMenuCommand
             return null;
         }
 
-        if (selected == AddLogEntry)
-        {
-            string logData = console.Ask("Log entry");
-
-            if (string.IsNullOrWhiteSpace(logData))
-            {
-                return "Empty log entries are ignored.";
-            }
-
-            store.AddLogEntry(new SituationLogEntry(Guid.NewGuid().ToString("N"), DateTimeOffset.Now, logData.Trim(), false));
-
-            return "Log entry added to situational awareness.";
-        }
-
         if (selected == ManagePeople)
         {
             return RunManagePeopleMenu(console, store);
+        }
+
+        if (selected == ManageLogs)
+        {
+            return RunManageLogsMenu(console, store);
         }
 
         string type = selected switch
@@ -408,14 +413,32 @@ public static class DevCraftMenuCommand
 
     private static void AddSituationPerson(IConsoleInteraction console, ISituationStore store)
     {
-        string firstName = console.Ask("First name");
-        string lastName = console.Ask("Last name");
-        string email = console.Ask("Email");
-        string phone = console.Ask("Phone");
-        string jobTitle = console.Ask("Job Title");
-        string assignedTeam = console.Ask("Assigned Team");
-        string organization = console.Ask("Organization");
-        string relation = console.Ask("Relationship details");
+        FieldEditResult fields = console.EditFields(new FieldEditOptions(
+            "Person Details",
+            [
+                new FieldEditField("firstName", "First name", Required: true),
+                new FieldEditField("lastName", "Last name"),
+                new FieldEditField("email", "Email"),
+                new FieldEditField("phone", "Phone"),
+                new FieldEditField("jobTitle", "Job Title"),
+                new FieldEditField("assignedTeam", "Assigned Team"),
+                new FieldEditField("organization", "Organization"),
+            ]));
+
+        if (!fields.Saved)
+        {
+            console.WriteStatus("Person was not added.");
+            return;
+        }
+
+        TextEditResult relation = console.EditText(new TextEditOptions("Relationship Details", string.Empty));
+
+        if (!relation.Saved)
+        {
+            console.WriteStatus("Person was not added.");
+            return;
+        }
+
         string status = console.Select("Status", ["ACTIVE", "INACTIVE"]);
         DateTimeOffset? inactiveDate = null;
 
@@ -432,15 +455,15 @@ public static class DevCraftMenuCommand
 
         store.AddPerson(new SituationPerson(
             Guid.NewGuid().ToString("N"),
-            firstName,
-            lastName,
-            email,
-            phone,
-            relation,
+            FieldValue(fields, "firstName"),
+            FieldValue(fields, "lastName"),
+            FieldValue(fields, "email"),
+            FieldValue(fields, "phone"),
+            relation.Text.Trim(),
             status,
-            jobTitle,
-            assignedTeam,
-            organization,
+            FieldValue(fields, "jobTitle"),
+            FieldValue(fields, "assignedTeam"),
+            FieldValue(fields, "organization"),
             inactiveDate));
         console.WriteStatus("Person added to situational awareness.");
     }
@@ -497,35 +520,80 @@ public static class DevCraftMenuCommand
 
             if (selected == EditName)
             {
+                FieldEditResult fields = console.EditFields(new FieldEditOptions(
+                    "Edit Name",
+                    [
+                        new FieldEditField("firstName", "First name", person.FirstName, Required: true),
+                        new FieldEditField("lastName", "Last name", person.LastName),
+                    ]));
+
+                if (!fields.Saved)
+                {
+                    console.WriteStatus("Person was not changed.");
+                    continue;
+                }
+
                 person = person with
                 {
-                    FirstName = console.Ask("First name"),
-                    LastName = console.Ask("Last name"),
+                    FirstName = FieldValue(fields, "firstName"),
+                    LastName = FieldValue(fields, "lastName"),
                 };
             }
             else if (selected == EditContact)
             {
+                FieldEditResult fields = console.EditFields(new FieldEditOptions(
+                    "Edit Contact",
+                    [
+                        new FieldEditField("email", "Email", person.Email),
+                        new FieldEditField("phone", "Phone", person.Phone),
+                    ]));
+
+                if (!fields.Saved)
+                {
+                    console.WriteStatus("Person was not changed.");
+                    continue;
+                }
+
                 person = person with
                 {
-                    Email = console.Ask("Email"),
-                    Phone = console.Ask("Phone"),
+                    Email = FieldValue(fields, "email"),
+                    Phone = FieldValue(fields, "phone"),
                 };
             }
             else if (selected == EditPosition)
             {
+                FieldEditResult fields = console.EditFields(new FieldEditOptions(
+                    "Edit Position",
+                    [
+                        new FieldEditField("jobTitle", "Job Title", person.JobTitle),
+                        new FieldEditField("assignedTeam", "Assigned Team", person.AssignedTeam),
+                        new FieldEditField("organization", "Organization", person.Organization),
+                    ]));
+
+                if (!fields.Saved)
+                {
+                    console.WriteStatus("Person was not changed.");
+                    continue;
+                }
+
                 person = person with
                 {
-                    JobTitle = console.Ask("Job Title"),
-                    AssignedTeam = console.Ask("Assigned Team"),
-                    Organization = console.Ask("Organization"),
+                    JobTitle = FieldValue(fields, "jobTitle"),
+                    AssignedTeam = FieldValue(fields, "assignedTeam"),
+                    Organization = FieldValue(fields, "organization"),
                 };
             }
             else if (selected == EditRelationship)
             {
-                person = person with
+                TextEditResult relation = console.EditText(new TextEditOptions("Relationship Details", person.Relation));
+
+                if (!relation.Saved)
                 {
-                    Relation = console.Ask("Relationship details"),
-                };
+                    console.WriteStatus("Person was not changed.");
+                    continue;
+                }
+
+                person = person with { Relation = relation.Text.Trim() };
             }
             else if (selected == MakeInactive)
             {
@@ -590,6 +658,345 @@ public static class DevCraftMenuCommand
         }
 
         return person.Status;
+    }
+
+    private static string? RunManageLogsMenu(IConsoleInteraction console, ISituationStore store)
+    {
+        while (true)
+        {
+            console.ShowMenuShell();
+            string selected = console.Select("Manage Logs", [ListLogEntries, NewLogEntry, ListSummaries, Back]);
+
+            if (selected == Back)
+            {
+                return null;
+            }
+
+            if (selected == NewLogEntry)
+            {
+                AddSituationLogEntry(console, store);
+            }
+            else if (selected == ListLogEntries)
+            {
+                RunLogEntryListMenu(console, store);
+            }
+            else if (selected == ListSummaries)
+            {
+                RunSummaryTypeMenu(console, store);
+            }
+        }
+    }
+
+    private static void AddSituationLogEntry(IConsoleInteraction console, ISituationStore store)
+    {
+        TextEditResult result = console.EditText(new TextEditOptions("New Log Entry", string.Empty));
+
+        if (!result.Saved)
+        {
+            console.WriteStatus("Log entry was not added.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(result.Text))
+        {
+            console.WriteStatus("Empty log entries are ignored.");
+            return;
+        }
+
+        store.AddLogEntry(new SituationLogEntry(Guid.NewGuid().ToString("N"), DateTimeOffset.Now, result.Text.Trim(), false));
+        console.WriteStatus("Log entry added to situational awareness.");
+    }
+
+    private static void RunLogEntryListMenu(IConsoleInteraction console, ISituationStore store)
+    {
+        while (true)
+        {
+            IReadOnlyList<SituationLogEntry> entries = store
+                .Read(true)
+                .LogEntries
+                .OrderByDescending(entry => entry.DateTime)
+                .ToList();
+
+            if (entries.Count == 0)
+            {
+                console.WriteStatus("No uncompressed log entries are tracked yet.");
+                return;
+            }
+
+            List<string> choices = [GoBack];
+            choices.AddRange(entries.Select(LogEntryChoice));
+            console.ShowMenuShell();
+            string selected = console.Select(ListLogEntries, choices);
+
+            if (selected == GoBack)
+            {
+                return;
+            }
+
+            int selectedIndex = choices.IndexOf(selected) - 1;
+            RunLogEntryEditMenu(console, store, entries[selectedIndex]);
+        }
+    }
+
+    private static void RunLogEntryEditMenu(IConsoleInteraction console, ISituationStore store, SituationLogEntry entry)
+    {
+        while (true)
+        {
+            entry = store.Read(false).LogEntries.First(current => current.RowId.Equals(entry.RowId, StringComparison.OrdinalIgnoreCase));
+            console.WriteStatus($"DateTime: {entry.DateTime:u}{Environment.NewLine}Content:{Environment.NewLine}{entry.LogData}");
+            console.ShowMenuShell();
+            string selected = console.Select(LogEntryChoice(entry), [Edit, GoBack]);
+
+            if (selected == GoBack)
+            {
+                return;
+            }
+
+            DateTimeOffset? dateTime = AskDateTime(console, "Log entry date/time", entry.DateTime);
+            TextEditResult content = console.EditText(new TextEditOptions("Edit Log Entry Content", entry.LogData));
+
+            if (dateTime is null || !content.Saved)
+            {
+                console.WriteStatus("Log entry was not changed.");
+                continue;
+            }
+
+            entry = entry with
+            {
+                DateTime = dateTime.Value,
+                LogData = content.Text.Trim(),
+            };
+            store.UpsertLogEntry(entry);
+            console.WriteStatus("Log entry updated.");
+        }
+    }
+
+    private static void RunSummaryTypeMenu(IConsoleInteraction console, ISituationStore store)
+    {
+        while (true)
+        {
+            console.ShowMenuShell();
+            string selected = console.Select("List Summaries", ["Week", "Month", "Sprint", "Quarter", "Year", GoBack]);
+
+            if (selected == GoBack)
+            {
+                return;
+            }
+
+            RunSummaryListMenu(console, store, selected.ToLowerInvariant());
+        }
+    }
+
+    private static void RunSummaryListMenu(IConsoleInteraction console, ISituationStore store, string type)
+    {
+        while (true)
+        {
+            IReadOnlyList<SituationSummary> summaries = store
+                .Read(true)
+                .Summaries
+                .Where(summary => summary.Type.Equals(type, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(summary => summary.DateTime)
+                .ToList();
+
+            if (summaries.Count == 0)
+            {
+                console.WriteStatus($"No uncompressed {type} summaries are tracked yet.");
+                return;
+            }
+
+            List<string> choices = [GoBack];
+            choices.AddRange(summaries.Select(SummaryChoice));
+            console.ShowMenuShell();
+            string selected = console.Select($"{type} summaries", choices);
+
+            if (selected == GoBack)
+            {
+                return;
+            }
+
+            int selectedIndex = choices.IndexOf(selected) - 1;
+            RunSummaryEditMenu(console, store, summaries[selectedIndex]);
+        }
+    }
+
+    private static void RunSummaryEditMenu(IConsoleInteraction console, ISituationStore store, SituationSummary summary)
+    {
+        while (true)
+        {
+            summary = store.Read(false).Summaries.First(current => current.RowId.Equals(summary.RowId, StringComparison.OrdinalIgnoreCase));
+            console.WriteStatus($"DateTime: {summary.DateTime:u}{Environment.NewLine}Type: {summary.Type}{Environment.NewLine}Content:{Environment.NewLine}{summary.SummaryData}");
+            console.ShowMenuShell();
+            string selected = console.Select(SummaryChoice(summary), [Edit, GoBack]);
+
+            if (selected == GoBack)
+            {
+                return;
+            }
+
+            DateTimeOffset? dateTime = AskDateTime(console, "Summary date/time", summary.DateTime);
+            TextEditResult content = console.EditText(new TextEditOptions("Edit Summary Content", summary.SummaryData));
+
+            if (dateTime is null || !content.Saved)
+            {
+                console.WriteStatus("Summary was not changed.");
+                continue;
+            }
+
+            summary = summary with
+            {
+                DateTime = dateTime.Value,
+                SummaryData = content.Text.Trim(),
+            };
+            store.UpsertSummary(summary);
+            console.WriteStatus("Summary updated.");
+        }
+    }
+
+    private static DateTimeOffset? AskDateTime(IConsoleInteraction console, string prompt, DateTimeOffset current)
+    {
+        string value = console.Ask($"{prompt} [{current:u}]");
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return current;
+        }
+
+        return DateTimeOffset.TryParse(value, out DateTimeOffset parsed)
+            ? parsed
+            : null;
+    }
+
+    private static string LogEntryChoice(SituationLogEntry entry)
+    {
+        return $"{entry.DateTime:yyyy-MM-dd HH:mm} | {SingleLinePreview(entry.LogData)}";
+    }
+
+    private static string SummaryChoice(SituationSummary summary)
+    {
+        return $"{summary.DateTime:yyyy-MM-dd HH:mm} | {SingleLinePreview(summary.SummaryData)}";
+    }
+
+    private static string SingleLinePreview(string value)
+    {
+        string preview = value.ReplaceLineEndings(" ").Trim();
+
+        return preview.Length <= 80 ? preview : $"{preview[..77]}...";
+    }
+
+    private static void RunConfigureSupportedClients(StartupContext context, IConsoleInteraction console)
+    {
+        while (true)
+        {
+            DevCraftProfileConfiguration configuration = ProfileConfigurationReader.Read(context.ProfileDirectory);
+            IReadOnlyList<SupportedTerminalClient> clients = configuration.SupportedClients;
+
+            if (clients.Count == 0)
+            {
+                console.WriteStatus("There are no supported clients to configure.");
+                return;
+            }
+
+            List<string> choices = clients.Select(ClientChoice).Append(Back).ToList();
+            console.ShowMenuShell();
+            string selected = console.Select("Configure Supported Clients", choices);
+
+            if (selected == Back)
+            {
+                return;
+            }
+
+            SupportedTerminalClient client = clients.First(item => selected.EndsWith($"({item.Slug})", StringComparison.Ordinal));
+            RunSupportedClientEditMenu(context, console, configuration, client);
+        }
+    }
+
+    private static void RunSupportedClientEditMenu(
+        StartupContext context,
+        IConsoleInteraction console,
+        DevCraftProfileConfiguration configuration,
+        SupportedTerminalClient client)
+    {
+        console.ShowMenuShell();
+        string selected = console.Select(ClientChoice(client), [Edit, Back]);
+
+        if (selected == Back)
+        {
+            return;
+        }
+
+        FieldEditResult fields = console.EditFields(new FieldEditOptions(
+            "Supported Client",
+            [
+                new FieldEditField("name", "Client name", client.Name, Required: true),
+                new FieldEditField("slug", "Client slug", client.Slug, Required: true),
+                new FieldEditField("scanBinary", "Scan binary path", client.Scan.BinaryPath, Required: true),
+                new FieldEditField("sessionBinary", "Session binary path", client.Session.BinaryPath, Required: true),
+            ]));
+        TextEditResult description = console.EditText(new TextEditOptions("Client Description", client.Description));
+        TextEditResult scanDescription = console.EditText(new TextEditOptions("Scan Operation Description", client.Scan.Description));
+        TextEditResult scanArguments = console.EditText(new TextEditOptions("Scan Arguments", string.Join(Environment.NewLine, client.Scan.Arguments)));
+        TextEditResult sessionDescription = console.EditText(new TextEditOptions("Session Operation Description", client.Session.Description));
+        TextEditResult sessionArguments = console.EditText(new TextEditOptions("Session Arguments", string.Join(Environment.NewLine, client.Session.Arguments)));
+
+        if (!fields.Saved || !description.Saved || !scanDescription.Saved || !scanArguments.Saved || !sessionDescription.Saved || !sessionArguments.Saved)
+        {
+            console.WriteStatus("Supported client was not changed.");
+            return;
+        }
+
+        string name = FieldValue(fields, "name");
+        string slug = FieldValue(fields, "slug");
+        string scanBinary = FieldValue(fields, "scanBinary");
+        string sessionBinary = FieldValue(fields, "sessionBinary");
+
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(slug) || string.IsNullOrWhiteSpace(scanBinary) || string.IsNullOrWhiteSpace(sessionBinary))
+        {
+            console.WriteStatus("Supported client was not changed. Name, slug, scan binary, and session binary are required.");
+            return;
+        }
+
+        SupportedTerminalClient updated = new(
+            slug.Trim(),
+            name.Trim(),
+            description.Text.Trim(),
+            new TerminalClientOperation(
+                scanDescription.Text.Trim(),
+                scanBinary.Trim(),
+                ParseArgumentLines(scanArguments.Text)),
+            new TerminalClientOperation(
+                sessionDescription.Text.Trim(),
+                sessionBinary.Trim(),
+                ParseArgumentLines(sessionArguments.Text)));
+        List<SupportedTerminalClient> clients = configuration.SupportedClients.ToList();
+        int index = clients.FindIndex(item => item.Slug.Equals(client.Slug, StringComparison.OrdinalIgnoreCase));
+
+        if (index >= 0)
+        {
+            clients[index] = updated;
+        }
+        else
+        {
+            clients.Add(updated);
+        }
+
+        DevCraftProfileConfigurationWriter.Write(context.ProfileDirectory, configuration with { SupportedClients = clients });
+        console.WriteStatus("Supported client updated.");
+    }
+
+    private static IReadOnlyList<string> ParseArgumentLines(string value)
+    {
+        return value
+            .Split(["\r\n", "\n"], StringSplitOptions.None)
+            .Select(argument => argument.Trim())
+            .Where(argument => argument.Length > 0)
+            .ToList();
+    }
+
+    private static string FieldValue(FieldEditResult result, string key)
+    {
+        return result.Values.TryGetValue(key, out string? value)
+            ? value.Trim()
+            : string.Empty;
     }
 
     private static void RunConfigureSituationalAwareness(StartupContext context, IConsoleInteraction console)

@@ -28,8 +28,10 @@ function Copy-Profile($SourceProfile) {
         Get-ChildItem $SourceProfile -File -Recurse | Where-Object { $_.Name -ne "soul.md" } | ForEach-Object {
             $relativePath = [System.IO.Path]::GetRelativePath($SourceProfile, $_.FullName)
             $targetPath = Join-Path $InstallDir $relativePath
-            New-Item -ItemType Directory -Force -Path (Split-Path -Parent $targetPath) | Out-Null
-            Copy-Item $_.FullName $targetPath -Force
+            if (-not ($relativePath -eq "configure.json" -and (Test-Path $targetPath))) {
+                New-Item -ItemType Directory -Force -Path (Split-Path -Parent $targetPath) | Out-Null
+                Copy-Item $_.FullName $targetPath -Force
+            }
         }
     }
 

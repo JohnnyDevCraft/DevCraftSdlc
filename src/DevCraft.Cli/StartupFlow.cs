@@ -125,7 +125,8 @@ public sealed class StartupFlow
         string selectedDescription = SelectSuggestedOrCustom(
             "Tell me what this project is about.",
             aiProfile.Description,
-            "Enter a custom project description");
+            "Enter a custom project description",
+            true);
 
         return new ProjectProfile(selectedName, selectedDescription, selectedDescription);
     }
@@ -140,19 +141,22 @@ public sealed class StartupFlow
             projectName = defaultName;
         }
 
-        string projectDescription = console.Ask("Tell me what this project is about.");
+        TextEditResult projectDescriptionResult = console.EditText(new TextEditOptions("Project Description", string.Empty));
+        string projectDescription = projectDescriptionResult.Saved ? projectDescriptionResult.Text.Trim() : string.Empty;
 
         return new ProjectProfile(projectName, projectDescription, projectDescription);
     }
 
-    private string SelectSuggestedOrCustom(string prompt, string suggestion, string customChoice)
+    private string SelectSuggestedOrCustom(string prompt, string suggestion, string customChoice, bool largeText = false)
     {
         string useSuggestionChoice = $"Use AI suggestion: {suggestion}";
         string selected = console.Select(prompt, [useSuggestionChoice, customChoice]);
 
         if (selected == customChoice)
         {
-            return console.Ask(prompt);
+            return largeText
+                ? console.EditText(new TextEditOptions(prompt, suggestion)).Text.Trim()
+                : console.Ask(prompt);
         }
 
         return suggestion;
@@ -182,9 +186,9 @@ public sealed class StartupFlow
 
         SoulSetupAnswers answers = new(
             console.Ask("What should I call you?"),
-            console.Ask("Tell me what you do and how I'll be able to assist you."),
+            console.EditText(new TextEditOptions("Tell me what you do and how I'll be able to assist you.", string.Empty)).Text.Trim(),
             console.Ask("What would you like me to be called?"),
-            console.Ask("How would you like me to respond to you?"),
+            console.EditText(new TextEditOptions("How would you like me to respond to you?", string.Empty)).Text.Trim(),
             console.Select("Which terminal AI agent should I use by default?", installedAgents.Select(agent => agent.DisplayName).ToList()));
 
         SoulFileWriter.Write(context.SoulFilePath, answers);

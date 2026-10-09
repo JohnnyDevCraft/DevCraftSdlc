@@ -11,4 +11,8 @@ public sealed record DevCraftProfileConfiguration(
     bool SituationEnabled = false,
     string SituationScale = "weeks",
     string SituationStorage = "file",
-    string? SituationConnection = null);
+    string? SituationConnection = null,
+    int SchemaVersion = DevCraftProfileConfiguration.CurrentSchemaVersion)
+{
+    public const int CurrentSchemaVersion = 1;
+}

@@ -26,20 +26,26 @@ public static class SupportedTerminalClientProfileNormalizer
 
     private static SupportedTerminalClient Merge(SupportedTerminalClient defaultClient, SupportedTerminalClient configured)
     {
-        return defaultClient with
+        return new SupportedTerminalClient(
+            string.IsNullOrWhiteSpace(configured.Slug) ? defaultClient.Slug : configured.Slug.Trim(),
+            string.IsNullOrWhiteSpace(configured.Name) ? defaultClient.Name : configured.Name.Trim(),
+            string.IsNullOrWhiteSpace(configured.Description) ? defaultClient.Description : configured.Description.Trim(),
+            MergeOperation(defaultClient.Scan, configured.Scan),
+            MergeOperation(defaultClient.Session, configured.Session));
+    }
+
+    private static TerminalClientOperation MergeOperation(TerminalClientOperation defaultOperation, TerminalClientOperation? configuredOperation)
+    {
+        if (configuredOperation is null)
         {
-            Scan = defaultClient.Scan with
-            {
-                BinaryPath = string.IsNullOrWhiteSpace(configured.Scan.BinaryPath)
-                    ? defaultClient.Scan.BinaryPath
-                    : configured.Scan.BinaryPath,
-            },
-            Session = defaultClient.Session with
-            {
-                BinaryPath = string.IsNullOrWhiteSpace(configured.Session.BinaryPath)
-                    ? defaultClient.Session.BinaryPath
-                    : configured.Session.BinaryPath,
-            },
-        };
+            return defaultOperation;
+        }
+
+        return new TerminalClientOperation(
+            string.IsNullOrWhiteSpace(configuredOperation.Description) ? defaultOperation.Description : configuredOperation.Description.Trim(),
+            string.IsNullOrWhiteSpace(configuredOperation.BinaryPath) ? defaultOperation.BinaryPath : configuredOperation.BinaryPath.Trim(),
+            configuredOperation.Arguments is null || configuredOperation.Arguments.Count == 0
+                ? defaultOperation.Arguments
+                : configuredOperation.Arguments);
     }
 }

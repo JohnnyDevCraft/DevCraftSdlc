@@ -48,6 +48,37 @@ public sealed class ProfileStructureInitializerTests
     }
 
     [Fact]
+    public void EnsurePreservesExistingSituationalAwarenessSettings()
+    {
+        using TestDirectory root = new();
+        using TestDirectory sourceRoot = new();
+        string profile = Path.Combine(root.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        DevCraftProfileConfigurationWriter.Write(
+            profile,
+            new DevCraftProfileConfiguration(
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                true,
+                SituationScale.Sprint,
+                SituationStorage.Database,
+                "mongodb://localhost:27017/PreserveMe"));
+
+        ProfileStructureInitializer.Ensure(profile, sourceRoot.Path);
+
+        DevCraftProfileConfiguration configuration = ProfileConfigurationReader.Read(profile);
+        Assert.True(configuration.SituationEnabled);
+        Assert.Equal(SituationScale.Sprint, configuration.SituationScale);
+        Assert.Equal(SituationStorage.Database, configuration.SituationStorage);
+        Assert.Equal("mongodb://localhost:27017/PreserveMe", configuration.SituationConnection);
+    }
+
+    [Fact]
     public void EnsureCopiesBaseFilesAndWritesConfigureJson()
     {
         using TestDirectory root = new();
@@ -175,6 +206,7 @@ public sealed class ProfileStructureInitializerTests
         Assert.Contains("\"SituationScale\": \"weeks\"", configureJson);
         Assert.Contains("\"SituationStorage\": \"file\"", configureJson);
         Assert.Contains("\"SituationConnection\": null", configureJson);
+        Assert.Contains("\"SchemaVersion\": 1", configureJson);
         Assert.Contains("\"Scan\"", configureJson);
         Assert.Contains("\"Session\"", configureJson);
         Assert.Contains("\"Arguments\"", configureJson);

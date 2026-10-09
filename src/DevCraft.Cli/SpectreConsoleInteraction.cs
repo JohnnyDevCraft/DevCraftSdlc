@@ -33,6 +33,20 @@ public sealed class SpectreConsoleInteraction : IConsoleInteraction
         return AnsiConsole.Ask<string>(Markup.Escape(prompt));
     }
 
+    public FieldEditResult EditFields(FieldEditOptions options)
+    {
+        ShowMenuShell();
+
+        return TerminalGuiFieldEditor.Edit(options);
+    }
+
+    public TextEditResult EditText(TextEditOptions options)
+    {
+        ShowMenuShell();
+
+        return TerminalGuiTextEditor.Edit(options);
+    }
+
     public string Select(string title, IReadOnlyList<string> choices)
     {
         ShowMenuShell();

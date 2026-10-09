@@ -102,6 +102,22 @@
 - `tests/DevCraft.Cli.Tests/DevCraftMenuCommandTests.cs`, `tests/DevCraft.Cli.Tests/SituationStorageTests.cs`, and `tests/DevCraft.Cli.Tests/SituationPromptContextBuilderTests.cs` - Added focused Beta 8 coverage for Manage People, sorting, edit/upsert, inactive dates, legacy records, and prompt guidance.
 - `src/DevCraft.Cli/DevCraft.Cli.csproj` and `tests/DevCraft.Cli.Tests/CliLogoRendererTests.cs` - Bumped the Beta 8 release version and displayed version expectation to `1.0.0-beta.8`.
 - `README.md`, `tests/installer-release-selection.sh`, and `tests/InstallerReleaseSelection.Tests.ps1` - Updated installer documentation and release-selection tests for `1.0.0-beta.8`.
+- `src/DevCraft.Cli/TextEditOptions.cs`, `src/DevCraft.Cli/TextEditResult.cs`, and `src/DevCraft.Cli/TerminalGuiTextEditor.cs` - Added a reusable Terminal.Gui multiline editor with save/cancel commands, markdown-aware editor support, line numbers, word wrap, paste, undo/redo, and return/tab-friendly editing.
+- `src/DevCraft.Cli/FieldEditOptions.cs`, `src/DevCraft.Cli/FieldEditResult.cs`, and `src/DevCraft.Cli/TerminalGuiFieldEditor.cs` - Added a reusable Terminal.Gui field form for structured single-line edits.
+- `src/DevCraft.Cli/IConsoleInteraction.cs`, `src/DevCraft.Cli/SpectreConsoleInteraction.cs`, and `tests/DevCraft.Cli.Tests/FakeConsoleInteraction.cs` - Routed field and large-text editing through reusable console-interaction adapters.
+- `src/DevCraft.Cli/ISituationStore.cs`, `src/DevCraft.Cli/FileSituationStore.cs`, and `src/DevCraft.Cli/MongoSituationStore.cs` - Added log-entry and summary upsert operations that preserve row identity, compression status, and summary type.
+- `src/DevCraft.Cli/DevCraftMenuCommand.cs` - Added Manage Logs, uncompressed log-entry and summary listing/editing, new multiline log entry creation, Terminal.Gui-backed people forms, and Configure DevCraft supported-client editing.
+- `src/DevCraft.Cli/StartupFlow.cs` - Routed soul setup, response style, custom project descriptions, and AI-suggested project description overrides through the multiline editor.
+- `src/DevCraft.Cli/SupportedTerminalClientProfileNormalizer.cs` - Preserved operator-authored supported-client names, descriptions, binaries, and argument arrays during startup normalization.
+- `tests/DevCraft.Cli.Tests/DevCraftMenuCommandTests.cs`, `tests/DevCraft.Cli.Tests/SituationStorageTests.cs`, `tests/DevCraft.Cli.Tests/StartupFlowTests.cs`, and `tests/DevCraft.Cli.Tests/SupportedTerminalClientCatalogTests.cs` - Added and updated Beta 9 coverage for Manage Logs, summary/log upserts, supported-client editing, large-text routing, and operator-authored client preservation.
+- `src/DevCraft.Cli/DevCraft.Cli.csproj` and `tests/DevCraft.Cli.Tests/CliLogoRendererTests.cs` - Bumped the Beta 9 release version and displayed version expectation to `1.0.0-beta.9`.
+- `README.md`, `tests/installer-release-selection.sh`, and `tests/InstallerReleaseSelection.Tests.ps1` - Updated installer documentation and release-selection tests for `1.0.0-beta.9`.
+- `src/DevCraft.Cli/DevCraftMenuCommand.cs` - Moved existing project actions under a new `Project Management` submenu and retained the existing `Project theme` action/label because the codebase has a theme workflow, not a team workflow.
+- `install.sh` and `install.ps1` - Stopped package profile copies from overwriting an existing profile `configure.json`, preserving situational-awareness settings during routine upgrades.
+- `src/DevCraft.Cli/CatalogMergeCommand.cs` - Preserved target profile situational-awareness settings when merging external catalogs.
+- `tests/DevCraft.Cli.Tests/DevCraftMenuCommandTests.cs`, `tests/DevCraft.Cli.Tests/CatalogMergeCommandTests.cs`, `tests/DevCraft.Cli.Tests/ProfileStructureInitializerTests.cs`, `tests/installer-release-selection.sh`, and `tests/InstallerReleaseSelection.Tests.ps1` - Added regressions for Project Management menu shape/return behavior and situational-awareness settings preservation across initialization, merge, and installer copy paths.
+- `src/DevCraft.Cli/DevCraftProfileConfiguration.cs`, `src/DevCraft.Cli/ProfileConfigurationReader.cs`, and `profile/configure.json` - Added explicit profile configuration `SchemaVersion` support with legacy migration to the current schema and future-schema rejection.
+- `tests/DevCraft.Cli.Tests/ProfileConfigurationReaderTests.cs` - Added coverage for legacy migration preserving situational-awareness settings, current-schema idempotence, and unknown future schema rejection.
 
 ## TDD Evidence
 
@@ -141,6 +157,22 @@
 - Red: `dotnet test --filter "FullyQualifiedName~SituationStorageTests|FullyQualifiedName~DevCraftMenuCommandTests|FullyQualifiedName~SituationPromptContextBuilderTests"` failed to compile because `SituationPerson` lacked Beta 8 people fields, the storage abstraction lacked person upsert support, and the menu still exposed only direct Add Person behavior.
 - Green: `dotnet test --filter "FullyQualifiedName~SituationStorageTests|FullyQualifiedName~DevCraftMenuCommandTests|FullyQualifiedName~SituationPromptContextBuilderTests"` passed with 33 focused tests after adding Manage People, sorted selectable people, edit flows, status toggles, inactive dates, storage upserts, legacy normalization, and updated handoff guidance.
 - Refactor: File and Mongo stores keep status normalization at the provider boundary, and person edits use the same `RowId` to avoid duplicate rows across storage modes.
+
+### Terminal.Gui Editing And Manage Logs
+
+- Red: `dotnet test --filter "FullyQualifiedName~SituationStorageTests|FullyQualifiedName~DevCraftMenuCommandTests|FullyQualifiedName~StartupFlowTests|FullyQualifiedName~SupportedTerminalClientCatalogTests"` initially failed after adding Beta 9 expectations because log/summary upserts, Manage Logs, supported-client editing, and multiline editor routing were not present.
+- Green: The same focused test command passed with 48 focused tests after adding reusable Terminal.Gui editors, Manage Logs, log-entry and summary edit flows, supported-client configuration editing, and startup large-text routing.
+- Refactor: Supported-client profile normalization now fills only missing defaults and preserves explicit operator-authored values so startup cannot wipe manual client changes.
+
+### Project Management And SA-Preserving Upgrades
+
+- Red: Focused menu tests proved project actions were still top-level main-menu choices instead of grouped under `Project Management`.
+- Red: Installer and merge inspection found profile `configure.json` overwrite/reset paths: package profile copies could overwrite existing situational-awareness settings, and catalog merge rebuilt configuration without carrying the target situation settings forward.
+- Red: Profile configuration had no explicit schema-version migration path, so legacy/current/future-schema behavior was implicit rather than governed.
+- Green: `dotnet test --filter "FullyQualifiedName~DevCraftMenuCommandTests|FullyQualifiedName~CatalogMergeCommandTests|FullyQualifiedName~ProfileStructureInitializerTests|FullyQualifiedName~SituationStorageTests"` passed with 45 focused tests after adding the submenu and preservation fixes.
+- Green: `dotnet test --filter "FullyQualifiedName~ProfileConfigurationReaderTests|FullyQualifiedName~ProfileStructureInitializerTests|FullyQualifiedName~CatalogMergeCommandTests|FullyQualifiedName~DevCraftMenuCommandTests"` passed with 38 focused tests after adding explicit schema migration behavior.
+- Green: `tests/installer-release-selection.sh` passed after adding a regression that preserves enabled MongoDB sprint settings and a custom connection string during package install.
+- Refactor: The submenu keeps the exact existing `Project theme` action because the current workflow is theme-oriented; no new Project Team workflow was added. Future profile configuration schemas are rejected before profile initialization or merge can destructively rewrite them.
 
 ## Validation
 
@@ -216,6 +248,31 @@
 - `file artifacts/publish/osx-arm64/DevCraft.Cli` reported a Mach-O 64-bit arm64 executable, and `codesign --verify --deep --strict --verbose=4 artifacts/publish/osx-arm64/DevCraft.Cli` passed after Beta 8 updates.
 - Local published startup displayed `Version 1.0.0-beta.8`.
 - PowerShell Core was not installed on the validation host, so `tests/InstallerReleaseSelection.Tests.ps1` was updated for Beta 8 but not executed locally.
+- `dotnet test --filter "FullyQualifiedName~SituationStorageTests|FullyQualifiedName~DevCraftMenuCommandTests|FullyQualifiedName~StartupFlowTests|FullyQualifiedName~SupportedTerminalClientCatalogTests"` passed after Beta 9 editor and Manage Logs work: 48 focused tests.
+- `dotnet test` passed after Beta 9 updates: 120 tests.
+- `dotnet build -c Release` passed with 2 xUnit analyzer warnings and 0 errors after Beta 9 updates.
+- `dotnet list package --vulnerable --include-transitive` passed with no vulnerable packages reported by the configured sources after Beta 9 updates.
+- `tests/installer-release-selection.sh` passed after Beta 9 release-selection updates.
+- PowerShell Core was not installed on the validation host, so `tests/InstallerReleaseSelection.Tests.ps1` was updated for Beta 9 but not executed locally.
+- `dotnet publish src/DevCraft.Cli/DevCraft.Cli.csproj -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true -o artifacts/beta9-osx-arm64` passed after Beta 9 updates.
+- `file artifacts/beta9-osx-arm64/DevCraft.Cli` reported a Mach-O 64-bit arm64 executable, and `codesign -dv artifacts/beta9-osx-arm64/DevCraft.Cli` reported an embedded ad hoc signature.
+- Isolated profile smoke with `HOME=/tmp/... artifacts/beta9-osx-arm64/DevCraft.Cli list` passed and listed seeded profile catalogs plus supported clients without touching the live installed binary.
+- Interactive PTY validation with `TERM=xterm-256color` passed for Manage Logs: keyboard navigation opened the Terminal.Gui editor, multiline text plus a tab were saved with Ctrl+S, List Log Entries displayed only the uncompressed record, reopening edit showed existing content, and Esc cancel returned without modifying the stored JSON.
+- Interactive PTY validation also passed for the Terminal.Gui field form path: Add Person accepted Tab navigation across fields, Ctrl+S saved the structured form, the relationship multiline editor saved with Ctrl+S, ACTIVE status was selected, and `people.json` contained the expected person fields and multiline relationship.
+- Terminal.Gui.Editor package documentation lists Markdown as a built-in highlighting definition, and the reusable editor sets `HighlightingManager.Instance.GetDefinitionByExtension(".md")` when Markdown highlighting is preferred.
+- `dotnet test --filter "FullyQualifiedName~DevCraftMenuCommandTests|FullyQualifiedName~CatalogMergeCommandTests|FullyQualifiedName~ProfileStructureInitializerTests|FullyQualifiedName~SituationStorageTests"` passed after Project Management and SA-preservation work: 45 focused tests.
+- `dotnet test` passed after Project Management and SA-preservation work: 124 tests.
+- `dotnet build -c Release` passed with 2 xUnit analyzer warnings and 0 errors after Project Management and SA-preservation work.
+- `dotnet list package --vulnerable --include-transitive` passed with no vulnerable packages reported by the configured sources after Project Management and SA-preservation work.
+- `tests/installer-release-selection.sh` passed after the install preservation regression.
+- PowerShell Core was not installed on the validation host, so `tests/InstallerReleaseSelection.Tests.ps1` was updated with install preservation coverage but not executed locally.
+- Local redeploy to `/Users/john/.DevCraft/devcraft` used a staged signed arm64 Mach-O and atomic rename. The installed binary displayed `Version 1.0.0-beta.9`, `devcraft list` passed, and SHA-256 checksums for `/Users/john/.DevCraft/configure.json` and `/Users/john/.DevCraft/soul.md` matched before and after deployment.
+- `dotnet test` passed after schema migration work: 127 tests.
+- `dotnet build -c Release` passed after schema migration work with 2 xUnit analyzer warnings and 0 errors.
+- `tests/installer-release-selection.sh` passed after schema migration work.
+- `dotnet list package --vulnerable --include-transitive` passed with no vulnerable packages reported after schema migration work.
+- PowerShell Core was still not installed on the validation host, so `tests/InstallerReleaseSelection.Tests.ps1` remained updated but not executed locally.
+- Local redeploy to `/Users/john/.DevCraft/devcraft` used a staged signed arm64 Mach-O and atomic rename. The installed binary displayed `Version 1.0.0-beta.9`, `devcraft list` passed, and SHA-256 checksums for `/Users/john/.DevCraft/configure.json` and `/Users/john/.DevCraft/soul.md` again matched before and after deployment.
 
 ## Notes
 

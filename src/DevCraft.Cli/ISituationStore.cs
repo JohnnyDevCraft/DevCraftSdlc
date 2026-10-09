@@ -10,7 +10,11 @@ public interface ISituationStore
 
     void AddLogEntry(SituationLogEntry logEntry);
 
+    void UpsertLogEntry(SituationLogEntry logEntry);
+
     void AddSummary(SituationSummary summary);
+
+    void UpsertSummary(SituationSummary summary);
 
     void CompleteCompression(IReadOnlyList<string> logEntryIds, IReadOnlyList<string> summaryIds);
 

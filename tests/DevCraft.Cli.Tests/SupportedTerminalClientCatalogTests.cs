@@ -25,7 +25,7 @@ public sealed class SupportedTerminalClientCatalogTests
     }
 
     [Fact]
-    public void NormalizePreservesCustomBinaryPathButRefreshesDefaultArguments()
+    public void NormalizePreservesCustomOperationSettings()
     {
         SupportedTerminalClient staleClaude = new(
             "claude-code",
@@ -45,8 +45,10 @@ public sealed class SupportedTerminalClientCatalogTests
             client => client.Slug == "claude-code");
 
         Assert.Equal("/opt/custom/claude", normalized.Scan.BinaryPath);
-        Assert.Contains("--output-format", normalized.Scan.Arguments);
-        Assert.Contains("json", normalized.Scan.Arguments);
+        Assert.Equal(["--print", "{prompt}"], normalized.Scan.Arguments);
+        Assert.Equal("Old scan.", normalized.Scan.Description);
+        Assert.Equal(["{prompt}"], normalized.Session.Arguments);
+        Assert.Equal("Old session.", normalized.Session.Description);
     }
 
     [Fact]

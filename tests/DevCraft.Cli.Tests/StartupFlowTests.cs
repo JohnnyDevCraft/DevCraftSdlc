@@ -21,12 +21,12 @@ public sealed class StartupFlowTests
         FakeConsoleInteraction console = new(
         [
             "John",
-            "I build software.",
             "Jarvis",
-            "Be concise.",
             "Empty Project",
-            "A project created from an empty folder.",
         ]);
+        console.EnqueueTextEdit("I build software.");
+        console.EnqueueTextEdit("Be concise.");
+        console.EnqueueTextEdit("A project created from an empty folder.");
         FakeAiProjectScanner scanner = new(new ProjectScanResult(SampleProfile, [], new AiSdlcDetection(false, null)));
         StartupFlow flow = new(console, scanner, () =>
         [
@@ -62,12 +62,12 @@ public sealed class StartupFlowTests
         FakeConsoleInteraction console = new(
         [
             "John",
-            "I build software.",
             "Jarvis",
-            "Be concise.",
             "Fresh Project",
-            "A fresh profile startup project.",
         ]);
+        console.EnqueueTextEdit("I build software.");
+        console.EnqueueTextEdit("Be concise.");
+        console.EnqueueTextEdit("A fresh profile startup project.");
         FakeAiProjectScanner scanner = new(new ProjectScanResult(SampleProfile, [], new AiSdlcDetection(false, null)));
         StartupFlow flow = new(console, scanner, () =>
         [
@@ -131,8 +131,9 @@ public sealed class StartupFlowTests
         File.WriteAllText(Path.Combine(root.Path, "Program.cs"), "Console.WriteLine();");
         StartupContext context = new(root.Path, profile, soul);
         FakeConsoleInteraction console = new(
-            ["Operator Project", "Operator description."],
+            ["Operator Project"],
             ["Enter a custom project name", "Enter a custom project description"]);
+        console.EnqueueTextEdit("Operator description.");
         ProjectScanResult scanResult = new(
             SampleProfile,
             [

@@ -5,7 +5,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>1.0.0-beta.8</Version>
+    <Version>1.0.0-beta.9</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,6 +13,8 @@
     <PackageReference Include="Figgle.Fonts" Version="0.6.6" />
     <PackageReference Include="MongoDB.Driver" Version="3.12.0" />
     <PackageReference Include="Spectre.Console" Version="0.57.2" />
+    <PackageReference Include="Terminal.Gui" Version="2.5.0" />
+    <PackageReference Include="Terminal.Gui.Editor" Version="2.5.7" />
   </ItemGroup>
 
 </Project>

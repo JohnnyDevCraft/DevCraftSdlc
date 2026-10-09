@@ -33,7 +33,11 @@ public sealed class CatalogMergeCommandTests
                     "OpenAI Codex.",
                     new TerminalClientOperation("Scan with Codex.", "codex", ["exec"]),
                     new TerminalClientOperation("Open Codex.", "codex", [])),
-            ]);
+            ],
+            true,
+            SituationScale.Sprint,
+            SituationStorage.Database,
+            "mongodb://localhost:27017/CustomDevCraft");
         DevCraftProfileConfiguration source = new(
             [
                 new ProfileCatalogDocument("CREATE-API", "Create API", "New skill.", "skills/Create-API-v2.md"),
@@ -70,6 +74,10 @@ public sealed class CatalogMergeCommandTests
         Assert.Single(configuration.Templates);
         Assert.Equal("skill-template", configuration.Templates[0].Slug);
         Assert.Single(configuration.SupportedClients);
+        Assert.True(configuration.SituationEnabled);
+        Assert.Equal(SituationScale.Sprint, configuration.SituationScale);
+        Assert.Equal(SituationStorage.Database, configuration.SituationStorage);
+        Assert.Equal("mongodb://localhost:27017/CustomDevCraft", configuration.SituationConnection);
     }
 
     [Fact]
@@ -90,7 +98,11 @@ public sealed class CatalogMergeCommandTests
                 [],
                 [],
                 [],
-                []));
+                [],
+                true,
+                SituationScale.Sprint,
+                SituationStorage.Database,
+                "mongodb://localhost:27017/DevCraftCustom"));
         string sourcePath = Path.Combine(sourceRoot.Path, "catalog.json");
         Directory.CreateDirectory(Path.Combine(sourceRoot.Path, "skills"));
         Directory.CreateDirectory(Path.Combine(sourceRoot.Path, "standards"));
@@ -134,6 +146,10 @@ public sealed class CatalogMergeCommandTests
         Assert.Contains(configuration.Standards, document => document.Slug == "standard-one");
         Assert.Contains(configuration.Architectures, document => document.Slug == "architecture-one");
         Assert.Contains(configuration.ProjectTypes, document => document.Slug == "project-type-one");
+        Assert.True(configuration.SituationEnabled);
+        Assert.Equal(SituationScale.Sprint, configuration.SituationScale);
+        Assert.Equal(SituationStorage.Database, configuration.SituationStorage);
+        Assert.Equal("mongodb://localhost:27017/DevCraftCustom", configuration.SituationConnection);
     }
 
     [Fact]

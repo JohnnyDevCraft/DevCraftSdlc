@@ -21,6 +21,7 @@ cat > "$metadata" <<'JSON'
   { "tag_name": "v1.0.0-beta.6", "draft": false },
   { "tag_name": "v1.0.0-beta.7", "draft": false },
   { "tag_name": "v1.0.0-beta.8", "draft": false },
+  { "tag_name": "v1.0.0-beta.9", "draft": false },
   { "tag_name": "v0.9.0", "draft": false }
 ]
 JSON
@@ -46,12 +47,13 @@ assert_true() {
     fi
 }
 
-assert_equal "v1.0.0-beta.8" "$(select_release_tag_from_metadata "$metadata")" "selects newest beta over alpha releases"
+assert_equal "v1.0.0-beta.9" "$(select_release_tag_from_metadata "$metadata")" "selects newest beta over alpha releases"
 assert_true "beta sorts after alpha 12" version_greater "v1.0.0-beta.1" "v1.0.0-alpha.12"
 assert_true "beta 2 sorts after beta 1" version_greater "v1.0.0-beta.2" "v1.0.0-beta.1"
 assert_true "beta 5 sorts after beta 2" version_greater "v1.0.0-beta.5" "v1.0.0-beta.2"
 assert_true "beta 7 sorts after beta 6" version_greater "v1.0.0-beta.7" "v1.0.0-beta.6"
 assert_true "beta 8 sorts after beta 7" version_greater "v1.0.0-beta.8" "v1.0.0-beta.7"
+assert_true "beta 9 sorts after beta 8" version_greater "v1.0.0-beta.9" "v1.0.0-beta.8"
 assert_true "alpha 12 sorts after alpha 9" version_greater "v1.0.0-alpha.12" "v1.0.0-alpha.9"
 
 DEVCRAFT_VERSION="1.0.0-alpha.12"
@@ -65,6 +67,22 @@ cp "/bin/ls" "$install_root/devcraft"
 chmod +x "$install_root/devcraft"
 cp "/bin/cat" "$package_dir/devcraft"
 chmod +x "$package_dir/devcraft"
+cat > "$install_root/configure.json" <<'JSON'
+{
+  "SituationEnabled": true,
+  "SituationScale": "sprint",
+  "SituationStorage": "database",
+  "SituationConnection": "mongodb://localhost:27017/ExistingDevCraft"
+}
+JSON
+cat > "$package_dir/profile/configure.json" <<'JSON'
+{
+  "SituationEnabled": false,
+  "SituationScale": "weeks",
+  "SituationStorage": "file",
+  "SituationConnection": null
+}
+JSON
 old_inode="$(ls -i "$install_root/devcraft" | awk '{print $1}')"
 
 DEVCRAFT_HOME="$install_root"
@@ -82,6 +100,23 @@ if [ "$old_inode" = "$new_inode" ]; then
     printf 'FAIL: install should replace devcraft with a new inode\n' >&2
     exit 1
 fi
+
+grep '"SituationEnabled": true' "$install_root/configure.json" >/dev/null 2>&1 || {
+    printf 'FAIL: install should preserve existing situational awareness enablement\n' >&2
+    exit 1
+}
+grep '"SituationScale": "sprint"' "$install_root/configure.json" >/dev/null 2>&1 || {
+    printf 'FAIL: install should preserve existing situational awareness scale\n' >&2
+    exit 1
+}
+grep '"SituationStorage": "database"' "$install_root/configure.json" >/dev/null 2>&1 || {
+    printf 'FAIL: install should preserve existing situational awareness storage\n' >&2
+    exit 1
+}
+grep '"SituationConnection": "mongodb://localhost:27017/ExistingDevCraft"' "$install_root/configure.json" >/dev/null 2>&1 || {
+    printf 'FAIL: install should preserve existing situational awareness connection\n' >&2
+    exit 1
+}
 
 invalid_package_dir="$TMP_DIR/invalid-package"
 mkdir -p "$invalid_package_dir/profile"

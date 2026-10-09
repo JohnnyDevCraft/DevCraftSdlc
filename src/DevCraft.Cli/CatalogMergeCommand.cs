@@ -60,7 +60,11 @@ public static class CatalogMergeCommand
             target.Templates,
             projectTypes,
             target.FeatureStorageTypes,
-            target.SupportedClients);
+            target.SupportedClients,
+            target.SituationEnabled,
+            target.SituationScale,
+            target.SituationStorage,
+            target.SituationConnection);
 
         return (
             configuration,

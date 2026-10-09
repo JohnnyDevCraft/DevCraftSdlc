@@ -49,9 +49,25 @@ public sealed class MongoSituationStore : ISituationStore
         logEntries.InsertOne(logEntry);
     }
 
+    public void UpsertLogEntry(SituationLogEntry logEntry)
+    {
+        logEntries.ReplaceOne(
+            existing => existing.RowId == logEntry.RowId,
+            logEntry,
+            new ReplaceOptions { IsUpsert = true });
+    }
+
     public void AddSummary(SituationSummary summary)
     {
         summaries.InsertOne(summary);
+    }
+
+    public void UpsertSummary(SituationSummary summary)
+    {
+        summaries.ReplaceOne(
+            existing => existing.RowId == summary.RowId,
+            summary,
+            new ReplaceOptions { IsUpsert = true });
     }
 
     public void CompleteCompression(IReadOnlyList<string> logEntryIds, IReadOnlyList<string> summaryIds)

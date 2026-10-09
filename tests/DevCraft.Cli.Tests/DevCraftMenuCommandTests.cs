@@ -29,7 +29,7 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
         ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
-        FakeConsoleInteraction console = new([], ["Project discovery", "OpenAI Codex (codex)", "Exit"]);
+        FakeConsoleInteraction console = new([], ["Project Management", "Project discovery", "OpenAI Codex (codex)", "Exit"]);
         FakeDevCraftAiSessionLauncher launcher = new();
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
@@ -52,7 +52,7 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         ProfileStructureInitializer.Ensure(profile);
         ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
-        FakeConsoleInteraction console = new([], ["Project discovery", "OpenAI Codex (codex)", "Exit"]);
+        FakeConsoleInteraction console = new([], ["Project Management", "Project discovery", "OpenAI Codex (codex)", "Exit"]);
         FakeDevCraftAiSessionLauncher launcher = new();
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
@@ -75,7 +75,7 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         ProfileStructureInitializer.Ensure(profile);
         ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
-        FakeConsoleInteraction console = new([], ["Project discovery", "OpenAI Codex (codex)", "Exit"]);
+        FakeConsoleInteraction console = new([], ["Project Management", "Project discovery", "OpenAI Codex (codex)", "Exit"]);
         FakeDevCraftAiSessionLauncher launcher = new()
         {
             ExceptionToThrow = new InvalidOperationException("Could not start OpenAI Codex."),
@@ -87,6 +87,77 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         Assert.Contains(
             console.SelectTitles,
             title => title.Contains("Could not start the selected AI client", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void RunMainMenuShowsProjectManagementInsteadOfProjectActions()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Exit"]);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        IReadOnlyList<string> mainChoices = console.SelectChoices[0];
+        Assert.Contains("Project Management", mainChoices);
+        Assert.DoesNotContain("Project discovery", mainChoices);
+        Assert.DoesNotContain("Project design", mainChoices);
+        Assert.DoesNotContain("Project theme", mainChoices);
+        Assert.DoesNotContain("Project setup", mainChoices);
+        Assert.DoesNotContain("Create Project", mainChoices);
+    }
+
+    [Fact]
+    public void RunProjectManagementShowsProjectActionsWithBack()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Project Management", "Back", "Exit"]);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        int projectManagementIndex = console.SelectTitles.FindIndex(title => title == "Project Management");
+        IReadOnlyList<string> choices = console.SelectChoices[projectManagementIndex];
+        Assert.Equal(["Project discovery", "Project design", "Project theme", "Project setup", "Create Project", "Back"], choices);
+        Assert.Contains("What do you want to work on?", console.SelectTitles.Last());
+        Assert.Empty(launcher.Instructions);
+        Assert.Empty(featureLauncher.Launches);
+    }
+
+    [Fact]
+    public void RunProjectManagementReturnsToMainMenuAfterProjectHandoff()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Project Management", "Project design", "OpenAI Codex (codex)", "Exit"]);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        string instruction = Assert.Single(launcher.Instructions);
+        Assert.Contains("project design", instruction, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("What do you want to work on?", console.SelectTitles.Last());
+        Assert.Empty(featureLauncher.Launches);
     }
 
     [Fact]
@@ -134,7 +205,7 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         ProfileStructureInitializer.Ensure(profile, sourceRoot.Path);
         ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
-        FakeConsoleInteraction console = new([], ["Create Project", "Web API (web-api)", "OpenAI Codex (codex)", "Exit"]);
+        FakeConsoleInteraction console = new([], ["Project Management", "Create Project", "Web API (web-api)", "OpenAI Codex (codex)", "Exit"]);
         FakeDevCraftAiSessionLauncher launcher = new();
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
@@ -159,7 +230,7 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         ProfileStructureInitializer.Ensure(profile, sourceRoot.Path);
         ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
-        FakeConsoleInteraction console = new([], ["Create Project", "Project discovery", "OpenAI Codex (codex)", "Exit"]);
+        FakeConsoleInteraction console = new([], ["Project Management", "Create Project", "Project Management", "Project discovery", "OpenAI Codex (codex)", "Exit"]);
         FakeDevCraftAiSessionLauncher launcher = new();
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
@@ -398,8 +469,9 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
         FakeConsoleInteraction console = new(
-            ["Ada", "Lovelace", "ada@example.com", "555-0100", "Principal Engineer", "Platform", "Analytical Engines", "Trusted collaborator"],
+            ["Ada", "Lovelace", "ada@example.com", "555-0100", "Principal Engineer", "Platform", "Analytical Engines"],
             ["Logging", "Manage People", "Add Person", "ACTIVE", "Back", "Exit"]);
+        console.EnqueueTextEdit("Trusted collaborator");
         FakeDevCraftAiSessionLauncher launcher = new();
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
@@ -511,6 +583,107 @@ public sealed class DevCraftMenuCommandTests : IDisposable
     }
 
     [Fact]
+    public void RunManageLogsEditsUncompressedLogEntryAndPreservesIdentity()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        DevCraftProfileConfigurationWriter.Write(profile, new DevCraftProfileConfiguration([], [], [], [], [], [], [], true));
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        FileSituationStore store = new(profile);
+        store.AddLogEntry(new SituationLogEntry("log-1", DateTimeOffset.Parse("2026-10-09T08:00:00-04:00"), "Original", false));
+        store.AddLogEntry(new SituationLogEntry("log-2", DateTimeOffset.Parse("2026-10-09T07:00:00-04:00"), "Compressed", true));
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new(
+            ["2026-10-09T09:00:00-04:00"],
+            ["Logging", "Manage Logs", "List Log Entries", "2026-10-09 08:00 | Original", "Edit", "Go Back", "Go Back", "Back", "Exit"]);
+        console.EnqueueTextEdit("Updated\nMarkdown");
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        SituationSnapshot snapshot = new FileSituationStore(profile).Read(false);
+        SituationLogEntry updated = Assert.Single(snapshot.LogEntries.Where(entry => entry.RowId == "log-1"));
+        Assert.Equal("Updated\nMarkdown", updated.LogData);
+        Assert.Equal(DateTimeOffset.Parse("2026-10-09T09:00:00-04:00"), updated.DateTime);
+        Assert.False(updated.IsCompressed);
+        Assert.DoesNotContain(console.SelectChoices.SelectMany(choice => choice), choice => choice.Contains("Compressed", StringComparison.Ordinal));
+        Assert.Contains(console.TextEditTitles, title => title == "Edit Log Entry Content");
+    }
+
+    [Fact]
+    public void RunManageLogsCancelEditDoesNotWriteSummary()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        DevCraftProfileConfigurationWriter.Write(profile, new DevCraftProfileConfiguration([], [], [], [], [], [], [], true));
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        FileSituationStore store = new(profile);
+        store.AddSummary(new SituationSummary("summary-1", DateTimeOffset.Parse("2026-10-09T08:00:00-04:00"), "Original", "week", false));
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new(
+            ["2026-10-09T09:00:00-04:00"],
+            ["Logging", "Manage Logs", "List Summaries", "Week", "2026-10-09 08:00 | Original", "Edit", "Go Back", "Go Back", "Go Back", "Back", "Exit"]);
+        console.EnqueueTextEdit("Updated", saved: false);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        SituationSummary summary = Assert.Single(new FileSituationStore(profile).Read(false).Summaries);
+        Assert.Equal("Original", summary.SummaryData);
+        Assert.Equal(DateTimeOffset.Parse("2026-10-09T08:00:00-04:00"), summary.DateTime);
+        Assert.Equal("week", summary.Type);
+        Assert.False(summary.IsCompressed);
+    }
+
+    [Fact]
+    public void RunConfigureDevCraftEditsSupportedClientWithoutNormalizingAwayManualValues()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        SupportedTerminalClient client = new(
+            "custom-agent",
+            "Custom Agent",
+            "Original description",
+            new TerminalClientOperation("Original scan", "/opt/custom-scan", ["scan", "{prompt}"]),
+            new TerminalClientOperation("Original session", "/opt/custom-session", ["session", "{prompt}"]));
+        DevCraftProfileConfigurationWriter.Write(profile, new DevCraftProfileConfiguration([], [], [], [], [], [], [client]));
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new(
+            ["Updated Agent", "custom-agent", "/opt/custom-scan-v2", "/opt/custom-session-v2"],
+            ["Configure DevCraft", "Configure Supported Clients", "Custom Agent (custom-agent)", "Edit", "Back", "Exit"]);
+        console.EnqueueTextEdit("Updated description");
+        console.EnqueueTextEdit("Updated scan description");
+        console.EnqueueTextEdit("scan\n--json\n{prompt}");
+        console.EnqueueTextEdit("Updated session description");
+        console.EnqueueTextEdit("session\n{prompt}");
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        SupportedTerminalClient updated = Assert.Single(ProfileConfigurationReader.Read(profile).SupportedClients.Where(item => item.Slug == "custom-agent"));
+        Assert.Equal("Updated Agent", updated.Name);
+        Assert.Equal("Updated description", updated.Description);
+        Assert.Equal("/opt/custom-scan-v2", updated.Scan.BinaryPath);
+        Assert.Equal(["scan", "--json", "{prompt}"], updated.Scan.Arguments);
+        Assert.Equal("Updated session description", updated.Session.Description);
+        Assert.Equal("/opt/custom-session-v2", updated.Session.BinaryPath);
+        Assert.Equal(["session", "{prompt}"], updated.Session.Arguments);
+    }
+
+    [Fact]
     public void RunFeatureMenuBackReturnsToMainMenu()
     {
         using TestDirectory root = new();
@@ -555,7 +728,7 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         ProfileStructureInitializer.Ensure(profile, sourceRoot.Path);
         ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
-        FakeConsoleInteraction console = new([], ["Create Project", "Back", "Exit"]);
+        FakeConsoleInteraction console = new([], ["Project Management", "Create Project", "Back", "Exit"]);
         FakeDevCraftAiSessionLauncher launcher = new();
         FakeFeatureAiSessionLauncher featureLauncher = new();
 

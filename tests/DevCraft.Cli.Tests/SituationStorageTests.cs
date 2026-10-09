@@ -105,6 +105,41 @@ public sealed class SituationStorageTests
     }
 
     [Fact]
+    public void FileStoreUpsertsLogEntryWithoutChangingRowIdOrCompressionStatus()
+    {
+        using TestDirectory root = new();
+        FileSituationStore store = new(root.Path);
+        SituationLogEntry original = new("log-1", DateTimeOffset.Parse("2026-10-09T08:00:00-04:00"), "Original", false);
+        store.AddLogEntry(original);
+
+        store.UpsertLogEntry(original with { DateTime = DateTimeOffset.Parse("2026-10-09T09:00:00-04:00"), LogData = "Updated" });
+
+        SituationLogEntry entry = Assert.Single(store.Read(false).LogEntries);
+        Assert.Equal("log-1", entry.RowId);
+        Assert.Equal(DateTimeOffset.Parse("2026-10-09T09:00:00-04:00"), entry.DateTime);
+        Assert.Equal("Updated", entry.LogData);
+        Assert.False(entry.IsCompressed);
+    }
+
+    [Fact]
+    public void FileStoreUpsertsSummaryWithoutChangingRowIdTypeOrCompressionStatus()
+    {
+        using TestDirectory root = new();
+        FileSituationStore store = new(root.Path);
+        SituationSummary original = new("summary-1", DateTimeOffset.Parse("2026-10-09T08:00:00-04:00"), "Original", "week", false);
+        store.AddSummary(original);
+
+        store.UpsertSummary(original with { DateTime = DateTimeOffset.Parse("2026-10-09T09:00:00-04:00"), SummaryData = "Updated" });
+
+        SituationSummary summary = Assert.Single(store.Read(false).Summaries);
+        Assert.Equal("summary-1", summary.RowId);
+        Assert.Equal(DateTimeOffset.Parse("2026-10-09T09:00:00-04:00"), summary.DateTime);
+        Assert.Equal("Updated", summary.SummaryData);
+        Assert.Equal("week", summary.Type);
+        Assert.False(summary.IsCompressed);
+    }
+
+    [Fact]
     public void FileCompressionRemovesSourceRecordsAfterSummary()
     {
         using TestDirectory root = new();

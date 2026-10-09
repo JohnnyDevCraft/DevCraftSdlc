@@ -294,5 +294,6 @@
   "SituationEnabled": false,
   "SituationScale": "weeks",
   "SituationStorage": "file",
-  "SituationConnection": null
+  "SituationConnection": null,
+  "SchemaVersion": 1
 }

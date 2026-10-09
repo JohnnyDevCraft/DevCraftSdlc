@@ -247,3 +247,13 @@
 - [x] VAL-029 GREEN: Add Manage People list/add/edit/status flows, new people fields, legacy normalization, and storage upsert behavior.
 - [x] VAL-030 Run full Beta 8 local validation: package audit, tests, build, installer selection, publish, and codesign.
 - [x] VAL-031 Bump DevCraft release metadata, docs, and tests to `1.0.0-beta.8`.
+- [x] VAL-032 RED: Prove Beta 9 Manage Logs, summary editing, and supported-client editing are absent from the existing menus/storage contracts.
+- [x] VAL-033 GREEN: Add reusable Terminal.Gui field and multiline editors, Manage Logs list/new/edit flows, summary edit flows, and supported-client configuration editing.
+- [x] VAL-034 REFACTOR: Preserve operator-authored supported-client values during startup normalization and route large/freeform text through the shared editor adapter.
+- [x] VAL-035 Run Beta 9 local validation: focused tests, full tests, package audit, Release build, installer selection, publish, codesign metadata, isolated list smoke, and PTY editor smoke.
+- [x] VAL-036 Bump DevCraft release metadata, docs, and tests to `1.0.0-beta.9` without publishing a release.
+- [x] VAL-037 RED: Prove project actions still appear directly on the main menu and situational-awareness settings can be reset by install or merge paths.
+- [x] VAL-038 GREEN: Move project actions under Project Management and preserve existing situational-awareness settings during shell/PowerShell install, profile initialization, and catalog merge.
+- [x] VAL-039 REFACTOR: Keep the existing Project theme workflow/label because there is no Project Team workflow yet, and redeploy the local Beta 9 binary without a version bump.
+- [x] VAL-040 RED: Prove profile configuration lacked explicit schema-version migration behavior for legacy, idempotent current, and unknown future schemas.
+- [x] VAL-041 GREEN: Add profile configuration `SchemaVersion` migration, legacy-to-current normalization, idempotence coverage, and future-schema rejection without destructive rewrite.
