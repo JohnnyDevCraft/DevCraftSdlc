@@ -7,6 +7,9 @@ namespace DevCraft.Cli;
 public static class CliLogoRenderer
 {
     public static CliLogo Create()
+        => Create(CliHeaderContextCache.Current);
+
+    internal static CliLogo Create(CliHeaderContext headerContext)
     {
         IReadOnlyList<string> devLines = Render(CliBranding.ProductNamePrefix);
         IReadOnlyList<string> craftLines = Render(CliBranding.ProductNameSuffix);
@@ -27,7 +30,7 @@ public static class CliLogoRenderer
             lines,
             CliBranding.CopyrightLine,
             CliBranding.CreatorLine,
-            $"Version {GetVersion()}");
+            CreateVersionLine(headerContext));
     }
 
     private static IReadOnlyList<string> Render(string text)
@@ -55,5 +58,14 @@ public static class CliLogoRenderer
         int metadataIndex = version.IndexOf('+', StringComparison.Ordinal);
 
         return metadataIndex >= 0 ? version[..metadataIndex] : version;
+    }
+
+    private static string CreateVersionLine(CliHeaderContext headerContext)
+    {
+        string branchStatus = string.IsNullOrWhiteSpace(headerContext.GitDivergence)
+            ? headerContext.GitBranch
+            : $"{headerContext.GitBranch} {headerContext.GitDivergence}";
+
+        return $"Version {GetVersion()} | {headerContext.DirectoryPath} | {branchStatus}";
     }
 }

@@ -274,6 +274,36 @@
 - PowerShell Core was still not installed on the validation host, so `tests/InstallerReleaseSelection.Tests.ps1` remained updated but not executed locally.
 - Local redeploy to `/Users/john/.DevCraft/devcraft` used a staged signed arm64 Mach-O and atomic rename. The installed binary displayed `Version 1.0.0-beta.9`, `devcraft list` passed, and SHA-256 checksums for `/Users/john/.DevCraft/configure.json` and `/Users/john/.DevCraft/soul.md` again matched before and after deployment.
 
+### Beta 10 Header Context And Editor Chrome
+
+- Red coverage target: Existing header coverage only asserted the plain version string, and no automated coverage existed for cached directory/branch/divergence context, home-path display, or disabled Terminal.Gui editor gutters.
+- Green: The focused header/editor test command passed with 9 tests after adding process-level header context caching, git branch/divergence lookup, `~` path formatting, and `GutterOptions.None` for long text editing.
+- Refactor: `TerminalGuiTextEditorWindow` and `TerminalGuiFieldEditorWindow` were moved into separate files to satisfy the one-type-per-file rule while both Terminal.Gui editor surfaces gained the shared header above their content.
+
+#### Files Changed
+
+- `src/DevCraft.Cli/CliHeaderContext.cs` - Added an immutable header context for the current directory, Git branch, and upstream divergence.
+- `src/DevCraft.Cli/CliHeaderContextCache.cs` - Added process memory for the startup header context so render calls reuse one captured snapshot.
+- `src/DevCraft.Cli/CliHeaderContextProvider.cs` - Added startup Git command execution for branch and ahead/behind state, including detached and no-upstream fallback behavior.
+- `src/DevCraft.Cli/DisplayPathFormatter.cs` - Added home-directory shortening so visible paths render like `~/Source/repos/...`.
+- `src/DevCraft.Cli/CliLogoRenderer.cs` - Updated the visible version line to include the cached directory, branch, and divergence.
+- `src/DevCraft.Cli/DevCraftCli.cs` - Initialized the header context cache as the first startup step.
+- `src/DevCraft.Cli/TerminalGuiHeader.cs` - Added a shared Terminal.Gui header renderer that reuses the DevCraft logo text.
+- `src/DevCraft.Cli/TerminalGuiTextEditor.cs` - Placed long text editing under the header and disabled line-number gutters.
+- `src/DevCraft.Cli/TerminalGuiFieldEditor.cs` - Placed field editing under the same header so Terminal.Gui surfaces preserve the DevCraft chrome.
+- `src/DevCraft.Cli/TerminalGuiTextEditorWindow.cs` and `src/DevCraft.Cli/TerminalGuiFieldEditorWindow.cs` - Split existing window support types into their own files.
+- `src/DevCraft.Cli/DevCraft.Cli.csproj`, `README.md`, `tests/installer-release-selection.sh`, and `tests/InstallerReleaseSelection.Tests.ps1` - Bumped local release metadata and installer selection expectations to `1.0.0-beta.10`.
+- `tests/DevCraft.Cli.Tests/CliLogoRendererTests.cs`, `tests/DevCraft.Cli.Tests/CliHeaderContextProviderTests.cs`, `tests/DevCraft.Cli.Tests/DisplayPathFormatterTests.cs`, and `tests/DevCraft.Cli.Tests/TerminalGuiTextEditorTests.cs` - Added regression coverage for the Beta 10 header and editor changes.
+
+#### Validation
+
+- `dotnet test --filter "FullyQualifiedName~CliHeaderContextProviderTests|FullyQualifiedName~CliLogoRendererTests|FullyQualifiedName~DisplayPathFormatterTests|FullyQualifiedName~TerminalGuiTextEditorTests"` passed: 10 focused tests.
+- `dotnet test` passed: 132 tests.
+- `tests/installer-release-selection.sh` passed.
+- `dotnet build -c Release` passed with the existing 2 xUnit analyzer warnings and 0 errors.
+- `dotnet list package --vulnerable --include-transitive` passed with no vulnerable packages reported.
+- `git diff --check` passed.
+
 ## Notes
 
 - Earlier `MongoDB.Driver 3.5.0` restore output reported vulnerable transitive `SharpCompress` and `Snappier` packages. Updating to `MongoDB.Driver 3.12.0` resolved those warnings in `dotnet list package --vulnerable --include-transitive`.

@@ -257,3 +257,6 @@
 - [x] VAL-039 REFACTOR: Keep the existing Project theme workflow/label because there is no Project Team workflow yet, and redeploy the local Beta 9 binary without a version bump.
 - [x] VAL-040 RED: Prove profile configuration lacked explicit schema-version migration behavior for legacy, idempotent current, and unknown future schemas.
 - [x] VAL-041 GREEN: Add profile configuration `SchemaVersion` migration, legacy-to-current normalization, idempotence coverage, and future-schema rejection without destructive rewrite.
+- [x] VAL-042 RED: Prove the visible header lacks cached directory, branch, and upstream divergence information and the text editor still shows line numbers.
+- [x] VAL-043 GREEN: Cache header context at DevCraft startup, render directory/branch/divergence in the version line, keep the Terminal.Gui header above editor/form content, and disable text-editor line numbers.
+- [x] VAL-044 REFACTOR: Split Terminal.Gui window support types into one type per file and bump local release metadata, docs, and release-selection tests to `1.0.0-beta.10` without publishing a release.

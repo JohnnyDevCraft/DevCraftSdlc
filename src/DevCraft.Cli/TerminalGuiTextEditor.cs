@@ -2,7 +2,6 @@ using Terminal.Gui.App;
 using Terminal.Gui.Editor;
 using Terminal.Gui.Editor.Document;
 using Terminal.Gui.Editor.Highlighting;
-using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
@@ -28,11 +27,12 @@ public static class TerminalGuiTextEditor
                 editedText = editor.Document?.Text ?? string.Empty;
             });
 
+        int contentTop = TerminalGuiHeader.AddTo(window);
         Label hint = new()
         {
             Text = "Ctrl+S Save | Esc Cancel | Ctrl+Z Undo | Ctrl+Y Redo | Ctrl+V Paste",
             X = 0,
-            Y = 0,
+            Y = contentTop,
             Width = Dim.Fill(),
         };
         Button save = new()
@@ -52,24 +52,25 @@ public static class TerminalGuiTextEditor
         save.Accepted += (_, _) => window.SaveAndStop();
         cancel.Accepted += (_, _) => window.CancelAndStop();
 
+        editor.Y = contentTop + 2;
         window.Add(hint, editor, save, cancel);
         app.Run(window);
 
         return new TextEditResult(saved, editedText);
     }
 
-    private static Editor CreateEditor(TextEditOptions options)
+    internal static Editor CreateEditor(TextEditOptions options)
     {
         Editor editor = new()
         {
             X = 0,
-            Y = 2,
+            Y = 0,
             Width = Dim.Fill(),
             Height = Dim.Fill(2),
             Document = new TextDocument(options.InitialText),
             WordWrap = true,
             ViewportSettings = ViewportSettingsFlags.HasScrollBars,
-            GutterOptions = GutterOptions.LineNumbers,
+            GutterOptions = GutterOptions.None,
         };
 
         if (options.PreferMarkdownHighlighting)
@@ -79,44 +80,4 @@ public static class TerminalGuiTextEditor
 
         return editor;
     }
-}
-
-internal sealed class TerminalGuiTextEditorWindow : Window
-{
-    private readonly IApplication app;
-    private readonly Action save;
-
-    public TerminalGuiTextEditorWindow(IApplication app, string title, Action save)
-    {
-        this.app = app;
-        this.save = save;
-
-        Title = title;
-        Width = Dim.Fill();
-        Height = Dim.Fill();
-
-        KeyBindings.Add(Key.S.WithCtrl, Command.Save);
-        AddCommand(Command.Save, () =>
-        {
-            SaveAndStop();
-
-            return true;
-        });
-
-        KeyBindings.Add(Key.Esc, Command.Quit);
-        AddCommand(Command.Quit, () =>
-        {
-            CancelAndStop();
-
-            return true;
-        });
-    }
-
-    public void SaveAndStop()
-    {
-        save();
-        app.RequestStop(this);
-    }
-
-    public void CancelAndStop() => app.RequestStop(this);
 }

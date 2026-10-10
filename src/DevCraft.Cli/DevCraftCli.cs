@@ -4,6 +4,8 @@ public static class DevCraftCli
 {
     public static void Run(string[] args)
     {
+        CliHeaderContextCache.Initialize(Environment.CurrentDirectory);
+
         StartupContext context = StartupContextResolver.Resolve();
 
         if (args.Length > 0 && args[0].Equals("list", StringComparison.OrdinalIgnoreCase))
