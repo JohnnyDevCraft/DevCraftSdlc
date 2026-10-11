@@ -1148,7 +1148,7 @@ public static class DevCraftMenuCommand
             }
 
             FeatureStorageSelector.EnsureSelected(context, console, projectConfiguration);
-            FeatureCommand.Run(context, ["list"], console, featureLauncher, SelectAiClient(context, console));
+            FeatureCommand.Run(context, ["list"], console, featureLauncher, selectClient: () => SelectAiClient(context, console));
             return;
         }
 

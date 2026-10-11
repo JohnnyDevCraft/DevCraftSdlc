@@ -741,6 +741,82 @@ public sealed class DevCraftMenuCommandTests : IDisposable
     }
 
     [Fact]
+    public void RunFeatureListBackDoesNotPromptForAiClient()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        DevCraftFeature feature = new(
+            "Menu Feature",
+            "menu-feature",
+            "Validate feature list back behavior.",
+            "feature-folder",
+            FeatureStorageMode.RepoCentral,
+            null);
+        ProjectDevCraftConfigurationStore.Write(
+            root.Path,
+            new ProjectDevCraftConfiguration(
+                Guid.NewGuid().ToString(),
+                null,
+                "features.json",
+                SampleProfile,
+                [feature]));
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Features", "List features", "Back", "Exit"]);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        int featureListIndex = console.SelectTitles.FindIndex(title => title == "Select a feature");
+        Assert.True(featureListIndex >= 0);
+        Assert.Contains("Back", console.SelectChoices[featureListIndex]);
+        Assert.DoesNotContain("Which AI client should I use?", console.SelectTitles);
+        Assert.Empty(featureLauncher.Launches);
+    }
+
+    [Fact]
+    public void RunFeatureListPromptsForAiClientAfterFeatureSelection()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        ProfileStructureInitializer.Ensure(profile);
+        DevCraftFeature feature = new(
+            "Menu Feature",
+            "menu-feature",
+            "Validate deferred client selection.",
+            "feature-folder",
+            FeatureStorageMode.RepoCentral,
+            null);
+        ProjectDevCraftConfigurationStore.Write(
+            root.Path,
+            new ProjectDevCraftConfiguration(
+                Guid.NewGuid().ToString(),
+                null,
+                "features.json",
+                SampleProfile,
+                [feature]));
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Features", "List features", "Menu Feature (menu-feature)", "OpenAI Codex (codex)", "Exit"]);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        int featureListIndex = console.SelectTitles.FindIndex(title => title == "Select a feature");
+        int clientPromptIndex = console.SelectTitles.FindIndex(title => title == "Which AI client should I use?");
+        Assert.True(featureListIndex >= 0);
+        Assert.True(clientPromptIndex > featureListIndex);
+        Assert.Single(featureLauncher.Launches);
+        Assert.Equal("codex", featureLauncher.Launches[0].Client.Slug);
+    }
+
+    [Fact]
     public void RunCreateProjectBackReturnsToMainMenu()
     {
         using TestDirectory root = new();

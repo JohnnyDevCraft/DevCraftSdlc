@@ -88,6 +88,99 @@ public sealed class FeatureCommandTests
     }
 
     [Fact]
+    public void ListIncludesBackAndDoesNotSelectClientWhenBackIsSelected()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string soul = Path.Combine(profile, "soul.md");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        DevCraftFeature feature = new(
+            "Deferred Client Feature",
+            "deferred-client-feature",
+            "Feature in repository.",
+            "feature-folder",
+            "repo-central",
+            null);
+        ProjectDevCraftConfigurationStore.Write(
+            root.Path,
+            new ProjectDevCraftConfiguration(
+                Guid.NewGuid().ToString(),
+                null,
+                "features.json",
+                SampleProfile,
+                [feature]));
+        StartupContext context = new(root.Path, profile, soul);
+        FakeConsoleInteraction console = new([], ["Back"]);
+        FakeFeatureAiSessionLauncher launcher = new();
+        bool clientSelected = false;
+
+        FeatureCommand.Run(
+            context,
+            ["list"],
+            console,
+            launcher,
+            selectClient: () =>
+            {
+                clientSelected = true;
+                return SupportedTerminalClientCatalog.Create()[0];
+            });
+
+        int featureListIndex = console.SelectTitles.FindIndex(title => title == "Select a feature");
+        Assert.True(featureListIndex >= 0);
+        Assert.Contains("Back", console.SelectChoices[featureListIndex]);
+        Assert.False(clientSelected);
+        Assert.Empty(launcher.Launches);
+    }
+
+    [Fact]
+    public void ListSelectsClientAfterFeatureSelection()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string soul = Path.Combine(profile, "soul.md");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        DevCraftFeature feature = new(
+            "Deferred Client Feature",
+            "deferred-client-feature",
+            "Feature in repository.",
+            "feature-folder",
+            "repo-central",
+            null);
+        ProjectDevCraftConfigurationStore.Write(
+            root.Path,
+            new ProjectDevCraftConfiguration(
+                Guid.NewGuid().ToString(),
+                null,
+                "features.json",
+                SampleProfile,
+                [feature]));
+        StartupContext context = new(root.Path, profile, soul);
+        FakeConsoleInteraction console = new([], ["Deferred Client Feature (deferred-client-feature)"]);
+        FakeFeatureAiSessionLauncher launcher = new();
+        SupportedTerminalClient selectedClient = SupportedTerminalClientCatalog.Create()[1];
+        bool featureSelectedBeforeClient = false;
+
+        FeatureCommand.Run(
+            context,
+            ["list"],
+            console,
+            launcher,
+            selectClient: () =>
+            {
+                featureSelectedBeforeClient = console.StatusMessages.Contains("Selected feature: Deferred Client Feature");
+                return selectedClient;
+            });
+
+        Assert.True(featureSelectedBeforeClient);
+        Assert.Single(launcher.Launches);
+        Assert.Equal(selectedClient, launcher.Launches[0].Client);
+    }
+
+    [Fact]
     public void NewUsesRepositoryOverrideInsteadOfProfileDefault()
     {
         using TestDirectory root = new();

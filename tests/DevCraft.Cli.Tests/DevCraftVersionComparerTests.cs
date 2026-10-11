@@ -13,9 +13,9 @@ public sealed class DevCraftVersionComparerTests
     }
 
     [Fact]
-    public void CompareRepositoryToCurrentTreatsBeta11AsOlderThanBeta12()
+    public void CompareRepositoryToCurrentTreatsBeta12AsOlderThanBeta13()
     {
-        DevCraftVersionComparison comparison = DevCraftVersionComparer.CompareRepositoryToCurrent("1.0.0-beta.11", "1.0.0-beta.12");
+        DevCraftVersionComparison comparison = DevCraftVersionComparer.CompareRepositoryToCurrent("1.0.0-beta.12", "1.0.0-beta.13");
 
         Assert.Equal(DevCraftVersionComparison.Older, comparison);
     }
@@ -23,7 +23,7 @@ public sealed class DevCraftVersionComparerTests
     [Fact]
     public void CompareRepositoryToCurrentTreatsMissingVersionAsInvalid()
     {
-        DevCraftVersionComparison comparison = DevCraftVersionComparer.CompareRepositoryToCurrent(null, "1.0.0-beta.12");
+        DevCraftVersionComparison comparison = DevCraftVersionComparer.CompareRepositoryToCurrent(null, "1.0.0-beta.13");
 
         Assert.Equal(DevCraftVersionComparison.MissingOrInvalid, comparison);
     }

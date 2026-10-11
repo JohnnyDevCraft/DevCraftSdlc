@@ -2,12 +2,15 @@ namespace DevCraft.Cli;
 
 public static class FeatureCommand
 {
+    private const string Back = "Back";
+
     public static void Run(
         StartupContext context,
         IReadOnlyList<string> args,
         IConsoleInteraction console,
         IFeatureAiSessionLauncher launcher,
-        SupportedTerminalClient? client = null)
+        SupportedTerminalClient? client = null,
+        Func<SupportedTerminalClient>? selectClient = null)
     {
         ProfileStructureInitializer.Ensure(context.ProfileDirectory);
         ProjectDevCraftConfiguration? projectConfiguration = ProjectDevCraftConfigurationReader.Read(context.CurrentDirectory);
@@ -27,7 +30,7 @@ public static class FeatureCommand
         if (args[0].Equals("list", StringComparison.OrdinalIgnoreCase))
         {
             DevCraftProfileConfiguration profileConfiguration = ProfileConfigurationReader.Read(context.ProfileDirectory);
-            ListFeatures(context, projectConfiguration, profileConfiguration, console, launcher, client ?? SelectFallbackClient(context));
+            ListFeatures(context, projectConfiguration, profileConfiguration, console, launcher, client, selectClient);
             return;
         }
 
@@ -55,7 +58,8 @@ public static class FeatureCommand
         DevCraftProfileConfiguration profileConfiguration,
         IConsoleInteraction console,
         IFeatureAiSessionLauncher launcher,
-        SupportedTerminalClient client)
+        SupportedTerminalClient? client,
+        Func<SupportedTerminalClient>? selectClient)
     {
         IReadOnlyList<DevCraftFeature> features = projectConfiguration.Features;
 
@@ -67,14 +71,21 @@ public static class FeatureCommand
 
         string selected = console.Select(
             "Select a feature",
-            features.Select(feature => $"{feature.Name} ({feature.Slug})").ToList());
+            features.Select(feature => $"{feature.Name} ({feature.Slug})").Append(Back).ToList());
+
+        if (selected == Back)
+        {
+            return;
+        }
+
         DevCraftFeature feature = features.First(item => selected.EndsWith($"({item.Slug})", StringComparison.Ordinal));
         console.WriteStatus($"Selected feature: {feature.Name}");
+        SupportedTerminalClient selectedClient = client ?? selectClient?.Invoke() ?? SelectFallbackClient(context);
         launcher.Launch(
             context,
             FeatureStorageResolver.WithEffectiveStorage(profileConfiguration, projectConfiguration),
             feature,
-            client,
+            selectedClient,
             "Work on existing feature.");
     }
 

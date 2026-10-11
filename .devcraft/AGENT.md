@@ -58,10 +58,10 @@
 
 ## Active Feature Tracking
 
-- Active Feature ID: 0005
-- Active Feature Name: Beta 11 Repository Upgrade Agent
+- Active Feature ID: 0006
+- Active Feature Name: Beta 13 Feature Selection Flow
 - Active Feature State: Implementation
-- Current Implementation Phase: Phase 1: Profile Default And Repository Override Feature Storage
+- Current Implementation Phase: Phase 2: Beta 13 Release Metadata
 
 ## Working Agreements
 
