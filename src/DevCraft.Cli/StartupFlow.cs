@@ -5,18 +5,21 @@ public sealed class StartupFlow
     private readonly IConsoleInteraction console;
     private readonly IAiProjectScanner aiProjectScanner;
     private readonly Func<IReadOnlyList<TerminalAgent>> detectAgents;
+    private readonly IDevCraftRepositoryUpgradeLauncher upgradeLauncher;
 
     public StartupFlow(
         IConsoleInteraction console,
         IAiProjectScanner aiProjectScanner,
-        Func<IReadOnlyList<TerminalAgent>> detectAgents)
+        Func<IReadOnlyList<TerminalAgent>> detectAgents,
+        IDevCraftRepositoryUpgradeLauncher? upgradeLauncher = null)
     {
         this.console = console;
         this.aiProjectScanner = aiProjectScanner;
         this.detectAgents = detectAgents;
+        this.upgradeLauncher = upgradeLauncher ?? new TerminalDevCraftRepositoryUpgradeLauncher();
     }
 
-    public void Run(StartupContext context, bool forceInstall = false)
+    public bool Run(StartupContext context, bool forceInstall = false)
     {
         console.ShowStartupStage("Scanning for profile...");
         ProfileState profileState = ProfileStateDetector.Detect(context);
@@ -61,8 +64,13 @@ public sealed class StartupFlow
         if (hasDevCraftMarkers)
         {
             console.ShowStartupStage("DevCraft workflow detected.");
+            if (forceInstall)
+            {
+                return UpgradeExistingDevCraft(context);
+            }
+
             console.WriteStatus("Folder already uses DevCraft");
-            return;
+            return true;
         }
 
         if (forceInstall)
@@ -70,7 +78,7 @@ public sealed class StartupFlow
             console.ShowStartupStage("Force installing DevCraft.");
             console.WriteStatus("Force installing DevCraft in the current folder");
             InstallDevCraft(context.CurrentDirectory, AskForNewProjectProfile(context.CurrentDirectory), context.ProfileDirectory);
-            return;
+            return true;
         }
 
         if (readiness.Readiness == FolderReadiness.ReadyForDevCraft && !hasSdlcWorkflowMarkers)
@@ -78,14 +86,14 @@ public sealed class StartupFlow
             console.ShowStartupStage("No SDLC workflow detected.");
             console.WriteStatus("Folder ready for DevCraft");
             InstallDevCraft(context.CurrentDirectory, AskForNewProjectProfile(context.CurrentDirectory), context.ProfileDirectory);
-            return;
+            return true;
         }
 
         if (readiness.Readiness == FolderReadiness.ReadyForDevCraft)
         {
             console.ShowStartupStage("SDLC workflow detected.");
             console.WriteStatus("Folder has SDLC workflow markers");
-            return;
+            return true;
         }
 
         console.ShowStartupStage("Folder has code.");
@@ -103,7 +111,7 @@ public sealed class StartupFlow
         catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
         {
             console.WriteStatus($"AI project scan failed: {exception.Message}");
-            return;
+            return false;
         }
 
         ConsoleProjectScanWriter.Write(scanResult);
@@ -113,6 +121,50 @@ public sealed class StartupFlow
             ProjectProfile selectedProfile = SelectProjectProfile(scanResult.ProjectProfile);
             InstallDevCraft(context.CurrentDirectory, selectedProfile, context.ProfileDirectory);
         }
+
+        return true;
+    }
+
+    private bool UpgradeExistingDevCraft(StartupContext context)
+    {
+        ProjectDevCraftConfiguration? projectConfiguration = ProjectDevCraftConfigurationReader.Read(context.CurrentDirectory);
+
+        if (projectConfiguration is null)
+        {
+            console.WriteStatus("DevCraft repository configuration is missing. Re-run force install after restoring .devcraft/configure.json.");
+            return false;
+        }
+
+        DevCraftProfileConfiguration profileConfiguration = ProfileConfigurationReader.Read(context.ProfileDirectory);
+        string currentVersion = DevCraftCurrentVersionProvider.Get();
+        string? repositoryVersion = DevCraftRepositoryVersionStore.Read(context.CurrentDirectory);
+        DevCraftVersionComparison comparison = DevCraftVersionComparer.CompareRepositoryToCurrent(repositoryVersion, currentVersion);
+
+        if (comparison == DevCraftVersionComparison.CurrentOrNewer)
+        {
+            console.WriteStatus($"Repository DevCraft version is current: {repositoryVersion}");
+            return true;
+        }
+
+        string effectiveStorage = FeatureStorageResolver.Resolve(profileConfiguration, projectConfiguration);
+        DevCraftRepositoryUpgradeRequest request = new(
+            context,
+            projectConfiguration,
+            currentVersion,
+            repositoryVersion,
+            effectiveStorage);
+        DevCraftRepositoryUpgradeResult result = upgradeLauncher.Upgrade(request);
+
+        if (!result.Success)
+        {
+            console.WriteStatus($"DevCraft repository upgrade failed: {result.Summary}");
+            return false;
+        }
+
+        DevCraftRepositoryVersionStore.Write(context.CurrentDirectory, currentVersion);
+        console.WriteStatus($"DevCraft repository upgraded to {currentVersion}: {result.Summary}");
+
+        return true;
     }
 
     private ProjectProfile SelectProjectProfile(ProjectProfile aiProfile)

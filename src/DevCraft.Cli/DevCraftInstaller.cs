@@ -24,11 +24,32 @@ public static class DevCraftInstaller
         WriteIfMissing(Path.Combine(controlDirectory, "THEME.md"), Template(profileDirectory, "THEME.template.md", Theme(), profile), projectDirectory, createdPaths, preservedPaths);
         WriteIfMissing(Path.Combine(controlDirectory, "DESIGN.md"), Template(profileDirectory, "DESIGN.template.md", Design(), profile), projectDirectory, createdPaths, preservedPaths);
         WriteProjectConfiguration(controlDirectory, profile, projectDirectory, createdPaths, preservedPaths);
+        WriteVersion(projectDirectory, createdPaths, preservedPaths);
 
         return new DevCraftInstallationResult(
             RelativePath(projectDirectory, controlDirectory),
             createdPaths,
             preservedPaths);
+    }
+
+    private static void WriteVersion(
+        string projectDirectory,
+        List<string> createdPaths,
+        List<string> preservedPaths)
+    {
+        string path = DevCraftRepositoryVersionStore.PathFor(projectDirectory);
+        bool existed = File.Exists(path);
+
+        DevCraftRepositoryVersionStore.Write(projectDirectory, DevCraftCurrentVersionProvider.Get());
+
+        if (existed)
+        {
+            preservedPaths.Add(RelativePath(projectDirectory, path));
+        }
+        else
+        {
+            createdPaths.Add(RelativePath(projectDirectory, path));
+        }
     }
 
     private static void WriteProjectConfiguration(

@@ -20,7 +20,7 @@ public static class DevCraftMenuCommand
     private const string ListFeatures = "List features";
     private const string NewFeature = "Create new feature";
     private const string ImportSettings = "Import Settings";
-    private const string ChangeFeatureStorage = "Change Feature Storage";
+    private const string ChangeFeatureStorage = "Change Repository-Level Feature Storage";
     private const string CreateSkill = "Create Skill";
     private const string CreateStandards = "Create Standards";
     private const string CreateArchitecture = "Create Architecture";

@@ -76,6 +76,16 @@ public static class ProfileConfigurationReader
             string.IsNullOrWhiteSpace(configuration.SituationConnection)
                 ? null
                 : configuration.SituationConnection.Trim(),
-            schemaVersion);
+            schemaVersion)
+        {
+            DefaultFeatureStorage = NormalizeFeatureStorage(configuration.DefaultFeatureStorage),
+        };
+    }
+
+    private static string NormalizeFeatureStorage(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? FeatureStorageMode.SystemCentral
+            : value.Trim();
     }
 }

@@ -7,7 +7,7 @@
 - Spec: [spec.md](./spec.md)
 - Research: [research.md](./research.md)
 - Tasks: [tasks.md](./tasks.md)
-- State: Analysis
+- State: Implementation
 
 ## Analysis Summary
 
@@ -71,4 +71,4 @@ The requested Beta 11 behavior is implementable with the existing startup, insta
 
 ## Implementation Readiness
 
-The feature is ready for operator review. It should not be implemented until the operator explicitly authorizes making feature `0005` active and moving it into `Implementation`.
+The operator authorized implementation by asking to implement the plan. Feature `0005` is now active and in `Implementation`.

@@ -5,7 +5,7 @@
 - Feature ID: 0005
 - Feature Name: Beta 11 Repository Upgrade Agent
 - Type: Feature
-- State: Discovery
+- State: Implementation
 
 Valid states: `Discovery`, `Clarification`, `Research`, `Planning`, `Analysis`, `Implementation`, `Complete`.
 Code is only allowed while state is `Implementation`.

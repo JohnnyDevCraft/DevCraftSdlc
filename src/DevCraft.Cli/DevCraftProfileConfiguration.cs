@@ -15,4 +15,6 @@ public sealed record DevCraftProfileConfiguration(
     int SchemaVersion = DevCraftProfileConfiguration.CurrentSchemaVersion)
 {
     public const int CurrentSchemaVersion = 1;
+
+    public string DefaultFeatureStorage { get; init; } = FeatureStorageMode.SystemCentral;
 }

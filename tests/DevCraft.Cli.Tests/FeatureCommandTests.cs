@@ -17,10 +17,16 @@ public sealed class FeatureCommandTests
         string profile = Path.Combine(profileRoot.Path, ".DevCraft");
         string soul = Path.Combine(profile, "soul.md");
         Directory.CreateDirectory(profile);
+        DevCraftProfileConfigurationWriter.Write(
+            profile,
+            new DevCraftProfileConfiguration([], [], [], [], [], [], [])
+            {
+                DefaultFeatureStorage = FeatureStorageMode.RepoCentral,
+            });
         Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
         ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
         StartupContext context = new(root.Path, profile, soul);
-        FakeConsoleInteraction console = new([], ["repo central (repo-central)"]);
+        FakeConsoleInteraction console = new([]);
         FakeFeatureAiSessionLauncher launcher = new();
 
         FeatureCommand.Run(context, ["new", "First", "Feature"], console, launcher);
@@ -30,20 +36,28 @@ public sealed class FeatureCommandTests
         Assert.Equal("First Feature", feature.Name);
         Assert.Equal("first-feature", feature.Slug);
         Assert.Equal("repo-central", feature.StorageType);
-        Assert.Contains(console.StatusMessages, message => message == "Feature storage set for this repository: repo-central");
+        Assert.Null(configuration.SelectedFeatureStorage);
+        Assert.DoesNotContain(console.StatusMessages, message => message.StartsWith("Feature storage set", StringComparison.OrdinalIgnoreCase));
         Assert.True(Directory.Exists(Path.Combine(root.Path, ".devcraft", "features", feature.FolderName)));
         Assert.Single(launcher.Launches);
+        Assert.Equal("repo-central", launcher.ProjectConfigurations[0].SelectedFeatureStorage);
         Assert.Equal("Create a new feature.", launcher.Launches[0].Instruction);
     }
 
     [Fact]
-    public void ListPromptsForFeatureStorageWhenRepositoryHasNoSelection()
+    public void ListUsesProfileDefaultWhenRepositoryHasNoOverride()
     {
         using TestDirectory root = new();
         using TestDirectory profileRoot = new();
         string profile = Path.Combine(profileRoot.Path, ".DevCraft");
         string soul = Path.Combine(profile, "soul.md");
         Directory.CreateDirectory(profile);
+        DevCraftProfileConfigurationWriter.Write(
+            profile,
+            new DevCraftProfileConfiguration([], [], [], [], [], [], [])
+            {
+                DefaultFeatureStorage = FeatureStorageMode.SystemCentral,
+            });
         Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
         DevCraftFeature feature = new(
             "Pending Storage Feature",
@@ -61,15 +75,53 @@ public sealed class FeatureCommandTests
                 SampleProfile,
                 [feature]));
         StartupContext context = new(root.Path, profile, soul);
-        FakeConsoleInteraction console = new([], ["repo central (repo-central)", "Pending Storage Feature (pending-storage-feature)"]);
+        FakeConsoleInteraction console = new([], ["Pending Storage Feature (pending-storage-feature)"]);
         FakeFeatureAiSessionLauncher launcher = new();
 
         FeatureCommand.Run(context, ["list"], console, launcher);
 
         ProjectDevCraftConfiguration configuration = ProjectDevCraftConfigurationReader.Read(root.Path)!;
-        Assert.Equal("repo-central", configuration.SelectedFeatureStorage);
-        Assert.Contains(console.StatusMessages, message => message == "Feature storage set for this repository: repo-central");
+        Assert.Null(configuration.SelectedFeatureStorage);
+        Assert.DoesNotContain(console.StatusMessages, message => message.StartsWith("Feature storage set", StringComparison.OrdinalIgnoreCase));
         Assert.Single(launcher.Launches);
+        Assert.Equal("system-central", launcher.ProjectConfigurations[0].SelectedFeatureStorage);
+    }
+
+    [Fact]
+    public void NewUsesRepositoryOverrideInsteadOfProfileDefault()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string soul = Path.Combine(profile, "soul.md");
+        Directory.CreateDirectory(profile);
+        DevCraftProfileConfigurationWriter.Write(
+            profile,
+            new DevCraftProfileConfiguration([], [], [], [], [], [], [])
+            {
+                DefaultFeatureStorage = FeatureStorageMode.SystemCentral,
+            });
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        ProjectDevCraftConfigurationStore.Write(
+            root.Path,
+            new ProjectDevCraftConfiguration(
+                Guid.NewGuid().ToString(),
+                FeatureStorageMode.RepoCentral,
+                "features.json",
+                SampleProfile,
+                []));
+        StartupContext context = new(root.Path, profile, soul);
+        FakeConsoleInteraction console = new([]);
+        FakeFeatureAiSessionLauncher launcher = new();
+
+        FeatureCommand.Run(context, ["new", "Repository", "Override"], console, launcher);
+
+        ProjectDevCraftConfiguration configuration = ProjectDevCraftConfigurationReader.Read(root.Path)!;
+        DevCraftFeature feature = Assert.Single(configuration.Features);
+        Assert.Equal(FeatureStorageMode.RepoCentral, feature.StorageType);
+        Assert.Equal(FeatureStorageMode.RepoCentral, configuration.SelectedFeatureStorage);
+        Assert.True(Directory.Exists(Path.Combine(root.Path, ".devcraft", "features", feature.FolderName)));
+        Assert.Equal(FeatureStorageMode.RepoCentral, launcher.ProjectConfigurations[0].SelectedFeatureStorage);
     }
 
     [Fact]

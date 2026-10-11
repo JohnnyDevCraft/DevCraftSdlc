@@ -26,8 +26,8 @@ public static class FeatureCommand
 
         if (args[0].Equals("list", StringComparison.OrdinalIgnoreCase))
         {
-            projectConfiguration = FeatureStorageSelector.EnsureSelected(context, console, projectConfiguration);
-            ListFeatures(context, projectConfiguration, console, launcher, client ?? SelectFallbackClient(context));
+            DevCraftProfileConfiguration profileConfiguration = ProfileConfigurationReader.Read(context.ProfileDirectory);
+            ListFeatures(context, projectConfiguration, profileConfiguration, console, launcher, client ?? SelectFallbackClient(context));
             return;
         }
 
@@ -41,8 +41,8 @@ public static class FeatureCommand
                 return;
             }
 
-            projectConfiguration = FeatureStorageSelector.EnsureSelected(context, console, projectConfiguration);
-            CreateFeature(context, projectConfiguration, featureName, console, launcher, client ?? SelectFallbackClient(context));
+            DevCraftProfileConfiguration profileConfiguration = ProfileConfigurationReader.Read(context.ProfileDirectory);
+            CreateFeature(context, projectConfiguration, profileConfiguration, featureName, console, launcher, client ?? SelectFallbackClient(context));
             return;
         }
 
@@ -52,6 +52,7 @@ public static class FeatureCommand
     private static void ListFeatures(
         StartupContext context,
         ProjectDevCraftConfiguration projectConfiguration,
+        DevCraftProfileConfiguration profileConfiguration,
         IConsoleInteraction console,
         IFeatureAiSessionLauncher launcher,
         SupportedTerminalClient client)
@@ -69,19 +70,24 @@ public static class FeatureCommand
             features.Select(feature => $"{feature.Name} ({feature.Slug})").ToList());
         DevCraftFeature feature = features.First(item => selected.EndsWith($"({item.Slug})", StringComparison.Ordinal));
         console.WriteStatus($"Selected feature: {feature.Name}");
-        launcher.Launch(context, projectConfiguration, feature, client, "Work on existing feature.");
+        launcher.Launch(
+            context,
+            FeatureStorageResolver.WithEffectiveStorage(profileConfiguration, projectConfiguration),
+            feature,
+            client,
+            "Work on existing feature.");
     }
 
     private static void CreateFeature(
         StartupContext context,
         ProjectDevCraftConfiguration projectConfiguration,
+        DevCraftProfileConfiguration profileConfiguration,
         string featureName,
         IConsoleInteraction console,
         IFeatureAiSessionLauncher launcher,
         SupportedTerminalClient client)
     {
-        string storageType = projectConfiguration.SelectedFeatureStorage
-            ?? throw new InvalidOperationException("Feature storage must be selected before creating a feature.");
+        string storageType = FeatureStorageResolver.Resolve(profileConfiguration, projectConfiguration);
         string slug = UniqueSlug(SlugGenerator.Create(featureName), projectConfiguration.Features);
         DevCraftFeature feature = new(
             featureName,
@@ -107,7 +113,12 @@ public static class FeatureCommand
         }
 
         console.WriteStatus($"Feature created: {feature.Name}");
-        launcher.Launch(context, updatedConfiguration, feature, client, "Create a new feature.");
+        launcher.Launch(
+            context,
+            FeatureStorageResolver.WithEffectiveStorage(profileConfiguration, updatedConfiguration),
+            feature,
+            client,
+            "Create a new feature.");
     }
 
     private static void AddSystemCentralFeature(

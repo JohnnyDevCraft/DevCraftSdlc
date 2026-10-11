@@ -3,23 +3,16 @@ namespace DevCraft.Cli;
 public static class FeatureStorageSelector
 {
     private const string Back = "Back";
+    private const string UseProfileDefault = "Use Profile Default";
 
     public static ProjectDevCraftConfiguration EnsureSelected(
         StartupContext context,
         IConsoleInteraction console,
         ProjectDevCraftConfiguration projectConfiguration)
     {
-        if (!string.IsNullOrWhiteSpace(projectConfiguration.SelectedFeatureStorage))
-        {
-            return projectConfiguration;
-        }
+        DevCraftProfileConfiguration profileConfiguration = ProfileConfigurationReader.Read(context.ProfileDirectory);
 
-        return SelectAndSave(
-            context,
-            console,
-            projectConfiguration,
-            "Select the feature storage mechanism for this repository",
-            includeBack: false) ?? projectConfiguration;
+        return FeatureStorageResolver.WithEffectiveStorage(profileConfiguration, projectConfiguration);
     }
 
     public static ProjectDevCraftConfiguration? Change(
@@ -49,6 +42,8 @@ public static class FeatureStorageSelector
             ? [FeatureStorageMode.RepoCentral, FeatureStorageMode.SystemCentral]
             : storageTypes.Select(StorageChoice).ToList();
 
+        choices.Insert(0, UseProfileDefault);
+
         if (includeBack)
         {
             choices.Add(Back);
@@ -60,6 +55,19 @@ public static class FeatureStorageSelector
         if (selected == Back)
         {
             return null;
+        }
+
+        if (selected == UseProfileDefault)
+        {
+            ProjectDevCraftConfiguration defaultConfiguration = projectConfiguration with
+            {
+                SelectedFeatureStorage = null,
+            };
+
+            ProjectDevCraftConfigurationStore.Write(context.CurrentDirectory, defaultConfiguration);
+            console.WriteStatus("Repository feature storage override cleared. This repository will use the profile default.");
+
+            return defaultConfiguration;
         }
 
         string slug = SelectedSlug(selected, storageTypes);

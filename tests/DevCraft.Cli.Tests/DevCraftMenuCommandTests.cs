@@ -170,7 +170,7 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
         ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
-        FakeConsoleInteraction console = new(["Menu Feature"], ["Features", "Create new feature", "repo central (repo-central)", "OpenAI Codex (codex)", "Exit"]);
+        FakeConsoleInteraction console = new(["Menu Feature"], ["Features", "Create new feature", "OpenAI Codex (codex)", "Exit"]);
         FakeDevCraftAiSessionLauncher launcher = new();
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
@@ -379,7 +379,7 @@ public sealed class DevCraftMenuCommandTests : IDisposable
     }
 
     [Fact]
-    public void RunConfigureDevCraftChangeFeatureStorageUpdatesRepositoryOnly()
+    public void RunConfigureDevCraftChangeRepositoryLevelFeatureStorageUpdatesRepositoryOnly()
     {
         using TestDirectory root = new();
         using TestDirectory profileRoot = new();
@@ -390,7 +390,7 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         ProfileStructureInitializer.Ensure(profile, sourceRoot.Path);
         ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
-        FakeConsoleInteraction console = new([], ["Configure DevCraft", "Change Feature Storage", "system central (system-central)", "Exit"]);
+        FakeConsoleInteraction console = new([], ["Configure DevCraft", "Change Repository-Level Feature Storage", "system central (system-central)", "Exit"]);
         FakeDevCraftAiSessionLauncher launcher = new();
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
@@ -400,6 +400,40 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         DevCraftProfileConfiguration profileConfiguration = ProfileConfigurationReader.Read(profile);
         Assert.Equal("system-central", repositoryConfiguration.SelectedFeatureStorage);
         Assert.DoesNotContain("\"SelectedFeatureStorage\"", File.ReadAllText(Path.Combine(profile, "configure.json")));
+        Assert.Contains("Change Repository-Level Feature Storage", console.SelectChoices.SelectMany(choice => choice));
+        Assert.DoesNotContain("Change Feature Storage", console.SelectChoices.SelectMany(choice => choice));
+        Assert.Empty(launcher.Instructions);
+        Assert.Empty(featureLauncher.Launches);
+    }
+
+    [Fact]
+    public void RunConfigureDevCraftChangeRepositoryLevelFeatureStorageCanClearOverride()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        using TestDirectory sourceRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        ProfileStructureInitializer.Ensure(profile, sourceRoot.Path);
+        ProjectDevCraftConfigurationStore.Write(
+            root.Path,
+            new ProjectDevCraftConfiguration(
+                Guid.NewGuid().ToString(),
+                FeatureStorageMode.RepoCentral,
+                "features.json",
+                SampleProfile,
+                []));
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Configure DevCraft", "Change Repository-Level Feature Storage", "Use Profile Default", "Exit"]);
+        FakeDevCraftAiSessionLauncher launcher = new();
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
+
+        ProjectDevCraftConfiguration repositoryConfiguration = ProjectDevCraftConfigurationReader.Read(root.Path)!;
+        Assert.Null(repositoryConfiguration.SelectedFeatureStorage);
+        Assert.Contains(console.StatusMessages, message => message.Contains("profile default", StringComparison.OrdinalIgnoreCase));
         Assert.Empty(launcher.Instructions);
         Assert.Empty(featureLauncher.Launches);
     }

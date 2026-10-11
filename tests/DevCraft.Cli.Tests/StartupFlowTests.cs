@@ -237,6 +237,7 @@ public sealed class StartupFlowTests
 
         Assert.True(Directory.Exists(Path.Combine(root.Path, ".devcraft")));
         Assert.True(File.Exists(Path.Combine(root.Path, ".devcraft", "configure.json")));
+        Assert.Equal(DevCraftCurrentVersionProvider.Get(), File.ReadAllText(Path.Combine(root.Path, ".devcraft", "version")).Trim());
         Assert.False(File.Exists(Path.Combine(root.Path, "AGENT.md")));
         Assert.True(Directory.Exists(Path.Combine(root.Path, ".specify")));
         Assert.False(scanner.WasCalled);
@@ -261,8 +262,127 @@ public sealed class StartupFlowTests
 
         Assert.True(Directory.Exists(Path.Combine(root.Path, ".devcraft")));
         Assert.True(File.Exists(Path.Combine(root.Path, ".devcraft", "configure.json")));
+        Assert.Equal(DevCraftCurrentVersionProvider.Get(), File.ReadAllText(Path.Combine(root.Path, ".devcraft", "version")).Trim());
         Assert.False(File.Exists(Path.Combine(root.Path, "AGENT.md")));
         Assert.False(scanner.WasCalled);
+    }
+
+    [Fact]
+    public void RunForceInCurrentDevCraftFolderDoesNotLaunchUpgradeAgent()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string soul = Path.Combine(profile, "soul.md");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        File.WriteAllText(soul, "- Default terminal AI agent: Codex");
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        DevCraftRepositoryVersionStore.Write(root.Path, DevCraftCurrentVersionProvider.Get());
+        StartupContext context = new(root.Path, profile, soul);
+        FakeConsoleInteraction console = new([]);
+        FakeDevCraftRepositoryUpgradeLauncher upgradeLauncher = new();
+        StartupFlow flow = new(
+            console,
+            new FakeAiProjectScanner(new ProjectScanResult(SampleProfile, [], new AiSdlcDetection(false, null))),
+            () => [],
+            upgradeLauncher);
+
+        bool shouldContinue = flow.Run(context, forceInstall: true);
+
+        Assert.True(shouldContinue);
+        Assert.Empty(upgradeLauncher.Requests);
+        Assert.Contains(console.StatusMessages, message => message.Contains("current", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void RunForceInMissingVersionDevCraftFolderLaunchesUpgradeAgentAndWritesVersion()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string soul = Path.Combine(profile, "soul.md");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        File.WriteAllText(soul, "- Default terminal AI agent: Codex");
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        StartupContext context = new(root.Path, profile, soul);
+        FakeConsoleInteraction console = new([]);
+        FakeDevCraftRepositoryUpgradeLauncher upgradeLauncher = new();
+        StartupFlow flow = new(
+            console,
+            new FakeAiProjectScanner(new ProjectScanResult(SampleProfile, [], new AiSdlcDetection(false, null))),
+            () => [],
+            upgradeLauncher);
+
+        bool shouldContinue = flow.Run(context, forceInstall: true);
+
+        Assert.True(shouldContinue);
+        DevCraftRepositoryUpgradeRequest request = Assert.Single(upgradeLauncher.Requests);
+        Assert.Null(request.RepositoryVersion);
+        Assert.Equal(FeatureStorageMode.SystemCentral, request.EffectiveFeatureStorage);
+        Assert.Equal(DevCraftCurrentVersionProvider.Get(), File.ReadAllText(Path.Combine(root.Path, ".devcraft", "version")).Trim());
+    }
+
+    [Fact]
+    public void RunForceInOlderVersionDevCraftFolderLaunchesUpgradeAgent()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string soul = Path.Combine(profile, "soul.md");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        File.WriteAllText(soul, "- Default terminal AI agent: Codex");
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        DevCraftRepositoryVersionStore.Write(root.Path, "1.0.0-beta.10");
+        StartupContext context = new(root.Path, profile, soul);
+        FakeConsoleInteraction console = new([]);
+        FakeDevCraftRepositoryUpgradeLauncher upgradeLauncher = new();
+        StartupFlow flow = new(
+            console,
+            new FakeAiProjectScanner(new ProjectScanResult(SampleProfile, [], new AiSdlcDetection(false, null))),
+            () => [],
+            upgradeLauncher);
+
+        bool shouldContinue = flow.Run(context, forceInstall: true);
+
+        Assert.True(shouldContinue);
+        DevCraftRepositoryUpgradeRequest request = Assert.Single(upgradeLauncher.Requests);
+        Assert.Equal("1.0.0-beta.10", request.RepositoryVersion);
+        Assert.Equal(DevCraftCurrentVersionProvider.Get(), request.CurrentVersion);
+    }
+
+    [Fact]
+    public void RunForceFailedUpgradeLeavesVersionUnchangedAndStopsStartup()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string soul = Path.Combine(profile, "soul.md");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        File.WriteAllText(soul, "- Default terminal AI agent: Codex");
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        DevCraftRepositoryVersionStore.Write(root.Path, "1.0.0-beta.10");
+        StartupContext context = new(root.Path, profile, soul);
+        FakeConsoleInteraction console = new([]);
+        FakeDevCraftRepositoryUpgradeLauncher upgradeLauncher = new()
+        {
+            Result = DevCraftRepositoryUpgradeResult.Failed("No agent."),
+        };
+        StartupFlow flow = new(
+            console,
+            new FakeAiProjectScanner(new ProjectScanResult(SampleProfile, [], new AiSdlcDetection(false, null))),
+            () => [],
+            upgradeLauncher);
+
+        bool shouldContinue = flow.Run(context, forceInstall: true);
+
+        Assert.False(shouldContinue);
+        Assert.Single(upgradeLauncher.Requests);
+        Assert.Equal("1.0.0-beta.10", File.ReadAllText(Path.Combine(root.Path, ".devcraft", "version")).Trim());
+        Assert.Contains(console.StatusMessages, message => message.Contains("upgrade failed", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

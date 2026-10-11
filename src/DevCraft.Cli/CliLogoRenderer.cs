@@ -1,6 +1,5 @@
 using Figgle;
 using Figgle.Fonts;
-using System.Reflection;
 
 namespace DevCraft.Cli;
 
@@ -48,16 +47,7 @@ public static class CliLogoRenderer
 
     private static string GetVersion()
     {
-        string version = typeof(CliLogoRenderer)
-            .Assembly
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
-            .InformationalVersion
-            ?? typeof(CliLogoRenderer).Assembly.GetName().Version?.ToString()
-            ?? "unknown";
-
-        int metadataIndex = version.IndexOf('+', StringComparison.Ordinal);
-
-        return metadataIndex >= 0 ? version[..metadataIndex] : version;
+        return DevCraftCurrentVersionProvider.Get();
     }
 
     private static string CreateVersionLine(CliHeaderContext headerContext)

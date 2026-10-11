@@ -734,7 +734,10 @@ public static class ProfileStructureInitializer
             existing.SituationEnabled,
             existing.SituationScale,
             existing.SituationStorage,
-            existing.SituationConnection);
+            existing.SituationConnection)
+        {
+            DefaultFeatureStorage = existing.DefaultFeatureStorage,
+        };
 
         if (File.Exists(configurePath))
         {

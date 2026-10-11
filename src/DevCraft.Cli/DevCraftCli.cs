@@ -50,7 +50,11 @@ public static class DevCraftCli
             new TerminalAiProjectScanner(),
             () => TerminalAgentCatalog.Create(CommandLocator.Exists));
 
-        startupFlow.Run(context, forceInstall);
+        if (!startupFlow.Run(context, forceInstall))
+        {
+            return;
+        }
+
         DevCraftMenuCommand.Run(context, console, sessionLauncher, sessionLauncher);
     }
 }

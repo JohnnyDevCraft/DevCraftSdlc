@@ -7,6 +7,7 @@ public sealed class FakeFeatureAiSessionLauncher : IFeatureAiSessionLauncher
     public Exception? ExceptionToThrow { get; set; }
 
     public List<(DevCraftFeature Feature, SupportedTerminalClient Client, string Instruction)> Launches { get; } = [];
+    public List<ProjectDevCraftConfiguration> ProjectConfigurations { get; } = [];
 
     public void Launch(
         StartupContext context,
@@ -21,5 +22,6 @@ public sealed class FakeFeatureAiSessionLauncher : IFeatureAiSessionLauncher
         }
 
         Launches.Add((feature, client, instruction));
+        ProjectConfigurations.Add(projectConfiguration);
     }
 }

@@ -30,6 +30,7 @@ public sealed class ProfileConfigurationReaderTests
         DevCraftProfileConfiguration configuration = ProfileConfigurationReader.ReadFile(path);
 
         Assert.Equal(DevCraftProfileConfiguration.CurrentSchemaVersion, configuration.SchemaVersion);
+        Assert.Equal(FeatureStorageMode.SystemCentral, configuration.DefaultFeatureStorage);
         Assert.True(configuration.SituationEnabled);
         Assert.Equal(SituationScale.Sprint, configuration.SituationScale);
         Assert.Equal(SituationStorage.Database, configuration.SituationStorage);
@@ -51,7 +52,10 @@ public sealed class ProfileConfigurationReaderTests
             true,
             SituationScale.Sprint,
             SituationStorage.Database,
-            "mongodb://localhost:27017/CurrentDevCraft");
+            "mongodb://localhost:27017/CurrentDevCraft")
+        {
+            DefaultFeatureStorage = FeatureStorageMode.RepoCentral,
+        };
 
         DevCraftProfileConfigurationWriter.Write(root.Path, original);
         DevCraftProfileConfiguration firstRead = ProfileConfigurationReader.Read(root.Path);
@@ -69,6 +73,7 @@ public sealed class ProfileConfigurationReaderTests
         Assert.Empty(secondRead.Templates);
         Assert.Empty(secondRead.ProjectTypes);
         Assert.Empty(secondRead.FeatureStorageTypes);
+        Assert.Equal(FeatureStorageMode.RepoCentral, secondRead.DefaultFeatureStorage);
         Assert.Equal(firstRead.SupportedClients.Select(client => client.Slug), secondRead.SupportedClients.Select(client => client.Slug));
         Assert.Equal(DevCraftProfileConfiguration.CurrentSchemaVersion, secondRead.SchemaVersion);
         Assert.True(File.ReadAllText(Path.Combine(root.Path, "configure.json")).Contains("\"SchemaVersion\": 1", StringComparison.Ordinal));
