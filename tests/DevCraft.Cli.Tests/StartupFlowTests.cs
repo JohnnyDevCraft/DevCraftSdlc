@@ -325,6 +325,36 @@ public sealed class StartupFlowTests
     }
 
     [Fact]
+    public void RunForceInDevCraftFolderWithMissingConfigurationLaunchesUpgradeAgent()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string soul = Path.Combine(profile, "soul.md");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        File.WriteAllText(soul, "- Default terminal AI agent: Codex");
+        StartupContext context = new(root.Path, profile, soul);
+        FakeConsoleInteraction console = new([]);
+        FakeDevCraftRepositoryUpgradeLauncher upgradeLauncher = new();
+        StartupFlow flow = new(
+            console,
+            new FakeAiProjectScanner(new ProjectScanResult(SampleProfile, [], new AiSdlcDetection(false, null))),
+            () => [],
+            upgradeLauncher);
+
+        bool shouldContinue = flow.Run(context, forceInstall: true);
+
+        Assert.True(shouldContinue);
+        DevCraftRepositoryUpgradeRequest request = Assert.Single(upgradeLauncher.Requests);
+        Assert.Null(request.RepositoryVersion);
+        Assert.Equal(Path.GetFileName(root.Path), request.ProjectConfiguration.ProjectProfile.Name);
+        Assert.Equal(FeatureStorageMode.SystemCentral, request.EffectiveFeatureStorage);
+        Assert.Equal(DevCraftCurrentVersionProvider.Get(), File.ReadAllText(Path.Combine(root.Path, ".devcraft", "version")).Trim());
+        Assert.DoesNotContain(console.StatusMessages, message => message.Contains("configuration is missing", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void RunForceInOlderVersionDevCraftFolderLaunchesUpgradeAgent()
     {
         using TestDirectory root = new();

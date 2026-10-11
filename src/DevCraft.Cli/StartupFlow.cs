@@ -127,13 +127,9 @@ public sealed class StartupFlow
 
     private bool UpgradeExistingDevCraft(StartupContext context)
     {
-        ProjectDevCraftConfiguration? projectConfiguration = ProjectDevCraftConfigurationReader.Read(context.CurrentDirectory);
-
-        if (projectConfiguration is null)
-        {
-            console.WriteStatus("DevCraft repository configuration is missing. Re-run force install after restoring .devcraft/configure.json.");
-            return false;
-        }
+        ProjectDevCraftConfiguration projectConfiguration =
+            ProjectDevCraftConfigurationReader.Read(context.CurrentDirectory)
+            ?? CreateLegacyProjectConfiguration(context.CurrentDirectory);
 
         DevCraftProfileConfiguration profileConfiguration = ProfileConfigurationReader.Read(context.ProfileDirectory);
         string currentVersion = DevCraftCurrentVersionProvider.Get();
@@ -165,6 +161,22 @@ public sealed class StartupFlow
         console.WriteStatus($"DevCraft repository upgraded to {currentVersion}: {result.Summary}");
 
         return true;
+    }
+
+    private static ProjectDevCraftConfiguration CreateLegacyProjectConfiguration(string repositoryDirectory)
+    {
+        string projectName = Path.GetFileName(Path.GetFullPath(repositoryDirectory).TrimEnd(Path.DirectorySeparatorChar));
+        ProjectProfile profile = new(
+            projectName,
+            "Legacy DevCraft project requiring configuration upgrade.",
+            "Legacy DevCraft project requiring configuration upgrade.");
+
+        return new ProjectDevCraftConfiguration(
+            Guid.NewGuid().ToString(),
+            null,
+            "features.json",
+            profile,
+            []);
     }
 
     private ProjectProfile SelectProjectProfile(ProjectProfile aiProfile)

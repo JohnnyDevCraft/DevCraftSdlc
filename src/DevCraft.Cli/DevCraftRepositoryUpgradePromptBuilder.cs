@@ -30,6 +30,7 @@ public static class DevCraftRepositoryUpgradePromptBuilder
             Rules:
             - Read actual files before changing them.
             - Preserve user-authored content.
+            - If repository .devcraft/configure.json is missing or invalid, recreate it from the repository files and the fallback project context in this prompt.
             - Do not destructively delete repository feature folders until their content is preserved in the target location.
             - Both repository-central and system-central feature folders must use GUID folder names.
             - Repository-central feature folders live under repository .devcraft/features/<guid>.

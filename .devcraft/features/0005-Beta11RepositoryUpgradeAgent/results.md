@@ -65,3 +65,12 @@
 ## Notes
 
 - `dotnet test` and `dotnet build -c Release` currently report two existing xUnit analyzer warnings in `DevCraftMenuCommandTests.cs`.
+
+## Follow-Up Fixes
+
+### Missing Repository Configuration During Force Upgrade
+
+- Issue: `devcraft -force` stopped when an existing DevCraft folder was missing `.devcraft/configure.json`, even though legacy or damaged installs should be upgraded by the agent.
+- Fix: `StartupFlow` now creates fallback legacy project configuration in memory when repository configuration is missing, launches the upgrade agent, and writes `.devcraft/version` only after success.
+- Prompt update: The upgrade prompt now explicitly instructs the agent to recreate missing or invalid repository `.devcraft/configure.json` from repository files and fallback project context.
+- Regression coverage: Added a startup test for force-upgrading a DevCraft folder with no repository configuration, and extended prompt coverage for missing/invalid configuration recreation guidance.

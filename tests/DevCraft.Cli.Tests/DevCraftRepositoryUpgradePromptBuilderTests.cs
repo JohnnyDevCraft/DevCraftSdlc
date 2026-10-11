@@ -32,6 +32,7 @@ public sealed class DevCraftRepositoryUpgradePromptBuilderTests
         Assert.Contains(SystemCentralProjectsStore.PathFor(profile), prompt);
         Assert.Contains("\"success\": true", prompt);
         Assert.Contains("repository .devcraft/configure.json feature history", prompt);
+        Assert.Contains("If repository .devcraft/configure.json is missing or invalid, recreate it", prompt);
         Assert.Contains("profile .DevCraft/features/projects.json feature history", prompt);
         Assert.Contains(".devcraft/features/<guid>", prompt);
         Assert.Contains(".DevCraft/features/<guid>", prompt);
