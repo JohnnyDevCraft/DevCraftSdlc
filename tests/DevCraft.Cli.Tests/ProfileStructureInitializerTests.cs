@@ -166,7 +166,7 @@ public sealed class ProfileStructureInitializerTests
         Assert.True(File.Exists(Path.Combine(profile, "templates", "standard-template.md")));
         Assert.True(File.Exists(Path.Combine(profile, "DevCraft.md")));
         Assert.True(File.Exists(Path.Combine(profile, "initialized.md")));
-        Assert.True(File.Exists(Path.Combine(profile, "desktop-agent-instructions.txt")));
+        Assert.False(File.Exists(Path.Combine(profile, "desktop-agent-instructions.txt")));
         Assert.True(File.Exists(Path.Combine(profile, "features", "projects.json")));
         Assert.True(File.Exists(Path.Combine(profile, "standards", "CSharp.md")));
         Assert.True(File.Exists(Path.Combine(profile, "architectures", "SwiftUI-App.md")));
@@ -213,5 +213,49 @@ public sealed class ProfileStructureInitializerTests
         Assert.Contains("\"codex\"", configureJson);
         Assert.Contains("\"claude-code\"", configureJson);
         Assert.Contains("\"github-copilot\"", configureJson);
+    }
+
+    [Fact]
+    public void EnsureDoesNotCreateDesktopAgentInstructionsFile()
+    {
+        using TestDirectory root = new();
+        using TestDirectory sourceRoot = new();
+        string profile = Path.Combine(root.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+
+        ProfileStructureResult result = ProfileStructureInitializer.Ensure(profile, sourceRoot.Path);
+
+        Assert.False(File.Exists(Path.Combine(profile, "desktop-agent-instructions.txt")));
+        Assert.DoesNotContain(result.CreatedFiles, file => file.EndsWith("desktop-agent-instructions.txt", StringComparison.Ordinal));
+        Assert.DoesNotContain(result.UpdatedFiles, file => file.EndsWith("desktop-agent-instructions.txt", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void EnsureDeletesLeftoverDesktopAgentInstructionsFile()
+    {
+        using TestDirectory root = new();
+        using TestDirectory sourceRoot = new();
+        string profile = Path.Combine(root.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        string leftover = Path.Combine(profile, "desktop-agent-instructions.txt");
+        File.WriteAllText(leftover, "Load DevCraft before doing meaningful work.");
+
+        ProfileStructureInitializer.Ensure(profile, sourceRoot.Path);
+
+        Assert.False(File.Exists(leftover));
+    }
+
+    [Fact]
+    public void EnsureSucceedsWhenNoDesktopAgentInstructionsFileExists()
+    {
+        using TestDirectory root = new();
+        using TestDirectory sourceRoot = new();
+        string profile = Path.Combine(root.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+
+        ProfileStructureInitializer.Ensure(profile, sourceRoot.Path);
+        ProfileStructureInitializer.Ensure(profile, sourceRoot.Path);
+
+        Assert.False(File.Exists(Path.Combine(profile, "desktop-agent-instructions.txt")));
     }
 }

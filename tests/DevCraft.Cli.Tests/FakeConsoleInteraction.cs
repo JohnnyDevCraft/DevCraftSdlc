@@ -19,6 +19,8 @@ public sealed class FakeConsoleInteraction : IConsoleInteraction
 
     public List<string> StartupStages { get; } = [];
 
+    public List<(string Prompt, int StatusCountWhenAsked)> WaitPrompts { get; } = [];
+
     public List<string> SelectTitles { get; } = [];
 
     public List<IReadOnlyList<string>> SelectChoices { get; } = [];
@@ -56,6 +58,11 @@ public sealed class FakeConsoleInteraction : IConsoleInteraction
     public void ShowMenuShell()
     {
         MenuShellCount++;
+    }
+
+    public void WaitForEnter(string prompt)
+    {
+        WaitPrompts.Add((prompt, StatusMessages.Count));
     }
 
     public string Ask(string prompt)

@@ -64,6 +64,7 @@ public static class SituationPromptContextBuilder
               - month: weekly rollups.
               - quarter: month or sprint rollups, depending on the configured scale.
               - year: quarter rollups.
+            - Do not paste these records back into the prompt unless the operator explicitly asks; read the collections directly as needed.
             - Use read-only MongoDB access when available, such as mongosh or an installed MongoDB driver/library. Do not run mutating commands.
             - If MongoDB tooling or access is unavailable, report the missing MongoDB access/tooling instead of using stale file-mode logs.
             """;

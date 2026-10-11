@@ -902,4 +902,155 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         Assert.Empty(launcher.Instructions);
         Assert.Empty(featureLauncher.Launches);
     }
+
+    [Fact]
+    public void RunAddDevCraftToDesktopAgentShowsBuiltInstructions()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = CreateDesktopAgentProfile(root, profileRoot, situationEnabled: true);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Configure DevCraft", "Add DevCraft To Desktop Agent", "Exit"]);
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        Assert.Contains("Copy and paste this text into your desktop agent's instructions:", console.StatusMessages);
+        Assert.Contains(DesktopAgentInstructionsBuilder.Build(profile), console.StatusMessages);
+    }
+
+    [Fact]
+    public void RunAddDevCraftToDesktopAgentReflectsCurrentConfiguration()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = CreateDesktopAgentProfile(root, profileRoot, situationEnabled: false);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction first = new([], ["Configure DevCraft", "Add DevCraft To Desktop Agent", "Exit"]);
+        FakeConsoleInteraction second = new([], ["Configure DevCraft", "Add DevCraft To Desktop Agent", "Exit"]);
+
+        DevCraftMenuCommand.Run(context, first, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+        DevCraftProfileConfigurationWriter.Write(profile, new DevCraftProfileConfiguration([], [], [], [], [], [], [], true));
+        DevCraftMenuCommand.Run(context, second, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        Assert.DoesNotContain(first.StatusMessages, message => message.Contains("Situational Awareness:", StringComparison.Ordinal));
+        Assert.Contains(second.StatusMessages, message => message.Contains("Situational Awareness:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void RunAddDevCraftToDesktopAgentDoesNotCreateInstructionsFile()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = CreateDesktopAgentProfile(root, profileRoot, situationEnabled: true);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Configure DevCraft", "Add DevCraft To Desktop Agent", "Exit"]);
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        Assert.False(File.Exists(Path.Combine(profile, "desktop-agent-instructions.txt")));
+    }
+
+    [Fact]
+    public void RunAddDevCraftToDesktopAgentWaitsForEnterAfterShowingInstructions()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = CreateDesktopAgentProfile(root, profileRoot, situationEnabled: true);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Configure DevCraft", "Add DevCraft To Desktop Agent", "Exit"]);
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        (string prompt, int statusCount) = Assert.Single(console.WaitPrompts);
+        Assert.Equal("Press Enter to return to the menu", prompt);
+        Assert.Equal(DesktopAgentInstructionsBuilder.Build(profile), console.StatusMessages[statusCount - 1]);
+    }
+
+    [Fact]
+    public void RunConfigureSituationalAwarenessWarnsWhenDesktopInstructionsChange()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = CreateDesktopAgentProfile(root, profileRoot, situationEnabled: false);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new(
+            [],
+            ["Configure DevCraft", "Configure Situational Awareness", "Yes", "Months & Weeks", "File", "Exit"]);
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        string notice = Assert.Single(console.StatusMessages, IsOutOfDateNotice);
+        Assert.Contains("Add DevCraft To Desktop Agent", notice);
+        (string prompt, int statusCount) = Assert.Single(console.WaitPrompts);
+        Assert.Equal("Press Enter to return to the menu", prompt);
+        Assert.Equal(notice, console.StatusMessages[statusCount - 1]);
+    }
+
+    [Fact]
+    public void RunConfigureSituationalAwarenessDoesNotWarnWhenDesktopInstructionsUnchanged()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = CreateDesktopAgentProfile(root, profileRoot, situationEnabled: true);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new(
+            [],
+            ["Configure DevCraft", "Configure Situational Awareness", "Yes", "Months & Weeks", "File", "Exit"]);
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        Assert.Contains("Situational awareness configuration updated.", console.StatusMessages);
+        Assert.DoesNotContain(console.StatusMessages, IsOutOfDateNotice);
+        Assert.Empty(console.WaitPrompts);
+    }
+
+    [Fact]
+    public void RunConfigureSituationalAwarenessWarnsWhenDisabled()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = CreateDesktopAgentProfile(root, profileRoot, situationEnabled: true);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Configure DevCraft", "Configure Situational Awareness", "No", "Exit"]);
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        Assert.Single(console.StatusMessages, IsOutOfDateNotice);
+        Assert.Single(console.WaitPrompts);
+    }
+
+    [Fact]
+    public void RunConfigureSituationalAwarenessNoticeDoesNotExposeConnectionString()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = CreateDesktopAgentProfile(root, profileRoot, situationEnabled: false);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        const string connectionString = "mongodb://user:secret@localhost:27017/DevCraft";
+        FakeConsoleInteraction console = new(
+            [connectionString],
+            ["Configure DevCraft", "Configure Situational Awareness", "Yes", "Months & Weeks", "Database", "Exit"]);
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        Assert.Single(console.StatusMessages, IsOutOfDateNotice);
+        Assert.DoesNotContain(console.StatusMessages, message => message.Contains(connectionString, StringComparison.Ordinal));
+        Assert.DoesNotContain(console.StatusMessages, message => message.Contains("secret", StringComparison.Ordinal));
+    }
+
+    private static bool IsOutOfDateNotice(string message)
+    {
+        return message.Contains("out of date", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string CreateDesktopAgentProfile(TestDirectory root, TestDirectory profileRoot, bool situationEnabled)
+    {
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        DevCraftProfileConfigurationWriter.Write(profile, new DevCraftProfileConfiguration([], [], [], [], [], [], [], situationEnabled));
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+
+        return profile;
+    }
 }

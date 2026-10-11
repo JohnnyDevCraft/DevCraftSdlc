@@ -10,6 +10,8 @@ public interface IConsoleInteraction
 
     string Ask(string prompt);
 
+    void WaitForEnter(string prompt);
+
     FieldEditResult EditFields(FieldEditOptions options);
 
     TextEditResult EditText(TextEditOptions options);

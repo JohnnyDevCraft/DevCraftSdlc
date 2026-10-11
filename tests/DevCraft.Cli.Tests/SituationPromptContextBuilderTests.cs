@@ -82,4 +82,17 @@ public sealed class SituationPromptContextBuilderTests
         Assert.DoesNotContain("secret", context);
         Assert.False(Directory.Exists(Path.Combine(root.Path, "situation", "handoff-snapshot")));
     }
+
+    [Fact]
+    public void BuildDatabaseGuidanceTellsAgentNotToPasteRecordsBack()
+    {
+        using TestDirectory root = new();
+        DevCraftProfileConfigurationWriter.Write(
+            root.Path,
+            new DevCraftProfileConfiguration([], [], [], [], [], [], [], true, SituationScale.Sprint, SituationStorage.Database, "mongodb://localhost:27017/DevCraft"));
+
+        string context = SituationPromptContextBuilder.Build(root.Path);
+
+        Assert.Contains("Do not paste these records back into the prompt unless the operator explicitly asks", context);
+    }
 }

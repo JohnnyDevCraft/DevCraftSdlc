@@ -58,10 +58,11 @@
 
 ## Active Feature Tracking
 
-- Active Feature ID: 0006
-- Active Feature Name: Beta 13 Feature Selection Flow
+- Active Feature ID: 48c4e2be-457b-41ed-9c58-b16422617077
+- Active Feature Name: Updates to the Instructions.txt
+- Active Feature Storage: system-central
 - Active Feature State: Implementation
-- Current Implementation Phase: Phase 2: Beta 13 Release Metadata
+- Current Implementation Phase: Final Phase: Validation And Completion (operator validation outstanding)
 
 ## Working Agreements
 

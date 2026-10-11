@@ -28,6 +28,9 @@ public static class DevCraftMenuCommand
     private const string ConfigureSituationalAwareness = "Configure Situational Awareness";
     private const string ConfigureSupportedClients = "Configure Supported Clients";
     private const string AddDevCraftToDesktopAgent = "Add DevCraft To Desktop Agent";
+    private const string ReturnToMenuPrompt = "Press Enter to return to the menu";
+    private const string DesktopAgentInstructionsOutOfDateNotice =
+        $"Desktop agent instructions you pasted earlier are now out of date. Copy the new text from {ConfigureDevCraft} > {AddDevCraftToDesktopAgent}.";
     private const string ManagePeople = "Manage People";
     private const string ManageLogs = "Manage Logs";
     private const string ListPeople = "List People";
@@ -1035,22 +1038,24 @@ public static class DevCraftMenuCommand
             SituationConnection = string.IsNullOrWhiteSpace(connection) ? null : connection.Trim(),
         };
 
+        string previousInstructions = DesktopAgentInstructionsBuilder.Build(context.ProfileDirectory);
+
         SituationMigrationService.Migrate(context.ProfileDirectory, oldConfiguration, newConfiguration);
         DevCraftProfileConfigurationWriter.Write(context.ProfileDirectory, newConfiguration);
         console.WriteStatus("Situational awareness configuration updated.");
+
+        if (DesktopAgentInstructionsBuilder.Build(context.ProfileDirectory) != previousInstructions)
+        {
+            console.WriteStatus(DesktopAgentInstructionsOutOfDateNotice);
+            console.WaitForEnter(ReturnToMenuPrompt);
+        }
     }
 
     private static void ShowDesktopAgentInstructions(StartupContext context, IConsoleInteraction console)
     {
-        string path = Path.Combine(context.ProfileDirectory, "desktop-agent-instructions.txt");
-
-        if (!File.Exists(path))
-        {
-            ProfileStructureInitializer.Ensure(context.ProfileDirectory);
-        }
-
         console.WriteStatus("Copy and paste this text into your desktop agent's instructions:");
-        console.WriteStatus(File.ReadAllText(path));
+        console.WriteStatus(DesktopAgentInstructionsBuilder.Build(context.ProfileDirectory));
+        console.WaitForEnter(ReturnToMenuPrompt);
     }
 
     private static void RunImportSettings(

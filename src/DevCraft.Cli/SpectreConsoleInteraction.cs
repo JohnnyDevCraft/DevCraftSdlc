@@ -33,6 +33,12 @@ public sealed class SpectreConsoleInteraction : IConsoleInteraction
         return AnsiConsole.Ask<string>(Markup.Escape(prompt));
     }
 
+    public void WaitForEnter(string prompt)
+    {
+        AnsiConsole.WriteLine();
+        AnsiConsole.Prompt(new TextPrompt<string>(Markup.Escape(prompt)).AllowEmpty());
+    }
+
     public FieldEditResult EditFields(FieldEditOptions options)
     {
         ShowMenuShell();

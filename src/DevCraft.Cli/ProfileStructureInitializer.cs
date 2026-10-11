@@ -58,7 +58,7 @@ public static class ProfileStructureInitializer
         EnsureStandardTemplate(profileDirectory, createdFiles);
         CopyDevCraftRules(sharedGuidanceRoot, profileDirectory, createdFiles);
         EnsureInitializedFile(profileDirectory, createdFiles);
-        EnsureDesktopAgentInstructions(profileDirectory, createdFiles);
+        RemoveLegacyDesktopAgentInstructions(profileDirectory);
         EnsureSystemCentralProjectIndex(profileDirectory, createdDirectories, createdFiles);
         WriteConfiguration(profileDirectory, createdFiles, updatedFiles);
 
@@ -751,28 +751,13 @@ public static class ProfileStructureInitializer
         DevCraftProfileConfigurationWriter.Write(profileDirectory, configuration);
     }
 
-    private static void EnsureDesktopAgentInstructions(string profileDirectory, List<string> createdFiles)
+    private static void RemoveLegacyDesktopAgentInstructions(string profileDirectory)
     {
-        string targetFile = Path.Combine(profileDirectory, "desktop-agent-instructions.txt");
-        string content =
-            """
-            Load DevCraft before doing meaningful work.
+        string legacyFile = Path.Combine(profileDirectory, "desktop-agent-instructions.txt");
 
-            Read and follow these files first:
-            - ~/.DevCraft/soul.md
-            - ~/.DevCraft/initialized.md
-            - ~/.DevCraft/DevCraft.md
-            - ~/.DevCraft/configure.json
-
-            When the current repository contains a .devcraft folder, operate in DevCraft mode. Read .devcraft/AGENT.md and the active feature artifacts before editing code. Only write application code when the active DevCraft feature state is Implementation.
-            """;
-
-        if (File.Exists(targetFile) && File.ReadAllText(targetFile) == content)
+        if (File.Exists(legacyFile))
         {
-            return;
+            File.Delete(legacyFile);
         }
-
-        File.WriteAllText(targetFile, content);
-        createdFiles.Add(targetFile);
     }
 }
