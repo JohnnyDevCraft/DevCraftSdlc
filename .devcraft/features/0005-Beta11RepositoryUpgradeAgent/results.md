@@ -74,3 +74,7 @@
 - Fix: `StartupFlow` now creates fallback legacy project configuration in memory when repository configuration is missing, launches the upgrade agent, and writes `.devcraft/version` only after success.
 - Prompt update: The upgrade prompt now explicitly instructs the agent to recreate missing or invalid repository `.devcraft/configure.json` from repository files and fallback project context.
 - Regression coverage: Added a startup test for force-upgrading a DevCraft folder with no repository configuration, and extended prompt coverage for missing/invalid configuration recreation guidance.
+
+### Beta 12 Version Bump
+
+- Updated package metadata, README install examples, release-selection tests, and version-dependent unit tests to `1.0.0-beta.12`.

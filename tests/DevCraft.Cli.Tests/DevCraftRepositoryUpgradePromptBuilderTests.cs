@@ -20,7 +20,7 @@ public sealed class DevCraftRepositoryUpgradePromptBuilderTests
         DevCraftRepositoryUpgradeRequest request = new(
             context,
             projectConfiguration,
-            "1.0.0-beta.11",
+            "1.0.0-beta.12",
             "1.0.0-beta.10",
             FeatureStorageMode.SystemCentral);
 
