@@ -299,6 +299,166 @@ public sealed class FeatureCommandTests
     }
 
     [Fact]
+    public void NewRecordsExistingRepositoryFeaturesInProjectIndex()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string soul = Path.Combine(profile, "soul.md");
+        Directory.CreateDirectory(Path.Combine(profile, "features"));
+        string projectKey = Guid.NewGuid().ToString();
+        WriteSystemCentralRepository(
+            root.Path,
+            projectKey,
+            [
+                SampleFeature("First Existing", "first-existing", "folder-one", "Implementation"),
+                SampleFeature("Second Existing", "second-existing", "folder-two", "Complete"),
+            ]);
+        StartupContext context = new(root.Path, profile, soul);
+
+        FeatureCommand.Run(context, ["new", "Third", "Feature"], new FakeConsoleInteraction([]), new FakeFeatureAiSessionLauncher());
+
+        SystemCentralProject project = Assert.Single(SystemCentralProjectsStore.Read(profile).Projects);
+        Assert.Equal(projectKey, project.ProjectKey);
+        Assert.Equal(
+            ["first-existing", "second-existing", "third-feature"],
+            project.Features.Select(feature => feature.Slug));
+        Assert.Equal("Complete", project.Features[1].Status);
+    }
+
+    [Fact]
+    public void ListHealsProjectIndexMissingRepositoryFeatures()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string soul = Path.Combine(profile, "soul.md");
+        Directory.CreateDirectory(Path.Combine(profile, "features"));
+        string projectKey = Guid.NewGuid().ToString();
+        WriteSystemCentralRepository(
+            root.Path,
+            projectKey,
+            [
+                SampleFeature("First Existing", "first-existing", "folder-one", "Implementation"),
+                SampleFeature("Second Existing", "second-existing", "folder-two", "Complete"),
+            ]);
+        SystemCentralProjectsStore.Write(
+            profile,
+            new SystemCentralProjectsIndex(
+            [
+                new SystemCentralProject(
+                    projectKey,
+                    "Sample Project",
+                    "sample-project",
+                    root.Path,
+                    [SampleFeature("Second Existing", "second-existing", "folder-two", "Discovery")]),
+            ]));
+        StartupContext context = new(root.Path, profile, soul);
+
+        FeatureCommand.Run(context, ["list"], new FakeConsoleInteraction([], ["Back"]), new FakeFeatureAiSessionLauncher());
+
+        SystemCentralProject project = Assert.Single(SystemCentralProjectsStore.Read(profile).Projects);
+        Assert.Equal(2, project.Features.Count);
+        Assert.Contains(project.Features, feature => feature.Slug == "first-existing" && feature.Status == "Implementation");
+        Assert.Contains(project.Features, feature => feature.Slug == "second-existing" && feature.Status == "Complete");
+    }
+
+    [Fact]
+    public void NewRecordsRepoCentralFeatureInProjectIndex()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string soul = Path.Combine(profile, "soul.md");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        string projectKey = Guid.NewGuid().ToString();
+        ProjectDevCraftConfigurationStore.Write(
+            root.Path,
+            new ProjectDevCraftConfiguration(
+                projectKey,
+                FeatureStorageMode.RepoCentral,
+                "features.json",
+                SampleProfile,
+                []));
+        StartupContext context = new(root.Path, profile, soul);
+
+        FeatureCommand.Run(context, ["new", "Local", "Feature"], new FakeConsoleInteraction([]), new FakeFeatureAiSessionLauncher());
+
+        SystemCentralProject project = Assert.Single(SystemCentralProjectsStore.Read(profile).Projects);
+        DevCraftFeature feature = Assert.Single(project.Features);
+        Assert.Equal(projectKey, project.ProjectKey);
+        Assert.Equal("local-feature", feature.Slug);
+        Assert.Equal(FeatureStorageMode.RepoCentral, feature.StorageType);
+        Assert.False(Directory.Exists(Path.Combine(profile, "features", feature.FolderName)));
+    }
+
+    [Fact]
+    public void SyncPreservesCentralOnlyFeaturesAndOtherProjects()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string soul = Path.Combine(profile, "soul.md");
+        Directory.CreateDirectory(Path.Combine(profile, "features"));
+        string projectKey = Guid.NewGuid().ToString();
+        WriteSystemCentralRepository(
+            root.Path,
+            projectKey,
+            [SampleFeature("Shared", "shared", "folder-shared", "Implementation")]);
+        SystemCentralProject otherProject = new(
+            Guid.NewGuid().ToString(),
+            "Other Project",
+            "other-project",
+            "/tmp/other-project",
+            [SampleFeature("Other Feature", "other-feature", "folder-other", "Complete")]);
+        SystemCentralProjectsStore.Write(
+            profile,
+            new SystemCentralProjectsIndex(
+            [
+                otherProject,
+                new SystemCentralProject(
+                    projectKey,
+                    "Sample Project",
+                    "sample-project",
+                    "/tmp/old-location",
+                    [
+                        SampleFeature("Central Only", "central-only", "folder-central", "Complete"),
+                        SampleFeature("Shared", "shared-old-slug", "folder-shared", "Discovery"),
+                    ]),
+            ]));
+        StartupContext context = new(root.Path, profile, soul);
+
+        FeatureCommand.Run(context, ["list"], new FakeConsoleInteraction([], ["Back"]), new FakeFeatureAiSessionLauncher());
+
+        IReadOnlyList<SystemCentralProject> projects = SystemCentralProjectsStore.Read(profile).Projects;
+        Assert.Equal(2, projects.Count);
+        Assert.Equal(otherProject.ProjectKey, projects[0].ProjectKey);
+        Assert.Equal("other-feature", Assert.Single(projects[0].Features).Slug);
+        Assert.Equal(root.Path, projects[1].RepositoryPath);
+        Assert.Equal(["central-only", "shared"], projects[1].Features.Select(feature => feature.Slug));
+        Assert.Equal("Implementation", projects[1].Features[1].Status);
+    }
+
+    private static DevCraftFeature SampleFeature(string name, string slug, string folderName, string status)
+    {
+        return new DevCraftFeature(name, slug, $"{name} description.", folderName, FeatureStorageMode.SystemCentral, null, status);
+    }
+
+    private static void WriteSystemCentralRepository(string repositoryPath, string projectKey, IReadOnlyList<DevCraftFeature> features)
+    {
+        Directory.CreateDirectory(Path.Combine(repositoryPath, ".devcraft"));
+        ProjectDevCraftConfigurationStore.Write(
+            repositoryPath,
+            new ProjectDevCraftConfiguration(
+                projectKey,
+                FeatureStorageMode.SystemCentral,
+                "features.json",
+                SampleProfile,
+                features));
+    }
+
+    [Fact]
     public void ReadsLegacySystemCentralProjectIndexJson()
     {
         using TestDirectory profileRoot = new();

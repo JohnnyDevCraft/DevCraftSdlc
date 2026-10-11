@@ -58,11 +58,13 @@
 
 ## Active Feature Tracking
 
-- Active Feature ID: 48c4e2be-457b-41ed-9c58-b16422617077
-- Active Feature Name: Updates to the Instructions.txt
+- Active Feature ID: 9f5f16e3-2b9b-4c33-8864-9815ff0a0ac8
+- Active Feature Name: Fix System Central Projects, and Features Mappings
 - Active Feature Storage: system-central
+- Active Feature Operator Mode: Agent Operator Mode
 - Active Feature State: Implementation
-- Current Implementation Phase: Final Phase: Validation And Completion (operator validation outstanding)
+- Current Implementation Phase: Final Phase: Validation And Completion (done; awaiting operator review and install of the new build)
+- Previous Active Feature: 48c4e2be-457b-41ed-9c58-b16422617077 Updates to the Instructions.txt (Implementation; Final Phase operator validation still outstanding)
 
 ## Working Agreements
 

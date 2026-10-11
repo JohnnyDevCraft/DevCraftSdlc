@@ -21,14 +21,34 @@ System Central stores feature data under the profile DevCraft folder:
       results.md
 ```
 
-The `projects.json` file is the system-level index of projects known to DevCraft. Each project entry has a project key, project name, project slug, repository path, and an array of features.
+The `projects.json` file is the system-level index of projects known to DevCraft. Each project entry has:
+
+- `id` - project key
+- `name` - project name
+- `slug` - project slug
+- `repo-location` - repository path
+- `repo-name` - repository folder name
+- `features` - array of features
 
 Each feature entry has:
 
-- Feature name
-- Feature slug
-- Feature short description
-- Folder name {feature-guid}
+- `id` and `folder-name` - folder name {feature-guid}
+- `feature-name` - feature name
+- `slug` - feature slug
+- `description` - feature short description
+- `storage-type` - feature storage type
+- `work-item-id` and `external-reference` - external work item link, when applicable
+- `status` - feature state
+
+## Both Indexes
+
+Every feature is recorded in two places: the repository `.devcraft/configure.json` `Features` list and the matching project entry in profile-level `features/projects.json`. This applies to every feature storage type, not only System Central.
+
+DevCraft reconciles the two whenever a feature command runs in a repository:
+
+- Every feature in the repository `Features` list is added to the project entry, or replaces the entry with the same folder name or slug.
+- A project missing from `projects.json` is created with the repository's full feature list.
+- Feature entries that exist only in `projects.json` are kept, and other projects are not changed.
 
 The project key and each feature folder name are randomly generated GUID values. The same project key is also stored in the repository DevCraft folder's `.devcraft/configure.json`, which lets DevCraft map the current repository back to the matching project entry in the profile-level `features/projects.json`.
 

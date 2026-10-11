@@ -21,6 +21,8 @@ public static class FeatureCommand
             return;
         }
 
+        SystemCentralProjectsSynchronizer.Sync(context, projectConfiguration);
+
         if (args.Count == 0)
         {
             console.WriteStatus("Use feature list or feature new <name>.");
@@ -113,10 +115,11 @@ public static class FeatureCommand
         };
 
         ProjectDevCraftConfigurationStore.Write(context.CurrentDirectory, updatedConfiguration);
+        SystemCentralProjectsSynchronizer.Sync(context, updatedConfiguration);
 
         if (storageType.Equals(FeatureStorageMode.SystemCentral, StringComparison.OrdinalIgnoreCase))
         {
-            AddSystemCentralFeature(context, updatedConfiguration, feature);
+            Directory.CreateDirectory(Path.Combine(context.ProfileDirectory, "features", feature.FolderName));
         }
         else if (storageType.Equals(FeatureStorageMode.RepoCentral, StringComparison.OrdinalIgnoreCase))
         {
@@ -130,48 +133,6 @@ public static class FeatureCommand
             feature,
             client,
             "Create a new feature.");
-    }
-
-    private static void AddSystemCentralFeature(
-        StartupContext context,
-        ProjectDevCraftConfiguration projectConfiguration,
-        DevCraftFeature feature)
-    {
-        SystemCentralProjectsIndex index = SystemCentralProjectsStore.Read(context.ProfileDirectory);
-        List<SystemCentralProject> projects = index.Projects.ToList();
-        int projectIndex = projects.FindIndex(project => project.ProjectKey.Equals(projectConfiguration.ProjectKey, StringComparison.OrdinalIgnoreCase));
-        SystemCentralProject project = projectIndex >= 0
-            ? projects[projectIndex]
-            : new SystemCentralProject(
-                projectConfiguration.ProjectKey,
-                projectConfiguration.ProjectProfile.Name,
-                SlugGenerator.Create(projectConfiguration.ProjectProfile.Name),
-                context.CurrentDirectory,
-                []);
-        List<DevCraftFeature> features = project.Features.ToList();
-
-        if (!features.Any(item => item.Slug.Equals(feature.Slug, StringComparison.OrdinalIgnoreCase)))
-        {
-            features.Add(feature);
-        }
-
-        project = project with
-        {
-            RepositoryPath = context.CurrentDirectory,
-            Features = features,
-        };
-
-        if (projectIndex >= 0)
-        {
-            projects[projectIndex] = project;
-        }
-        else
-        {
-            projects.Add(project);
-        }
-
-        SystemCentralProjectsStore.Write(context.ProfileDirectory, new SystemCentralProjectsIndex(projects));
-        Directory.CreateDirectory(Path.Combine(context.ProfileDirectory, "features", feature.FolderName));
     }
 
     private static string UniqueSlug(string slug, IReadOnlyList<DevCraftFeature> features)

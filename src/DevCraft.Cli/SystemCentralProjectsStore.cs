@@ -54,6 +54,20 @@ public static class SystemCentralProjectsStore
         File.WriteAllText(path, json);
     }
 
+    public static void WriteIfChanged(string profileDirectory, SystemCentralProjectsIndex index)
+    {
+        string path = PathFor(profileDirectory);
+        string json = WriteJson(index);
+
+        if (File.Exists(path) && File.ReadAllText(path) == json)
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, json);
+    }
+
     private static string WriteJson(SystemCentralProjectsIndex index)
     {
         using MemoryStream stream = new();
