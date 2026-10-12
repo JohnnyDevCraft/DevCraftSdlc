@@ -3,6 +3,10 @@ namespace DevCraft.Cli;
 public static class FeatureCommand
 {
     private const string Back = "Back";
+    private const string FeatureActions = "Feature actions";
+    private const string EditFeatureName = "Edit Feature Name";
+    private const string OpenFeatureDirectory = "Open Feature Directory using Code";
+    private const string StartConversation = "Start a conversation about the feature";
 
     public static void Run(
         StartupContext context,
@@ -10,7 +14,8 @@ public static class FeatureCommand
         IConsoleInteraction console,
         IFeatureAiSessionLauncher launcher,
         SupportedTerminalClient? client = null,
-        Func<SupportedTerminalClient>? selectClient = null)
+        Func<SupportedTerminalClient>? selectClient = null,
+        IFeatureDirectoryOpener? directoryOpener = null)
     {
         ProfileStructureInitializer.Ensure(context.ProfileDirectory);
         ProjectDevCraftConfiguration? projectConfiguration = ProjectDevCraftConfigurationReader.Read(context.CurrentDirectory);
@@ -32,7 +37,7 @@ public static class FeatureCommand
         if (args[0].Equals("list", StringComparison.OrdinalIgnoreCase))
         {
             DevCraftProfileConfiguration profileConfiguration = ProfileConfigurationReader.Read(context.ProfileDirectory);
-            ListFeatures(context, projectConfiguration, profileConfiguration, console, launcher, client, selectClient);
+            ListFeatures(context, projectConfiguration, profileConfiguration, console, launcher, client, selectClient, directoryOpener ?? new CodeFeatureDirectoryOpener());
             return;
         }
 
@@ -61,7 +66,8 @@ public static class FeatureCommand
         IConsoleInteraction console,
         IFeatureAiSessionLauncher launcher,
         SupportedTerminalClient? client,
-        Func<SupportedTerminalClient>? selectClient)
+        Func<SupportedTerminalClient>? selectClient,
+        IFeatureDirectoryOpener directoryOpener)
     {
         IReadOnlyList<DevCraftFeature> features = projectConfiguration.Features;
 
@@ -82,13 +88,117 @@ public static class FeatureCommand
 
         DevCraftFeature feature = features.First(item => selected.EndsWith($"({item.Slug})", StringComparison.Ordinal));
         console.WriteStatus($"Selected feature: {feature.Name}");
-        SupportedTerminalClient selectedClient = client ?? selectClient?.Invoke() ?? SelectFallbackClient(context);
-        launcher.Launch(
-            context,
-            FeatureStorageResolver.WithEffectiveStorage(profileConfiguration, projectConfiguration),
-            feature,
-            selectedClient,
-            "Work on existing feature.");
+
+        string? notice = null;
+
+        while (true)
+        {
+            string action = console.Select(
+                notice is null
+                    ? FeatureActions
+                    : $"{notice}{Environment.NewLine}{Environment.NewLine}{FeatureActions}",
+                [EditFeatureName, OpenFeatureDirectory, StartConversation, Back]);
+
+            if (action == Back)
+            {
+                return;
+            }
+
+            if (action == EditFeatureName)
+            {
+                (projectConfiguration, feature, notice) = RenameFeature(context, projectConfiguration, feature, console);
+                console.WriteStatus(notice);
+                continue;
+            }
+
+            if (action == OpenFeatureDirectory)
+            {
+                notice = OpenDirectory(context, feature, directoryOpener);
+                console.WriteStatus(notice);
+                continue;
+            }
+
+            SupportedTerminalClient selectedClient = client ?? selectClient?.Invoke() ?? SelectFallbackClient(context);
+            launcher.Launch(
+                context,
+                FeatureStorageResolver.WithEffectiveStorage(profileConfiguration, projectConfiguration),
+                feature,
+                selectedClient,
+                "Work on existing feature.");
+            return;
+        }
+    }
+
+    private static (ProjectDevCraftConfiguration Configuration, DevCraftFeature Feature, string Notice) RenameFeature(
+        StartupContext context,
+        ProjectDevCraftConfiguration projectConfiguration,
+        DevCraftFeature feature,
+        IConsoleInteraction console)
+    {
+        string newName = console.Ask("What is the new feature name?").Trim();
+
+        if (string.IsNullOrWhiteSpace(newName))
+        {
+            return (projectConfiguration, feature, "Feature name is required.");
+        }
+
+        if (newName.Equals(feature.Name, StringComparison.Ordinal))
+        {
+            return (projectConfiguration, feature, "Feature name is unchanged.");
+        }
+
+        DevCraftFeature renamedFeature = feature with
+        {
+            Name = newName,
+        };
+        ProjectDevCraftConfiguration updatedConfiguration = projectConfiguration with
+        {
+            Features = projectConfiguration.Features
+                .Select(item => ReferenceEquals(item, feature) ? renamedFeature : item)
+                .ToList(),
+        };
+
+        ProjectDevCraftConfigurationStore.Write(context.CurrentDirectory, updatedConfiguration);
+        SystemCentralProjectsSynchronizer.Sync(context, updatedConfiguration);
+
+        return (updatedConfiguration, renamedFeature, $"Feature renamed: {feature.Name} -> {newName}");
+    }
+
+    private static string OpenDirectory(
+        StartupContext context,
+        DevCraftFeature feature,
+        IFeatureDirectoryOpener directoryOpener)
+    {
+        string? directory = FeatureDirectory(context, feature);
+
+        if (directory is null)
+        {
+            return $"{feature.Name} uses {feature.StorageType} storage and has no local feature directory.";
+        }
+
+        if (!Directory.Exists(directory))
+        {
+            return $"Feature directory not found: {directory}";
+        }
+
+        return directoryOpener.Open(directory)
+            ? $"Opened feature directory in Visual Studio Code: {directory}"
+            : "Could not start Visual Studio Code. Make sure the `code` command is installed and on your PATH.";
+    }
+
+    private static string? FeatureDirectory(StartupContext context, DevCraftFeature feature)
+    {
+        if (feature.StorageType.Equals(FeatureStorageMode.SystemCentral, StringComparison.OrdinalIgnoreCase))
+        {
+            return Path.Combine(context.ProfileDirectory, "features", feature.FolderName);
+        }
+
+        if (feature.StorageType.Equals(FeatureStorageMode.RepoCentral, StringComparison.OrdinalIgnoreCase))
+        {
+            return Path.Combine(context.CurrentDirectory, ".devcraft", "features", feature.FolderName);
+        }
+
+        return null;
     }
 
     private static void CreateFeature(
@@ -117,13 +227,9 @@ public static class FeatureCommand
         ProjectDevCraftConfigurationStore.Write(context.CurrentDirectory, updatedConfiguration);
         SystemCentralProjectsSynchronizer.Sync(context, updatedConfiguration);
 
-        if (storageType.Equals(FeatureStorageMode.SystemCentral, StringComparison.OrdinalIgnoreCase))
+        if (FeatureDirectory(context, feature) is string featureDirectory)
         {
-            Directory.CreateDirectory(Path.Combine(context.ProfileDirectory, "features", feature.FolderName));
-        }
-        else if (storageType.Equals(FeatureStorageMode.RepoCentral, StringComparison.OrdinalIgnoreCase))
-        {
-            Directory.CreateDirectory(Path.Combine(context.CurrentDirectory, ".devcraft", "features", feature.FolderName));
+            Directory.CreateDirectory(featureDirectory);
         }
 
         console.WriteStatus($"Feature created: {feature.Name}");

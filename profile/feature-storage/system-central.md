@@ -61,6 +61,17 @@ The project key and each feature folder name are randomly generated GUID values.
 5. Create the feature artifact folder under profile-level `features/{feature-guid}`.
 6. Store the standard DevCraft feature artifacts inside that GUID-named folder.
 
+## Feature Actions
+
+Selecting a feature from `List features` (or `devcraft feature list`) opens a `Feature actions` menu:
+
+- `Edit Feature Name` - asks for a new name and writes it to both indexes: `Name` in the repository `.devcraft/configure.json` and `feature-name` in profile `features/projects.json`. The slug, GUID folder name, storage type, external reference, status, and description do not change, and feature artifacts are not edited.
+- `Open Feature Directory using Code` - runs `code {feature-dir}` to open the feature's artifact folder in Visual Studio Code. System Central features open `features/{feature-guid}` in the profile DevCraft folder; Repo Central features open `.devcraft/features/{feature-guid}` in the repository. Features on external storage have no local directory.
+- `Start a conversation about the feature` - selects the AI client and starts a session for the feature.
+- `Back` - returns without starting anything.
+
+Because a rename keeps the slug, agents can keep resolving a renamed feature by slug or by folder name.
+
 ## Edit Feature Artifacts
 
 When DevCraft edits a feature artifact in System Central mode, it must:

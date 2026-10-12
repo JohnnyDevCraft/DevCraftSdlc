@@ -802,7 +802,7 @@ public sealed class DevCraftMenuCommandTests : IDisposable
                 SampleProfile,
                 [feature]));
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
-        FakeConsoleInteraction console = new([], ["Features", "List features", "Menu Feature (menu-feature)", "OpenAI Codex (codex)", "Exit"]);
+        FakeConsoleInteraction console = new([], ["Features", "List features", "Menu Feature (menu-feature)", "Start a conversation about the feature", "OpenAI Codex (codex)", "Exit"]);
         FakeDevCraftAiSessionLauncher launcher = new();
         FakeFeatureAiSessionLauncher featureLauncher = new();
 

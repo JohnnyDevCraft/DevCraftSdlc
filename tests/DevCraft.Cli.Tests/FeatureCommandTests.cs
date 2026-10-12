@@ -75,7 +75,7 @@ public sealed class FeatureCommandTests
                 SampleProfile,
                 [feature]));
         StartupContext context = new(root.Path, profile, soul);
-        FakeConsoleInteraction console = new([], ["Pending Storage Feature (pending-storage-feature)"]);
+        FakeConsoleInteraction console = new([], ["Pending Storage Feature (pending-storage-feature)", StartConversation]);
         FakeFeatureAiSessionLauncher launcher = new();
 
         FeatureCommand.Run(context, ["list"], console, launcher);
@@ -159,7 +159,7 @@ public sealed class FeatureCommandTests
                 SampleProfile,
                 [feature]));
         StartupContext context = new(root.Path, profile, soul);
-        FakeConsoleInteraction console = new([], ["Deferred Client Feature (deferred-client-feature)"]);
+        FakeConsoleInteraction console = new([], ["Deferred Client Feature (deferred-client-feature)", StartConversation]);
         FakeFeatureAiSessionLauncher launcher = new();
         SupportedTerminalClient selectedClient = SupportedTerminalClientCatalog.Create()[1];
         bool featureSelectedBeforeClient = false;
@@ -242,7 +242,7 @@ public sealed class FeatureCommandTests
                 SampleProfile,
                 [feature]));
         StartupContext context = new(root.Path, profile, soul);
-        FakeConsoleInteraction console = new([]);
+        FakeConsoleInteraction console = new([], ["GitHub Backed Feature (github-backed-feature)", StartConversation]);
         FakeFeatureAiSessionLauncher launcher = new();
 
         FeatureCommand.Run(context, ["list"], console, launcher);
@@ -439,6 +439,336 @@ public sealed class FeatureCommandTests
         Assert.Equal(["central-only", "shared"], projects[1].Features.Select(feature => feature.Slug));
         Assert.Equal("Implementation", projects[1].Features[1].Status);
     }
+
+    [Fact]
+    public void ListShowsFeatureActionsAfterSelection()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        WriteSystemCentralRepository(
+            root.Path,
+            Guid.NewGuid().ToString(),
+            [SampleFeature("First Existing", "first-existing", "folder-one", "Implementation")]);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["First Existing (first-existing)", StartConversation]);
+        FakeFeatureAiSessionLauncher launcher = new();
+
+        FeatureCommand.Run(context, ["list"], console, launcher);
+
+        int actionsIndex = console.SelectTitles.FindIndex(title => title == "Feature actions");
+        Assert.True(actionsIndex > console.SelectTitles.FindIndex(title => title == "Select a feature"));
+        Assert.Equal([EditFeatureName, OpenFeatureDirectory, StartConversation, "Back"], console.SelectChoices[actionsIndex]);
+        Assert.Equal("Work on existing feature.", Assert.Single(launcher.Launches).Instruction);
+    }
+
+    [Fact]
+    public void ListFeatureActionsBackDoesNotLaunchOrSelectClient()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        WriteSystemCentralRepository(
+            root.Path,
+            Guid.NewGuid().ToString(),
+            [SampleFeature("First Existing", "first-existing", "folder-one", "Implementation")]);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["First Existing (first-existing)", "Back"]);
+        FakeFeatureAiSessionLauncher launcher = new();
+        bool clientSelected = false;
+
+        FeatureCommand.Run(
+            context,
+            ["list"],
+            console,
+            launcher,
+            selectClient: () =>
+            {
+                clientSelected = true;
+                return SupportedTerminalClientCatalog.Create()[0];
+            });
+
+        Assert.Contains("Feature actions", console.SelectTitles);
+        Assert.False(clientSelected);
+        Assert.Empty(launcher.Launches);
+    }
+
+    [Fact]
+    public void ListEditFeatureNameRenamesFeatureInBothIndexes()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string projectKey = Guid.NewGuid().ToString();
+        WriteSystemCentralRepository(
+            root.Path,
+            projectKey,
+            [
+                SampleFeature("First Existing", "first-existing", "folder-one", "Implementation"),
+                SampleFeature("Second Existing", "second-existing", "folder-two", "Complete"),
+            ]);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new(["  Renamed Feature  "], ["First Existing (first-existing)", EditFeatureName, "Back"]);
+        FakeFeatureAiSessionLauncher launcher = new();
+
+        FeatureCommand.Run(context, ["list"], console, launcher);
+
+        DevCraftFeature expected = SampleFeature("First Existing", "first-existing", "folder-one", "Implementation") with
+        {
+            Name = "Renamed Feature",
+        };
+        ProjectDevCraftConfiguration configuration = ProjectDevCraftConfigurationReader.Read(root.Path)!;
+        Assert.Equal(2, configuration.Features.Count);
+        Assert.Equal(expected, configuration.Features[0]);
+        Assert.Equal("Second Existing", configuration.Features[1].Name);
+        SystemCentralProject project = Assert.Single(SystemCentralProjectsStore.Read(profile).Projects);
+        Assert.Equal(projectKey, project.ProjectKey);
+        Assert.Equal(2, project.Features.Count);
+        Assert.Equal(expected, project.Features[0]);
+        Assert.Contains("Feature renamed: First Existing -> Renamed Feature", console.StatusMessages);
+        Assert.Equal(
+            $"Feature renamed: First Existing -> Renamed Feature{Environment.NewLine}{Environment.NewLine}Feature actions",
+            console.SelectTitles[^1]);
+        Assert.Empty(launcher.Launches);
+    }
+
+    [Fact]
+    public void ListEditFeatureNamePreservesOtherFeaturesAndProjects()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string projectKey = Guid.NewGuid().ToString();
+        WriteSystemCentralRepository(
+            root.Path,
+            projectKey,
+            [SampleFeature("Shared", "shared", "folder-shared", "Implementation")]);
+        SystemCentralProject otherProject = new(
+            Guid.NewGuid().ToString(),
+            "Other Project",
+            "other-project",
+            "/tmp/other-project",
+            [SampleFeature("Shared", "shared", "folder-other", "Complete")]);
+        SystemCentralProjectsStore.Write(
+            profile,
+            new SystemCentralProjectsIndex(
+            [
+                otherProject,
+                new SystemCentralProject(
+                    projectKey,
+                    "Sample Project",
+                    "sample-project",
+                    root.Path,
+                    [
+                        SampleFeature("Central Only", "central-only", "folder-central", "Complete"),
+                        SampleFeature("Shared", "shared", "folder-shared", "Implementation"),
+                    ]),
+            ]));
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new(["Renamed"], ["Shared (shared)", EditFeatureName, "Back"]);
+
+        FeatureCommand.Run(context, ["list"], console, new FakeFeatureAiSessionLauncher());
+
+        IReadOnlyList<SystemCentralProject> projects = SystemCentralProjectsStore.Read(profile).Projects;
+        Assert.Equal(2, projects.Count);
+        Assert.Equal("Shared", Assert.Single(projects[0].Features).Name);
+        Assert.Equal(["Central Only", "Renamed"], projects[1].Features.Select(feature => feature.Name));
+        Assert.Equal(["central-only", "shared"], projects[1].Features.Select(feature => feature.Slug));
+    }
+
+    [Fact]
+    public void ListEditFeatureNameRejectsBlankName()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        WriteSystemCentralRepository(
+            root.Path,
+            Guid.NewGuid().ToString(),
+            [SampleFeature("First Existing", "first-existing", "folder-one", "Implementation")]);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new(["   "], ["First Existing (first-existing)", EditFeatureName, "Back"]);
+
+        FeatureCommand.Run(context, ["list"], console, new FakeFeatureAiSessionLauncher());
+
+        Assert.Contains("Feature name is required.", console.StatusMessages);
+        Assert.Equal("First Existing", Assert.Single(ProjectDevCraftConfigurationReader.Read(root.Path)!.Features).Name);
+        Assert.Equal("First Existing", Assert.Single(Assert.Single(SystemCentralProjectsStore.Read(profile).Projects).Features).Name);
+    }
+
+    [Fact]
+    public void ListEditFeatureNameIgnoresUnchangedName()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        WriteSystemCentralRepository(
+            root.Path,
+            Guid.NewGuid().ToString(),
+            [SampleFeature("First Existing", "first-existing", "folder-one", "Implementation")]);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new(["First Existing"], ["First Existing (first-existing)", EditFeatureName, "Back"]);
+        string configurationPath = ProjectDevCraftConfigurationStore.PathFor(root.Path);
+        DateTime writtenAt = new(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        File.SetLastWriteTimeUtc(configurationPath, writtenAt);
+
+        FeatureCommand.Run(context, ["list"], console, new FakeFeatureAiSessionLauncher());
+
+        Assert.Contains("Feature name is unchanged.", console.StatusMessages);
+        Assert.Equal(writtenAt, File.GetLastWriteTimeUtc(configurationPath));
+    }
+
+    [Fact]
+    public void ListConversationAfterRenameUsesNewName()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        WriteSystemCentralRepository(
+            root.Path,
+            Guid.NewGuid().ToString(),
+            [SampleFeature("First Existing", "first-existing", "folder-one", "Implementation")]);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new(["Renamed Feature"], ["First Existing (first-existing)", EditFeatureName, StartConversation]);
+        FakeFeatureAiSessionLauncher launcher = new();
+
+        FeatureCommand.Run(context, ["list"], console, launcher);
+
+        Assert.Equal("Renamed Feature", Assert.Single(launcher.Launches).Feature.Name);
+        Assert.Equal(
+            "Renamed Feature",
+            Assert.Single(launcher.ProjectConfigurations).Features.Single().Name);
+    }
+
+    [Fact]
+    public void ListOpenFeatureDirectoryOpensSystemCentralFolder()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string featureDirectory = Path.Combine(profile, "features", "folder-one");
+        Directory.CreateDirectory(featureDirectory);
+        WriteSystemCentralRepository(
+            root.Path,
+            Guid.NewGuid().ToString(),
+            [SampleFeature("First Existing", "first-existing", "folder-one", "Implementation")]);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["First Existing (first-existing)", OpenFeatureDirectory, "Back"]);
+        FakeFeatureAiSessionLauncher launcher = new();
+        FakeFeatureDirectoryOpener opener = new();
+
+        FeatureCommand.Run(context, ["list"], console, launcher, directoryOpener: opener);
+
+        Assert.Equal([featureDirectory], opener.OpenedDirectories);
+        Assert.Contains($"Opened feature directory in Visual Studio Code: {featureDirectory}", console.StatusMessages);
+        Assert.Equal(
+            ["Feature actions", $"Opened feature directory in Visual Studio Code: {featureDirectory}{Environment.NewLine}{Environment.NewLine}Feature actions"],
+            console.SelectTitles.Skip(1));
+        Assert.Empty(launcher.Launches);
+    }
+
+    [Fact]
+    public void ListOpenFeatureDirectoryOpensRepoCentralFolder()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string featureDirectory = Path.Combine(root.Path, ".devcraft", "features", "folder-one");
+        Directory.CreateDirectory(featureDirectory);
+        WriteSystemCentralRepository(
+            root.Path,
+            Guid.NewGuid().ToString(),
+            [
+                SampleFeature("First Existing", "first-existing", "folder-one", "Implementation") with
+                {
+                    StorageType = FeatureStorageMode.RepoCentral,
+                },
+            ]);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["First Existing (first-existing)", OpenFeatureDirectory, "Back"]);
+        FakeFeatureDirectoryOpener opener = new();
+
+        FeatureCommand.Run(context, ["list"], console, new FakeFeatureAiSessionLauncher(), directoryOpener: opener);
+
+        Assert.Equal([featureDirectory], opener.OpenedDirectories);
+    }
+
+    [Fact]
+    public void ListOpenFeatureDirectoryReportsExternalStorage()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        WriteSystemCentralRepository(
+            root.Path,
+            Guid.NewGuid().ToString(),
+            [
+                SampleFeature("First Existing", "first-existing", "GH-123", "Implementation") with
+                {
+                    StorageType = "github-issue",
+                },
+            ]);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["First Existing (first-existing)", OpenFeatureDirectory, "Back"]);
+        FakeFeatureDirectoryOpener opener = new();
+
+        FeatureCommand.Run(context, ["list"], console, new FakeFeatureAiSessionLauncher(), directoryOpener: opener);
+
+        Assert.Empty(opener.OpenedDirectories);
+        Assert.Contains("First Existing uses github-issue storage and has no local feature directory.", console.StatusMessages);
+    }
+
+    [Fact]
+    public void ListOpenFeatureDirectoryReportsMissingDirectory()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        WriteSystemCentralRepository(
+            root.Path,
+            Guid.NewGuid().ToString(),
+            [SampleFeature("First Existing", "first-existing", "folder-one", "Implementation")]);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["First Existing (first-existing)", OpenFeatureDirectory, "Back"]);
+        FakeFeatureDirectoryOpener opener = new();
+
+        FeatureCommand.Run(context, ["list"], console, new FakeFeatureAiSessionLauncher(), directoryOpener: opener);
+
+        Assert.Empty(opener.OpenedDirectories);
+        Assert.Contains(
+            $"Feature directory not found: {Path.Combine(profile, "features", "folder-one")}",
+            console.StatusMessages);
+    }
+
+    [Fact]
+    public void ListOpenFeatureDirectoryReportsWhenCodeCannotStart()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(Path.Combine(profile, "features", "folder-one"));
+        WriteSystemCentralRepository(
+            root.Path,
+            Guid.NewGuid().ToString(),
+            [SampleFeature("First Existing", "first-existing", "folder-one", "Implementation")]);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["First Existing (first-existing)", OpenFeatureDirectory, "Back"]);
+        FakeFeatureDirectoryOpener opener = new()
+        {
+            Result = false,
+        };
+
+        FeatureCommand.Run(context, ["list"], console, new FakeFeatureAiSessionLauncher(), directoryOpener: opener);
+
+        Assert.Single(opener.OpenedDirectories);
+        Assert.Contains(
+            "Could not start Visual Studio Code. Make sure the `code` command is installed and on your PATH.",
+            console.StatusMessages);
+    }
+
+    private const string EditFeatureName = "Edit Feature Name";
+    private const string OpenFeatureDirectory = "Open Feature Directory using Code";
+    private const string StartConversation = "Start a conversation about the feature";
 
     private static DevCraftFeature SampleFeature(string name, string slug, string folderName, string status)
     {
