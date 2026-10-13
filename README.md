@@ -34,6 +34,8 @@ $env:DEVCRAFT_REPOSITORY="JohnnyDevCraft/DevCraftSdlc"; iwr https://raw.githubus
 
 The installer creates the profile DevCraft folder under your user profile, copies `devcraft.exe` and the profile seed files into it, preserves an existing `soul.md`, and adds that folder to the user PATH.
 
+The command works in both Windows PowerShell 5.1 and PowerShell 7. Set `DEVCRAFT_NO_MODIFY_PATH` to any value before running the installer to leave the user PATH unchanged.
+
 To install a specific release, set `DEVCRAFT_VERSION` before running the installer:
 
 ```powershell

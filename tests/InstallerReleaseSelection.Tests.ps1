@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $env:DEVCRAFT_INSTALLER_TEST_MODE = "1"
-. (Join-Path $PSScriptRoot ".." "install.ps1")
+. (Join-Path (Split-Path -Parent $PSScriptRoot) "install.ps1")
 
 function Assert-Equal($Expected, $Actual, $Description) {
     if ($Expected -ne $Actual) {
@@ -43,7 +43,7 @@ Remove-Item Env:\DEVCRAFT_VERSION
 
 $temp = Join-Path ([System.IO.Path]::GetTempPath()) "devcraft-installer-test-$([Guid]::NewGuid())"
 $InstallDir = Join-Path $temp "install-root"
-$sourceProfile = Join-Path $temp "package" "profile"
+$sourceProfile = Join-Path (Join-Path $temp "package") "profile"
 New-Item -ItemType Directory -Force -Path $InstallDir, $sourceProfile | Out-Null
 @'
 {

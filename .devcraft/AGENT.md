@@ -58,13 +58,13 @@
 
 ## Active Feature Tracking
 
-- Active Feature ID: 74b0a273-4e74-4998-bc52-eaa127dfa71f
-- Active Feature Name: Enable Feature Rename
+- Active Feature ID: 1976e2e8-7abe-4726-a69b-5d1e15daf2d8
+- Active Feature Name: Issues running on Windows
 - Active Feature Storage: system-central
 - Active Feature Operator Mode: Agent Operator Mode
 - Active Feature State: Implementation
-- Current Implementation Phase: Final Phase: Validation And Completion (done; awaiting operator review and install of the beta 16 build)
-- Previous Active Feature: 9f5f16e3-2b9b-4c33-8864-9815ff0a0ac8 Fix System Central Projects, and Features Mappings (Implementation; awaiting operator review)
+- Current Implementation Phase: Phases 1 and 2 implemented; awaiting push, first Windows CI run, and the operator's Windows test. Phase 3 blocked on that test.
+- Previous Active Feature: 74b0a273-4e74-4998-bc52-eaa127dfa71f Enable Feature Rename (Implementation; final phase done, awaiting operator review and install of the beta 16 build)
 
 ## Working Agreements
 

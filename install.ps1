@@ -16,17 +16,23 @@ function Get-Rid {
     }
 }
 
+function Get-ProfileRelativePath($SourceRoot, $FullName) {
+    return $FullName.Substring($SourceRoot.Length).TrimStart("\", "/")
+}
+
 function Copy-Profile($SourceProfile) {
     New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 
     if (Test-Path $SourceProfile) {
+        $sourceRoot = (Get-Item -LiteralPath $SourceProfile).FullName
+
         Get-ChildItem $SourceProfile -Directory -Recurse | ForEach-Object {
-            $relativePath = [System.IO.Path]::GetRelativePath($SourceProfile, $_.FullName)
+            $relativePath = Get-ProfileRelativePath $sourceRoot $_.FullName
             New-Item -ItemType Directory -Force -Path (Join-Path $InstallDir $relativePath) | Out-Null
         }
 
         Get-ChildItem $SourceProfile -File -Recurse | Where-Object { $_.Name -ne "soul.md" } | ForEach-Object {
-            $relativePath = [System.IO.Path]::GetRelativePath($SourceProfile, $_.FullName)
+            $relativePath = Get-ProfileRelativePath $sourceRoot $_.FullName
             $targetPath = Join-Path $InstallDir $relativePath
             if (-not ($relativePath -eq "configure.json" -and (Test-Path $targetPath))) {
                 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $targetPath) | Out-Null
@@ -194,12 +200,19 @@ function Install-FromRelease {
     $assetUrl = Get-AssetUrl $rid $releaseTag
 
     Write-Host "Downloading DevCraft $releaseTag for $rid..."
-    Invoke-WebRequest $assetUrl -OutFile $archive
+    Invoke-WebRequest $assetUrl -OutFile $archive -UseBasicParsing
     Expand-Archive $archive -DestinationPath $packageDir -Force
     Install-FromDirectory $packageDir
 }
 
 function Add-ToPath {
+    Write-Host "DevCraft installed in $InstallDir"
+
+    if ($env:DEVCRAFT_NO_MODIFY_PATH) {
+        Write-Host "PATH was not changed. Add $InstallDir to PATH, then run: devcraft"
+        return
+    }
+
     $currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
     $paths = $currentPath -split ";"
 
@@ -208,15 +221,21 @@ function Add-ToPath {
         [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
     }
 
-    Write-Host "DevCraft installed in $InstallDir"
     Write-Host "Open a new PowerShell window, then run: devcraft"
 }
 
-function Main {
-    $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+function Test-LocalPackage($Directory) {
+    # Piping the script to Invoke-Expression leaves no script folder to inspect.
+    if ([string]::IsNullOrWhiteSpace($Directory)) {
+        return $false
+    }
 
-    if ((Test-Path (Join-Path $scriptDir "devcraft.exe")) -and (Test-Path (Join-Path $scriptDir "profile"))) {
-        Install-FromDirectory $scriptDir
+    return (Test-Path (Join-Path $Directory "devcraft.exe")) -and (Test-Path (Join-Path $Directory "profile"))
+}
+
+function Main {
+    if (Test-LocalPackage $PSScriptRoot) {
+        Install-FromDirectory $PSScriptRoot
     } else {
         Install-FromRelease
     }
