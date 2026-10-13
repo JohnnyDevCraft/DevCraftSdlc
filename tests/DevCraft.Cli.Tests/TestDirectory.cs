@@ -12,10 +12,18 @@ public sealed class TestDirectory : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(Path))
+        if (!Directory.Exists(Path))
         {
-            Directory.Delete(Path, recursive: true);
+            return;
         }
+
+        // Git marks object files read-only, which blocks deletion on Windows.
+        foreach (string file in Directory.EnumerateFiles(Path, "*", SearchOption.AllDirectories))
+        {
+            File.SetAttributes(file, FileAttributes.Normal);
+        }
+
+        Directory.Delete(Path, recursive: true);
     }
 }
 

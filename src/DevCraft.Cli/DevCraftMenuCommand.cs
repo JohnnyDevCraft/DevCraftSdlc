@@ -209,7 +209,7 @@ public static class DevCraftMenuCommand
         }
 
         ProfileCatalogDocument projectType = profileConfiguration.ProjectTypes.First(item => selected.EndsWith($"({item.Slug})", StringComparison.Ordinal));
-        string projectTypePath = Path.Combine(context.ProfileDirectory, projectType.Path);
+        string projectTypePath = ProfilePath(context, projectType.Path);
 
         return LaunchClient(
             () => launcher.Launch(
@@ -1100,8 +1100,8 @@ public static class DevCraftMenuCommand
         string templateRelativePath,
         string task)
     {
-        string skillPath = Path.Combine(context.ProfileDirectory, skillRelativePath);
-        string templatePath = Path.Combine(context.ProfileDirectory, templateRelativePath);
+        string skillPath = ProfilePath(context, skillRelativePath);
+        string templatePath = ProfilePath(context, templateRelativePath);
 
         launcher.Launch(
             context,
@@ -1194,7 +1194,7 @@ public static class DevCraftMenuCommand
         }
 
         ProfileCatalogDocument skill = profileConfiguration.Skills.First(item => selected.EndsWith($"({item.Slug})", StringComparison.Ordinal));
-        string skillPath = Path.Combine(context.ProfileDirectory, skill.Path);
+        string skillPath = ProfilePath(context, skill.Path);
 
         return LaunchClient(
             () => launcher.Launch(
@@ -1212,6 +1212,12 @@ public static class DevCraftMenuCommand
 
                 Read the selected skill file before acting. Start by telling the user you are ready to use the skill, then ask the user for the details required by that skill. Do not assume the missing inputs. Let the skill guide the conversation and any files you create or update.
                 """));
+    }
+
+    private static string ProfilePath(StartupContext context, string relativePath)
+    {
+        // Catalog paths use forward slashes on every platform.
+        return Path.Combine(context.ProfileDirectory, relativePath.Replace('/', Path.DirectorySeparatorChar));
     }
 
     private static string SkillChoice(ProfileCatalogDocument skill)
