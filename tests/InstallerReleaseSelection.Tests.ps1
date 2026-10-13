@@ -41,6 +41,13 @@ $env:DEVCRAFT_VERSION = "1.0.0-alpha.12"
 Assert-Equal "v1.0.0-alpha.12" (Select-ReleaseTag $releases) "honors explicit version override"
 Remove-Item Env:\DEVCRAFT_VERSION
 
+Assert-Equal "win-x64" (Resolve-Rid @("AMD64")) "maps the Windows AMD64 processor name to win-x64"
+Assert-Equal "win-x64" (Resolve-Rid @("X64")) "maps the .NET X64 architecture name to win-x64"
+Assert-Equal "win-x64" (Resolve-Rid @($null, "", " amd64 ")) "skips empty readings and ignores case and spacing"
+Assert-Equal "win-x64" (Resolve-Rid @("x86", "AMD64")) "a 32-bit shell on 64-bit Windows still resolves win-x64"
+Assert-True ($null -eq (Resolve-Rid @("ARM64"))) "ARM64 is not supported"
+Assert-True ($null -eq (Resolve-Rid @($null, ""))) "no reading resolves nothing"
+
 $temp = Join-Path ([System.IO.Path]::GetTempPath()) "devcraft-installer-test-$([Guid]::NewGuid())"
 $InstallDir = Join-Path $temp "install-root"
 $sourceProfile = Join-Path (Join-Path $temp "package") "profile"

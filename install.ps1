@@ -7,13 +7,37 @@ function Fail($Message) {
     throw "DevCraft install failed: $Message"
 }
 
-function Get-Rid {
-    $arch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
+function Resolve-Rid($Readings) {
+    foreach ($reading in $Readings) {
+        $name = "$reading".Trim().ToUpperInvariant()
 
-    switch ($arch) {
-        "X64" { return "win-x64" }
-        default { Fail "unsupported CPU architecture: $arch" }
+        if ($name -eq "AMD64" -or $name -eq "X64") {
+            return "win-x64"
+        }
     }
+
+    return $null
+}
+
+function Get-Rid {
+    # A 32-bit shell on 64-bit Windows reports the real processor in PROCESSOR_ARCHITEW6432.
+    $readings = @($env:PROCESSOR_ARCHITEW6432, $env:PROCESSOR_ARCHITECTURE)
+
+    try {
+        $readings += [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
+    }
+    catch {
+        # Older .NET Framework builds do not have RuntimeInformation.
+        $readings += "unavailable"
+    }
+
+    $rid = Resolve-Rid $readings
+
+    if (-not $rid) {
+        Fail "unsupported CPU architecture (PROCESSOR_ARCHITEW6432='$($readings[0])', PROCESSOR_ARCHITECTURE='$($readings[1])', OSArchitecture='$($readings[2])')"
+    }
+
+    return $rid
 }
 
 function Get-ProfileRelativePath($SourceRoot, $FullName) {
