@@ -32,6 +32,8 @@ function New-FakePackage($Root) {
     Set-Content (Join-Path (Join-Path $sourceProfile "templates") "spec.template.md") "template"
     Set-Content (Join-Path $sourceProfile "soul.md") "package soul"
     Set-Content (Join-Path $sourceProfile "configure.json") "package configuration"
+    New-Item -ItemType Directory -Force -Path (Join-Path $sourceProfile "features") | Out-Null
+    Set-Content (Join-Path (Join-Path $sourceProfile "features") "projects.json") "package projects"
     Copy-Item $installer (Join-Path $package "install.ps1")
 
     return $package
@@ -92,6 +94,8 @@ function Test-ScriptFileInstallsLocalPackage {
     $package = New-FakePackage $root
     New-Item -ItemType Directory -Force -Path $installDir | Out-Null
     Set-Content (Join-Path $installDir "configure.json") "existing configuration"
+    New-Item -ItemType Directory -Force -Path (Join-Path $installDir "features") | Out-Null
+    Set-Content (Join-Path (Join-Path $installDir "features") "projects.json") "existing projects"
 
     $result = Invoke-InstallerShell $installDir @("-ExecutionPolicy", "Bypass", "-File", (Join-Path $package "install.ps1"))
 
@@ -101,6 +105,7 @@ function Test-ScriptFileInstallsLocalPackage {
     Assert-True (Test-Path (Join-Path (Join-Path $installDir "templates") "spec.template.md")) "package installer keeps nested profile paths"
     Assert-True (-not (Test-Path (Join-Path $installDir "soul.md"))) "package installer does not copy soul.md"
     Assert-Equal "existing configuration" (Get-Content (Join-Path $installDir "configure.json") -Raw).Trim() "package installer preserves an existing configure.json"
+    Assert-Equal "existing projects" (Get-Content (Join-Path (Join-Path $installDir "features") "projects.json") -Raw).Trim() "package installer preserves an existing features/projects.json"
 
     if ($env:OS -eq "Windows_NT") {
         $userPath = [Environment]::GetEnvironmentVariable("Path", "User")

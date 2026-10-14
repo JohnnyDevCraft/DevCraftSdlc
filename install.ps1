@@ -58,7 +58,9 @@ function Copy-Profile($SourceProfile) {
         Get-ChildItem $SourceProfile -File -Recurse | Where-Object { $_.Name -ne "soul.md" } | ForEach-Object {
             $relativePath = Get-ProfileRelativePath $sourceRoot $_.FullName
             $targetPath = Join-Path $InstallDir $relativePath
-            if (-not ($relativePath -eq "configure.json" -and (Test-Path $targetPath))) {
+            # Seeded user data: copy only when missing so reinstalls never reset it.
+            $isSeededUserData = @("configure.json", "features/projects.json") -contains $relativePath.Replace("\", "/")
+            if (-not ($isSeededUserData -and (Test-Path $targetPath))) {
                 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $targetPath) | Out-Null
                 Copy-Item $_.FullName $targetPath -Force
             }

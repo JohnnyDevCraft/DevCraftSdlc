@@ -209,9 +209,14 @@ copy_profile() {
             done
             find . -type f ! -name 'soul.md' | while IFS= read -r file; do
                 target="$INSTALL_DIR/$file"
-                if [ "$file" = "./configure.json" ] && [ -f "$target" ]; then
-                    continue
-                fi
+                # Seeded user data: copy only when missing so reinstalls never reset it.
+                case "$file" in
+                    ./configure.json | ./features/projects.json)
+                        if [ -f "$target" ]; then
+                            continue
+                        fi
+                        ;;
+                esac
 
                 mkdir -p "$(dirname "$target")"
                 cp "$file" "$target"
