@@ -58,13 +58,10 @@
 
 ## Active Feature Tracking
 
-- Active Feature ID: eb957661-e935-4694-8077-1beda3154834
-- Active Feature Name: Fix Editing, and Default Values
-- Active Feature Storage: system-central
-- Active Feature Operator Mode: Agent Operator Mode
-- Active Feature State: Implementation
-- Current Implementation Phase: All phases implemented and validated locally; released as 1.0.0-beta.17. Awaiting CI on the tagged push and the operator smoke test (VAL-007).
-- Previous Active Feature: 1976e2e8-7abe-4726-a69b-5d1e15daf2d8 Issues running on Windows (Implementation; Phases 1 and 2 done and pushed, Windows CI green; awaiting the operator's Windows test, which unblocks Phase 3)
+- Active Feature ID: None
+- Active Feature Name: None
+- Last Completed Feature: eb957661-e935-4694-8077-1beda3154834 Fix Editing, and Default Values (Complete 2026-10-14; released as 1.0.0-beta.17, operator-approved)
+- Open Feature: 1976e2e8-7abe-4726-a69b-5d1e15daf2d8 Issues running on Windows (Implementation; Phases 1 and 2 done and pushed, Windows CI green; awaiting the operator's Windows test, which unblocks Phase 3)
 
 ## Working Agreements
 
