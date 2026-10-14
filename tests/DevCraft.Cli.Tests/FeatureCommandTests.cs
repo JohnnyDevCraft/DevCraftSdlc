@@ -360,7 +360,10 @@ public sealed class FeatureCommandTests
         SystemCentralProject project = Assert.Single(SystemCentralProjectsStore.Read(profile).Projects);
         Assert.Equal(2, project.Features.Count);
         Assert.Contains(project.Features, feature => feature.Slug == "first-existing" && feature.Status == "Implementation");
-        Assert.Contains(project.Features, feature => feature.Slug == "second-existing" && feature.Status == "Complete");
+        Assert.Contains(project.Features, feature => feature.Slug == "second-existing" && feature.Status == "Discovery");
+        Assert.Contains(
+            ProjectDevCraftConfigurationReader.Read(root.Path)!.Features,
+            feature => feature.Slug == "second-existing" && feature.Status == "Discovery");
     }
 
     [Fact]
@@ -437,7 +440,106 @@ public sealed class FeatureCommandTests
         Assert.Equal("other-feature", Assert.Single(projects[0].Features).Slug);
         Assert.Equal(root.Path, projects[1].RepositoryPath);
         Assert.Equal(["central-only", "shared"], projects[1].Features.Select(feature => feature.Slug));
-        Assert.Equal("Implementation", projects[1].Features[1].Status);
+        Assert.Equal("Discovery", projects[1].Features[1].Status);
+    }
+
+    [Fact]
+    public void SyncCarriesCentralStatusIntoRepositoryConfiguration()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string projectKey = Guid.NewGuid().ToString();
+        WriteSystemCentralRepository(
+            root.Path,
+            projectKey,
+            [SampleFeature("Shipped", "shipped", "folder-shipped", "Implementation")]);
+        SystemCentralProjectsStore.Write(
+            profile,
+            new SystemCentralProjectsIndex(
+            [
+                new SystemCentralProject(
+                    projectKey,
+                    "Sample Project",
+                    "sample-project",
+                    root.Path,
+                    [SampleFeature("Shipped", "shipped", "folder-shipped", "Complete")]),
+            ]));
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+
+        FeatureCommand.Run(context, ["list"], new FakeConsoleInteraction([], ["Back"]), new FakeFeatureAiSessionLauncher());
+
+        Assert.Equal("Complete", Assert.Single(ProjectDevCraftConfigurationReader.Read(root.Path)!.Features).Status);
+        Assert.Equal("Complete", Assert.Single(Assert.Single(SystemCentralProjectsStore.Read(profile).Projects).Features).Status);
+    }
+
+    [Fact]
+    public void ListStartsWithBackAndCompletedAndShowsOnlyInProgressFeatures()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        WriteSystemCentralRepository(
+            root.Path,
+            Guid.NewGuid().ToString(),
+            [
+                SampleFeature("Done Feature", "done-feature", "folder-done", "Complete"),
+                SampleFeature("Active Feature", "active-feature", "folder-active", "Implementation"),
+                SampleFeature("New Idea", "new-idea", "folder-idea", "Discovery"),
+            ]);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Back"]);
+
+        FeatureCommand.Run(context, ["list"], console, new FakeFeatureAiSessionLauncher());
+
+        int listIndex = console.SelectTitles.FindIndex(title => title == "Select a feature");
+        Assert.Equal(
+            ["Back", "Completed", "Active Feature (active-feature)", "New Idea (new-idea)"],
+            console.SelectChoices[listIndex]);
+    }
+
+    [Fact]
+    public void ListCompletedShowsOnlyCompletedFeaturesAndBackReturnsToInProgress()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        WriteSystemCentralRepository(
+            root.Path,
+            Guid.NewGuid().ToString(),
+            [
+                SampleFeature("Done Feature", "done-feature", "folder-done", "Complete"),
+                SampleFeature("Active Feature", "active-feature", "folder-active", "Implementation"),
+            ]);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Completed", "Back", "Back"]);
+        FakeFeatureAiSessionLauncher launcher = new();
+
+        FeatureCommand.Run(context, ["list"], console, launcher);
+
+        Assert.Equal(["Select a feature", "Completed features", "Select a feature"], console.SelectTitles);
+        Assert.Equal(["Back", "Done Feature (done-feature)"], console.SelectChoices[1]);
+        Assert.Empty(launcher.Launches);
+    }
+
+    [Fact]
+    public void ListCompletedFeatureCanBeSelected()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        WriteSystemCentralRepository(
+            root.Path,
+            Guid.NewGuid().ToString(),
+            [SampleFeature("Done Feature", "done-feature", "folder-done", "Complete")]);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["Completed", "Done Feature (done-feature)", "Back"]);
+
+        FeatureCommand.Run(context, ["list"], console, new FakeFeatureAiSessionLauncher());
+
+        Assert.Equal(["Back", "Completed"], console.SelectChoices[0]);
+        Assert.Contains("Selected feature: Done Feature", console.StatusMessages);
+        Assert.Contains("Feature actions", console.SelectTitles);
     }
 
     [Fact]

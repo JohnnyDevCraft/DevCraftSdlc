@@ -47,6 +47,7 @@ Every feature is recorded in two places: the repository `.devcraft/configure.jso
 DevCraft reconciles the two whenever a feature command runs in a repository:
 
 - Every feature in the repository `Features` list is added to the project entry, or replaces the entry with the same folder name or slug.
+- Feature `status` is owned by `projects.json`. When a feature already exists there, its central `status` wins and is carried into the repository `Features` list (`Status`), and the repository `configure.json` is rewritten when a status changed. Agents that change a feature's state must update `status` in `projects.json`; updating `Status` in the repository copy as well keeps both files readable.
 - A project missing from `projects.json` is created with the repository's full feature list.
 - Feature entries that exist only in `projects.json` are kept, and other projects are not changed.
 
@@ -61,9 +62,13 @@ The project key and each feature folder name are randomly generated GUID values.
 5. Create the feature artifact folder under profile-level `features/{feature-guid}`.
 6. Store the standard DevCraft feature artifacts inside that GUID-named folder.
 
+## List Features
+
+`List features` (or `devcraft feature list`) starts with `Back` (return to the previous menu) and `Completed`, followed by the features that are in progress, meaning any status other than `Complete`. Choosing `Completed` shows only the `Complete` features, and `Back` there returns to the in-progress list.
+
 ## Feature Actions
 
-Selecting a feature from `List features` (or `devcraft feature list`) opens a `Feature actions` menu:
+Selecting a feature from the list opens a `Feature actions` menu:
 
 - `Edit Feature Name` - asks for a new name and writes it to both indexes: `Name` in the repository `.devcraft/configure.json` and `feature-name` in profile `features/projects.json`. The slug, GUID folder name, storage type, external reference, status, and description do not change, and feature artifacts are not edited.
 - `Open Feature Directory using Code` - runs `code {feature-dir}` to open the feature's artifact folder in Visual Studio Code. System Central features open `features/{feature-guid}` in the profile DevCraft folder; Repo Central features open `.devcraft/features/{feature-guid}` in the repository. Features on external storage have no local directory.

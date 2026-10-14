@@ -106,6 +106,15 @@
       "StorageType": "system-central",
       "ExternalReference": null,
       "Status": "Complete"
+    },
+    {
+      "Name": "Feature Listing \u0026 SpecKit Import \u0026 New Feature Form",
+      "Slug": "feature-listing-speckit-import-new-feature-form",
+      "ShortDescription": "New feature names use a Terminal.Gui form; Project Management gains Import SpecKit Constitution and Infer Project Details, both run headless with the default agent (beta 19).",
+      "FolderName": "5aade414-d9f5-41ee-9425-21a41c35d52d",
+      "StorageType": "system-central",
+      "ExternalReference": null,
+      "Status": "Complete"
     }
   ]
 }

@@ -76,6 +76,13 @@ When DevCraft launches a terminal AI client, it should pass or reference `soul.m
 
 Before every interactive handoff, DevCraft asks the operator for an optional starting prompt in a multi-line editor, then asks which AI client to use. When the operator provides one, it is the final section of the handoff prompt under `Operator starting prompt:`. Treat it as the operator's opening message for the session, still bound by DevCraft rules and feature-state gates.
 
+Project Management also offers two headless runs of the operator's default agent (the soul's `Default terminal AI agent`). In these runs the agent reads files and returns a JSON object `{ "success", "summary", "files": [{ "name", "content" }] }`. DevCraft writes only allow-listed `.devcraft` files whose content changed:
+
+- `Import SpecKit Constitution` reads `.specify/memory/constitution.md` and updates AGENT.md, README.md, DISCOVERY.md, ARCH.md, GOV.md, MODEL.md, and THEME.md. After a successful run, DevCraft records the constitution path and its MD5 hash under `## SpecKit Constitution` in `.devcraft/README.md`. When the hash still matches, DevCraft reports that the constitution is already imported and runs the agent again only if the operator confirms.
+- `Infer Project Details` infers ARCH.md, DISCOVERY.md, MODEL.md, GOV.md, and THEME.md (only when the app has a theme) from the repository, and from the SpecKit constitution and `specs/` when present.
+
+Both runs must preserve the Project Status and Discovery Stage values.
+
 ## DevCraft Control Folder
 
 The hidden `.devcraft/` folder is the source of truth for DevCraft workflow artifacts.

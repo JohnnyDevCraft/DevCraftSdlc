@@ -83,7 +83,8 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         using TestDirectory root = new();
         using TestDirectory profileRoot = new();
         StartupContext context = MenuContext(root, profileRoot);
-        FakeConsoleInteraction console = new(["Cancelled Feature"], ["Features", "New feature", "Exit"]);
+        FakeConsoleInteraction console = new([], ["Features", "New feature", "Exit"]);
+        console.EnqueueValueEdit("Cancelled Feature");
         console.EnqueueTextEdit("Discarded", saved: false);
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
@@ -100,7 +101,8 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         using TestDirectory root = new();
         using TestDirectory profileRoot = new();
         StartupContext context = MenuContext(root, profileRoot);
-        FakeConsoleInteraction console = new(["Prompted Feature"], ["Features", "New feature", "OpenAI Codex (codex)", "Exit"]);
+        FakeConsoleInteraction console = new([], ["Features", "New feature", "OpenAI Codex (codex)", "Exit"]);
+        console.EnqueueValueEdit("Prompted Feature");
         console.EnqueueTextEdit("Here is what this feature is about.");
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
@@ -109,6 +111,193 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         Assert.Single(featureLauncher.Launches);
         Assert.Equal("Here is what this feature is about.", Assert.Single(featureLauncher.StartingPrompts));
         Assert.True(console.Events.IndexOf("text:Starting Prompt") < console.Events.IndexOf("select:Which AI client should I use?"));
+    }
+
+    [Fact]
+    public void RunImportSpecKitConstitutionWithoutConstitutionDoesNotCallAgent()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        FakeConsoleInteraction console = new([], ["Project Management", "Import SpecKit Constitution", "Exit"]);
+        FakeRepositoryDocumentAgent agent = new();
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher(), documentAgent: agent);
+
+        Assert.Empty(agent.Prompts);
+        Assert.StartsWith("No SpecKit constitution found at .specify/memory/constitution.md.", console.SelectTitles.Last(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RunImportSpecKitConstitutionRunsDefaultAgentHeadlessAndWritesChangedFiles()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        WriteConstitution(root.Path);
+        File.WriteAllText(context.SoulFilePath, "- Default terminal AI agent: Claude AI\n");
+        FakeConsoleInteraction console = new([], ["Project Management", "Import SpecKit Constitution", "Exit"]);
+        FakeRepositoryDocumentAgent agent = new()
+        {
+            Response = """{"success":true,"summary":"Added principles.","files":[{"name":"GOV.md","content":"# GOV.md\n\nPrinciple I\n"},{"name":"src/App.cs","content":"x"}]}""",
+        };
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher(), documentAgent: agent);
+
+        Assert.Equal("claude-code", Assert.Single(agent.Clients).Slug);
+        Assert.Contains(Path.Combine(root.Path, ".specify", "memory", "constitution.md"), Assert.Single(agent.Prompts));
+        Assert.Contains("Reading the SpecKit constitution with Claude Code...", console.StatusMessages);
+        Assert.DoesNotContain("Which AI client should I use?", console.SelectTitles);
+        Assert.DoesNotContain("Starting Prompt", console.TextEditTitles);
+        Assert.Equal("# GOV.md\n\nPrinciple I\n", File.ReadAllText(Path.Combine(root.Path, ".devcraft", "GOV.md")));
+        Assert.False(File.Exists(Path.Combine(root.Path, ".devcraft", "src", "App.cs")));
+        string notice = console.SelectTitles.Last();
+        Assert.Contains("Updated GOV.md.", notice);
+        Assert.Contains("src/App.cs", notice);
+        Assert.Contains("Added principles.", notice);
+    }
+
+    [Fact]
+    public void RunImportSpecKitConstitutionTwiceReportsNoChangesWhenFilesMatch()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        WriteConstitution(root.Path);
+        FakeConsoleInteraction console = new([], ["Project Management", "Import SpecKit Constitution", "Project Management", "Import SpecKit Constitution", "Yes", "Exit"]);
+        FakeRepositoryDocumentAgent agent = new()
+        {
+            Response = """{"success":true,"summary":"","files":[{"name":"GOV.md","content":"# GOV.md\n"}]}""",
+        };
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher(), documentAgent: agent);
+
+        Assert.Equal(2, agent.Prompts.Count);
+        Assert.Contains("No DevCraft files changed", console.SelectTitles.Last());
+    }
+
+    [Fact]
+    public void RunImportSpecKitConstitutionReportsAgentFailureWithoutWriting()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        WriteConstitution(root.Path);
+        FakeConsoleInteraction console = new([], ["Project Management", "Import SpecKit Constitution", "Exit"]);
+        FakeRepositoryDocumentAgent agent = new() { Response = "I could not do it." };
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher(), documentAgent: agent);
+
+        Assert.StartsWith("SpecKit constitution import failed:", console.SelectTitles.Last(), StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(root.Path, ".devcraft", "GOV.md")));
+    }
+
+    [Fact]
+    public void RunInferProjectDetailsUsesSpecKitSourcesWhenPresentAndWritesAllowedFiles()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        WriteConstitution(root.Path);
+        Directory.CreateDirectory(Path.Combine(root.Path, "specs", "001-login"));
+        FakeConsoleInteraction console = new([], ["Project Management", "Infer Project Details", "Exit"]);
+        FakeRepositoryDocumentAgent agent = new()
+        {
+            Response = """{"success":true,"summary":"Inferred.","files":[{"name":"ARCH.md","content":"# ARCH.md\n"},{"name":"MODEL.md","content":"# MODEL.md\n"},{"name":"AGENT.md","content":"x"}]}""",
+        };
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher(), documentAgent: agent);
+
+        string prompt = Assert.Single(agent.Prompts);
+        Assert.Contains(Path.Combine(root.Path, "specs"), prompt);
+        Assert.Contains(Path.Combine(root.Path, ".specify", "memory", "constitution.md"), prompt);
+        Assert.Contains("Inferring project details with OpenAI Codex...", console.StatusMessages);
+        Assert.True(File.Exists(Path.Combine(root.Path, ".devcraft", "ARCH.md")));
+        Assert.True(File.Exists(Path.Combine(root.Path, ".devcraft", "MODEL.md")));
+        Assert.False(File.Exists(Path.Combine(root.Path, ".devcraft", "AGENT.md")));
+        Assert.Contains("Updated ARCH.md, MODEL.md.", console.SelectTitles.Last());
+    }
+
+    [Fact]
+    public void RunImportSpecKitConstitutionRecordsConstitutionMd5InDevCraftReadme()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        WriteConstitution(root.Path);
+        string readmePath = Path.Combine(root.Path, ".devcraft", "README.md");
+        File.WriteAllText(readmePath, "# README.md\n\n## Purpose\n\nKeep me.\n");
+        FakeConsoleInteraction console = new([], ["Project Management", "Import SpecKit Constitution", "Exit"]);
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher(), documentAgent: new FakeRepositoryDocumentAgent());
+
+        string expectedHash = Convert.ToHexStringLower(System.Security.Cryptography.MD5.HashData(
+            File.ReadAllBytes(Path.Combine(root.Path, ".specify", "memory", "constitution.md"))));
+        string readme = File.ReadAllText(readmePath);
+        Assert.Contains("Keep me.", readme);
+        Assert.Contains("## SpecKit Constitution", readme);
+        Assert.Contains("- File: `.specify/memory/constitution.md`", readme);
+        Assert.Contains($"- MD5: `{expectedHash}`", readme);
+        Assert.Contains("first import", console.SelectTitles.Last());
+    }
+
+    [Fact]
+    public void RunImportSpecKitConstitutionDetectsChangedConstitutionAndReplacesRecordedHash()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        WriteConstitution(root.Path);
+        FakeConsoleInteraction first = new([], ["Project Management", "Import SpecKit Constitution", "Exit"]);
+        FakeRepositoryDocumentAgent agent = new();
+        DevCraftMenuCommand.Run(context, first, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher(), documentAgent: agent);
+        string readmePath = Path.Combine(root.Path, ".devcraft", "README.md");
+        string firstReadme = File.ReadAllText(readmePath);
+
+        FakeConsoleInteraction alreadyImported = new([], ["Project Management", "Import SpecKit Constitution", "No", "Exit"]);
+        DevCraftMenuCommand.Run(context, alreadyImported, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher(), documentAgent: agent);
+        Assert.Single(agent.Prompts);
+        Assert.Contains(alreadyImported.SelectTitles, title => title.Contains("already been imported", StringComparison.Ordinal));
+        Assert.Equal(["No", "Yes"], alreadyImported.SelectChoices[2]);
+        Assert.StartsWith("The SpecKit constitution is already imported", alreadyImported.SelectTitles.Last(), StringComparison.Ordinal);
+
+        FakeConsoleInteraction forced = new([], ["Project Management", "Import SpecKit Constitution", "Yes", "Exit"]);
+        DevCraftMenuCommand.Run(context, forced, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher(), documentAgent: agent);
+        Assert.Contains("unchanged since the last import", forced.SelectTitles.Last());
+        Assert.Contains("unchanged since the last import", agent.Prompts[1]);
+        Assert.Equal(firstReadme, File.ReadAllText(readmePath));
+
+        File.AppendAllText(Path.Combine(root.Path, ".specify", "memory", "constitution.md"), "## Principle II\n");
+        FakeConsoleInteraction changed = new([], ["Project Management", "Import SpecKit Constitution", "Exit"]);
+        DevCraftMenuCommand.Run(context, changed, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher(), documentAgent: agent);
+
+        Assert.Contains("changed since the last import", changed.SelectTitles.Last());
+        Assert.Contains("has changed since the last import", agent.Prompts[2]);
+        string readme = File.ReadAllText(readmePath);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(readme, "## SpecKit Constitution"));
+        Assert.NotEqual(firstReadme, readme);
+    }
+
+    [Fact]
+    public void RunImportSpecKitConstitutionFailureDoesNotRecordHash()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        WriteConstitution(root.Path);
+        FakeConsoleInteraction console = new([], ["Project Management", "Import SpecKit Constitution", "Exit"]);
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher(), documentAgent: new FakeRepositoryDocumentAgent { Response = "nope" });
+
+        string readmePath = Path.Combine(root.Path, ".devcraft", "README.md");
+        Assert.False(File.Exists(readmePath) && File.ReadAllText(readmePath).Contains("## SpecKit Constitution"));
+    }
+
+    private static void WriteConstitution(string repositoryPath)
+    {
+        string memory = Path.Combine(repositoryPath, ".specify", "memory");
+        Directory.CreateDirectory(memory);
+        File.WriteAllText(Path.Combine(memory, "constitution.md"), "# Constitution\n\n## Principle I\n");
     }
 
     private static StartupContext MenuContext(TestDirectory root, TestDirectory profileRoot)
@@ -213,7 +402,7 @@ public sealed class DevCraftMenuCommandTests : IDisposable
 
         int projectManagementIndex = console.SelectTitles.FindIndex(title => title == "Project Management");
         IReadOnlyList<string> choices = console.SelectChoices[projectManagementIndex];
-        Assert.Equal(["Project discovery", "Project design", "Project theme", "Project setup", "Create Project", "Back"], choices);
+        Assert.Equal(["Project discovery", "Project design", "Project theme", "Project setup", "Create Project", "Import SpecKit Constitution", "Infer Project Details", "Back"], choices);
         Assert.Contains("What do you want to work on?", console.SelectTitles.Last());
         Assert.Empty(launcher.Instructions);
         Assert.Empty(featureLauncher.Launches);
@@ -251,7 +440,8 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
         ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
-        FakeConsoleInteraction console = new(["Menu Feature"], ["Features", "Create new feature", "OpenAI Codex (codex)", "Exit"]);
+        FakeConsoleInteraction console = new([], ["Features", "Create new feature", "OpenAI Codex (codex)", "Exit"]);
+        console.EnqueueValueEdit("Menu Feature");
         FakeDevCraftAiSessionLauncher launcher = new();
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
@@ -262,6 +452,43 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         Assert.Equal("Menu Feature", feature.Name);
         Assert.Empty(launcher.Instructions);
         Assert.Single(featureLauncher.Launches);
+    }
+
+    [Fact]
+    public void RunNewFeatureUsesFeatureNameFormInsteadOfAsk()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        FakeConsoleInteraction console = new([], ["Features", "Create new feature", "OpenAI Codex (codex)", "Exit"]);
+        console.EnqueueValueEdit("  Form Feature  ");
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        Assert.Empty(console.AskPrompts);
+        Assert.Equal("New Feature", Assert.Single(console.ValueEditTitles));
+        Assert.Equal(string.Empty, Assert.Single(console.ValueEditInitialValues));
+        Assert.Equal("Form Feature", Assert.Single(ProjectDevCraftConfigurationReader.Read(root.Path)!.Features).Name);
+    }
+
+    [Theory]
+    [InlineData("Discarded", false)]
+    [InlineData("   ", true)]
+    public void RunNewFeatureCancelledOrBlankNameCreatesNothing(string name, bool saved)
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        FakeConsoleInteraction console = new([], ["Features", "Create new feature", "Exit"]);
+        console.EnqueueValueEdit(name, saved);
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), featureLauncher);
+
+        Assert.Empty(featureLauncher.Launches);
+        Assert.Empty(ProjectDevCraftConfigurationReader.Read(root.Path)!.Features);
+        Assert.DoesNotContain("Starting Prompt", console.TextEditTitles);
+        Assert.StartsWith("Feature was not created.", console.SelectTitles.Last(), StringComparison.Ordinal);
     }
 
     [Fact]

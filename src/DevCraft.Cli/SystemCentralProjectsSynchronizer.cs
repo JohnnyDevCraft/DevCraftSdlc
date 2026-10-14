@@ -2,11 +2,12 @@ namespace DevCraft.Cli;
 
 public static class SystemCentralProjectsSynchronizer
 {
-    public static void Sync(StartupContext context, ProjectDevCraftConfiguration projectConfiguration)
+    // The central projects.json owns feature status; every other field flows from the repository.
+    public static ProjectDevCraftConfiguration Sync(StartupContext context, ProjectDevCraftConfiguration projectConfiguration)
     {
         if (string.IsNullOrWhiteSpace(projectConfiguration.ProjectKey))
         {
-            return;
+            return projectConfiguration;
         }
 
         SystemCentralProjectsIndex index = SystemCentralProjectsStore.Read(context.ProfileDirectory);
@@ -21,10 +22,14 @@ public static class SystemCentralProjectsSynchronizer
                 context.CurrentDirectory,
                 []);
 
+        List<DevCraftFeature> repositoryFeatures = projectConfiguration.Features
+            .Select(feature => WithCentralStatus(project.Features, feature))
+            .ToList();
+
         project = project with
         {
             RepositoryPath = context.CurrentDirectory,
-            Features = MergeFeatures(project.Features, projectConfiguration.Features),
+            Features = MergeFeatures(project.Features, repositoryFeatures),
         };
 
         if (projectIndex >= 0)
@@ -37,6 +42,25 @@ public static class SystemCentralProjectsSynchronizer
         }
 
         SystemCentralProjectsStore.WriteIfChanged(context.ProfileDirectory, new SystemCentralProjectsIndex(projects));
+
+        if (repositoryFeatures.SequenceEqual(projectConfiguration.Features))
+        {
+            return projectConfiguration;
+        }
+
+        ProjectDevCraftConfiguration updated = projectConfiguration with { Features = repositoryFeatures };
+        ProjectDevCraftConfigurationStore.Write(context.CurrentDirectory, updated);
+
+        return updated;
+    }
+
+    private static DevCraftFeature WithCentralStatus(IReadOnlyList<DevCraftFeature> centralFeatures, DevCraftFeature repositoryFeature)
+    {
+        int featureIndex = FindFeature(centralFeatures.ToList(), repositoryFeature);
+
+        return featureIndex < 0 || string.IsNullOrWhiteSpace(centralFeatures[featureIndex].Status)
+            ? repositoryFeature
+            : repositoryFeature with { Status = centralFeatures[featureIndex].Status };
     }
 
     private static List<DevCraftFeature> MergeFeatures(

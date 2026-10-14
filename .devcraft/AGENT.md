@@ -60,7 +60,7 @@
 
 - Active Feature ID: None
 - Active Feature Name: None
-- Last Completed Feature: 560ad985-1921-413f-b0fa-14eb5b8ca288 Starting prompt (Complete 2026-10-14; released as 1.0.0-beta.18, completed in Agent Operator Mode)
+- Last Completed Feature: 5aade414-d9f5-41ee-9425-21a41c35d52d Feature Listing & SpecKit Import & New Feature Form (Complete 2026-10-14; released as 1.0.0-beta.19, completed in Agent Operator Mode)
 - Open Feature: 1976e2e8-7abe-4726-a69b-5d1e15daf2d8 Issues running on Windows (Implementation; Phases 1 and 2 done and pushed, Windows CI green; awaiting the operator's Windows test, which unblocks Phase 3)
 
 ## Working Agreements
@@ -75,4 +75,5 @@
 - Implementation must follow TDD: red test, green implementation, refactor while tests stay green.
 - DevCraft installation creates and maintains `.devcraft/` artifacts only; preserve root `AGENT.md` and `AGENTS.md` if they already exist.
 - Context files must be updated as part of completed work.
-- CLI inputs that edit an existing value or offer a default use a pre-filled Terminal.Gui form (`EditValue` / `EditFields` / `EditText`) that can be saved as-is or changed. Spectre `Ask` is only for inputs with no existing or default value. (Operator directive, 2026-10-14, feature eb957661-e935-4694-8077-1beda3154834.)
+- CLI inputs that edit an existing value or offer a default use a pre-filled Terminal.Gui form (`EditValue` / `EditFields` / `EditText`) that can be saved as-is or changed. Spectre `Ask` is only for inputs with no existing or default value, except the new feature name, which uses the `EditValue` form so the cursor can move. (Operator directives, 2026-10-14, features eb957661-e935-4694-8077-1beda3154834 and 5aade414-d9f5-41ee-9425-21a41c35d52d.)
+- Feature `status` in profile `features/projects.json` is authoritative and is carried into the repository `.devcraft/configure.json`. Update the central status when a feature's state changes. (Operator directive, 2026-10-14.)

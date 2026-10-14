@@ -10,6 +10,8 @@ public static class DevCraftMenuCommand
     private const string ProjectTheme = "Project theme";
     private const string ProjectSetup = "Project setup";
     private const string CreateProject = "Create Project";
+    private const string ImportSpecKitConstitution = "Import SpecKit Constitution";
+    private const string InferProjectDetails = "Infer Project Details";
     private const string Logging = "Logging";
     private const string SituationalConversation = "Situational Conversation";
     private const string Features = "Features";
@@ -59,8 +61,10 @@ public static class DevCraftMenuCommand
         IConsoleInteraction console,
         IDevCraftAiSessionLauncher launcher,
         IFeatureAiSessionLauncher featureLauncher,
-        ISituationSummaryGenerator? summaryGenerator = null)
+        ISituationSummaryGenerator? summaryGenerator = null,
+        IRepositoryDocumentAgent? documentAgent = null)
     {
+        documentAgent ??= new TerminalRepositoryDocumentAgent();
         ProjectDevCraftConfiguration? projectConfiguration = ProjectDevCraftConfigurationReader.Read(context.CurrentDirectory);
 
         if (projectConfiguration is null)
@@ -93,7 +97,7 @@ public static class DevCraftMenuCommand
                 case Exit:
                     return;
                 case ProjectManagement:
-                    notice = RunProjectManagementMenu(context, console, launcher, projectConfiguration);
+                    notice = RunProjectManagementMenu(context, console, launcher, documentAgent, projectConfiguration);
                     break;
                 case Logging:
                     notice = RunLoggingMenu(context, console, summaryGenerator ?? new TerminalSituationSummaryGenerator());
@@ -118,12 +122,13 @@ public static class DevCraftMenuCommand
         StartupContext context,
         IConsoleInteraction console,
         IDevCraftAiSessionLauncher launcher,
+        IRepositoryDocumentAgent documentAgent,
         ProjectDevCraftConfiguration projectConfiguration)
     {
         console.ShowMenuShell();
         string selected = console.Select(
             ProjectManagement,
-            [ProjectDiscovery, ProjectDesign, ProjectTheme, ProjectSetup, CreateProject, Back]);
+            [ProjectDiscovery, ProjectDesign, ProjectTheme, ProjectSetup, CreateProject, ImportSpecKitConstitution, InferProjectDetails, Back]);
 
         return selected switch
         {
@@ -153,6 +158,8 @@ public static class DevCraftMenuCommand
                     SelectHandoff(context, console),
                     "Work on project setup. Use and maintain the repository DevCraft setup context for this project.")),
             CreateProject => RunCreateProject(context, console, launcher, projectConfiguration),
+            ImportSpecKitConstitution => RepositoryDocumentCommand.ImportSpecKitConstitution(context, console, documentAgent),
+            InferProjectDetails => RepositoryDocumentCommand.InferProjectDetails(context, console, documentAgent),
             _ => throw new InvalidOperationException($"Unsupported project management option: {selected}."),
         };
     }
@@ -1161,7 +1168,7 @@ public static class DevCraftMenuCommand
             """);
     }
 
-    private static void RunFeatureMenu(
+    private static string? RunFeatureMenu(
         StartupContext context,
         IConsoleInteraction console,
         IFeatureAiSessionLauncher featureLauncher)
@@ -1171,7 +1178,7 @@ public static class DevCraftMenuCommand
 
         if (selected == Back)
         {
-            return;
+            return null;
         }
 
         if (selected == ListFeatures)
@@ -1180,25 +1187,32 @@ public static class DevCraftMenuCommand
 
             if (projectConfiguration is null)
             {
-                return;
+                return null;
             }
 
             FeatureStorageSelector.EnsureSelected(context, console, projectConfiguration);
             FeatureCommand.Run(context, ["list"], console, featureLauncher, selectHandoff: () => SelectHandoff(context, console));
-            return;
+            return null;
         }
 
-        console.ShowMenuShell();
-        string featureName = console.Ask("What is the feature name?");
+        ValueEditResult name = console.EditValue("New Feature", "Feature name", string.Empty, required: true);
+        string featureName = name.Value.Trim();
+
+        if (!name.Saved || featureName.Length == 0)
+        {
+            return "Feature was not created.";
+        }
+
         ProjectDevCraftConfiguration? configuration = ProjectDevCraftConfigurationReader.Read(context.CurrentDirectory);
 
         if (configuration is null)
         {
-            return;
+            return null;
         }
 
         FeatureStorageSelector.EnsureSelected(context, console, configuration);
         FeatureCommand.Run(context, ["new", featureName], console, featureLauncher, SelectHandoff(context, console));
+        return null;
     }
 
     private static string? RunSkillsMenu(
@@ -1300,11 +1314,19 @@ public static class DevCraftMenuCommand
 
     private static string? LaunchClient(Action launch)
     {
-        try
+        return LaunchClient(() =>
         {
             launch();
 
             return null;
+        });
+    }
+
+    private static string? LaunchClient(Func<string?> launch)
+    {
+        try
+        {
+            return launch();
         }
         catch (AgentHandoffCancelledException exception)
         {

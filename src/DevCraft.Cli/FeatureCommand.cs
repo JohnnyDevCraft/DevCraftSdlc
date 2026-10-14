@@ -5,6 +5,10 @@ namespace DevCraft.Cli;
 public static class FeatureCommand
 {
     private const string Back = "Back";
+    private const string Completed = "Completed";
+    private const string CompleteStatus = "Complete";
+    private const string SelectFeature = "Select a feature";
+    private const string CompletedFeatures = "Completed features";
     private const string FeatureActions = "Feature actions";
     private const string EditFeatureName = "Edit Feature Name";
     private const string OpenFeatureDirectory = "Open Feature Directory using Code";
@@ -28,7 +32,7 @@ public static class FeatureCommand
             return;
         }
 
-        SystemCentralProjectsSynchronizer.Sync(context, projectConfiguration);
+        projectConfiguration = SystemCentralProjectsSynchronizer.Sync(context, projectConfiguration);
 
         if (args.Count == 0)
         {
@@ -84,16 +88,14 @@ public static class FeatureCommand
             return;
         }
 
-        string selected = console.Select(
-            "Select a feature",
-            features.Select(feature => $"{feature.Name} ({feature.Slug})").Append(Back).ToList());
+        DevCraftFeature? selectedFeature = SelectFeatureFromList(console, features);
 
-        if (selected == Back)
+        if (selectedFeature is null)
         {
             return;
         }
 
-        DevCraftFeature feature = features.First(item => selected.EndsWith($"({item.Slug})", StringComparison.Ordinal));
+        DevCraftFeature feature = selectedFeature;
         console.WriteStatus($"Selected feature: {feature.Name}");
 
         string? notice = null;
@@ -257,6 +259,49 @@ public static class FeatureCommand
             feature,
             handoff,
             "Create a new feature.");
+    }
+
+    // In-progress features are listed by default; Completed switches to finished ones and Back returns.
+    private static DevCraftFeature? SelectFeatureFromList(IConsoleInteraction console, IReadOnlyList<DevCraftFeature> features)
+    {
+        bool showCompleted = false;
+
+        while (true)
+        {
+            List<DevCraftFeature> visible = features.Where(feature => IsComplete(feature) == showCompleted).ToList();
+            List<string> choices = showCompleted ? [Back] : [Back, Completed];
+            choices.AddRange(visible.Select(FeatureChoice));
+            string selected = console.Select(showCompleted ? CompletedFeatures : SelectFeature, choices);
+
+            if (selected == Back)
+            {
+                if (!showCompleted)
+                {
+                    return null;
+                }
+
+                showCompleted = false;
+                continue;
+            }
+
+            if (selected == Completed && !showCompleted)
+            {
+                showCompleted = true;
+                continue;
+            }
+
+            return visible.First(item => selected == FeatureChoice(item));
+        }
+    }
+
+    private static bool IsComplete(DevCraftFeature feature)
+    {
+        return feature.Status.Equals(CompleteStatus, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string FeatureChoice(DevCraftFeature feature)
+    {
+        return $"{feature.Name} ({feature.Slug})";
     }
 
     private static bool TryResolveHandoff(
