@@ -60,7 +60,7 @@
 
 - Active Feature ID: None
 - Active Feature Name: None
-- Last Completed Feature: eb957661-e935-4694-8077-1beda3154834 Fix Editing, and Default Values (Complete 2026-10-14; released as 1.0.0-beta.17, operator-approved)
+- Last Completed Feature: 560ad985-1921-413f-b0fa-14eb5b8ca288 Starting prompt (Complete 2026-10-14; released as 1.0.0-beta.18, completed in Agent Operator Mode)
 - Open Feature: 1976e2e8-7abe-4726-a69b-5d1e15daf2d8 Issues running on Windows (Implementation; Phases 1 and 2 done and pushed, Windows CI green; awaiting the operator's Windows test, which unblocks Phase 3)
 
 ## Working Agreements

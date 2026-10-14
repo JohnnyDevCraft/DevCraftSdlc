@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace DevCraft.Cli;
 
 public static class FeatureCommand
@@ -13,8 +15,8 @@ public static class FeatureCommand
         IReadOnlyList<string> args,
         IConsoleInteraction console,
         IFeatureAiSessionLauncher launcher,
-        SupportedTerminalClient? client = null,
-        Func<SupportedTerminalClient>? selectClient = null,
+        AgentHandoff? handoff = null,
+        Func<AgentHandoff>? selectHandoff = null,
         IFeatureDirectoryOpener? directoryOpener = null)
     {
         ProfileStructureInitializer.Ensure(context.ProfileDirectory);
@@ -37,7 +39,7 @@ public static class FeatureCommand
         if (args[0].Equals("list", StringComparison.OrdinalIgnoreCase))
         {
             DevCraftProfileConfiguration profileConfiguration = ProfileConfigurationReader.Read(context.ProfileDirectory);
-            ListFeatures(context, projectConfiguration, profileConfiguration, console, launcher, client, selectClient, directoryOpener ?? new CodeFeatureDirectoryOpener());
+            ListFeatures(context, projectConfiguration, profileConfiguration, console, launcher, handoff, selectHandoff, directoryOpener ?? new CodeFeatureDirectoryOpener());
             return;
         }
 
@@ -51,8 +53,13 @@ public static class FeatureCommand
                 return;
             }
 
+            if (!TryResolveHandoff(context, console, handoff, selectHandoff, out AgentHandoff? featureHandoff))
+            {
+                return;
+            }
+
             DevCraftProfileConfiguration profileConfiguration = ProfileConfigurationReader.Read(context.ProfileDirectory);
-            CreateFeature(context, projectConfiguration, profileConfiguration, featureName, console, launcher, client ?? SelectFallbackClient(context));
+            CreateFeature(context, projectConfiguration, profileConfiguration, featureName, console, launcher, featureHandoff);
             return;
         }
 
@@ -65,8 +72,8 @@ public static class FeatureCommand
         DevCraftProfileConfiguration profileConfiguration,
         IConsoleInteraction console,
         IFeatureAiSessionLauncher launcher,
-        SupportedTerminalClient? client,
-        Func<SupportedTerminalClient>? selectClient,
+        AgentHandoff? handoff,
+        Func<AgentHandoff>? selectHandoff,
         IFeatureDirectoryOpener directoryOpener)
     {
         IReadOnlyList<DevCraftFeature> features = projectConfiguration.Features;
@@ -118,12 +125,16 @@ public static class FeatureCommand
                 continue;
             }
 
-            SupportedTerminalClient selectedClient = client ?? selectClient?.Invoke() ?? SelectFallbackClient(context);
+            if (!TryResolveHandoff(context, console, handoff, selectHandoff, out AgentHandoff? conversationHandoff))
+            {
+                return;
+            }
+
             launcher.Launch(
                 context,
                 FeatureStorageResolver.WithEffectiveStorage(profileConfiguration, projectConfiguration),
                 feature,
-                selectedClient,
+                conversationHandoff,
                 "Work on existing feature.");
             return;
         }
@@ -215,7 +226,7 @@ public static class FeatureCommand
         string featureName,
         IConsoleInteraction console,
         IFeatureAiSessionLauncher launcher,
-        SupportedTerminalClient client)
+        AgentHandoff handoff)
     {
         string storageType = FeatureStorageResolver.Resolve(profileConfiguration, projectConfiguration);
         string slug = UniqueSlug(SlugGenerator.Create(featureName), projectConfiguration.Features);
@@ -244,8 +255,30 @@ public static class FeatureCommand
             context,
             FeatureStorageResolver.WithEffectiveStorage(profileConfiguration, updatedConfiguration),
             feature,
-            client,
+            handoff,
             "Create a new feature.");
+    }
+
+    private static bool TryResolveHandoff(
+        StartupContext context,
+        IConsoleInteraction console,
+        AgentHandoff? handoff,
+        Func<AgentHandoff>? selectHandoff,
+        [NotNullWhen(true)] out AgentHandoff? resolved)
+    {
+        try
+        {
+            resolved = handoff
+                ?? selectHandoff?.Invoke()
+                ?? AgentHandoffPrompter.Resolve(console, () => SelectFallbackClient(context));
+            return true;
+        }
+        catch (AgentHandoffCancelledException exception)
+        {
+            console.WriteStatus(exception.Message);
+            resolved = null;
+            return false;
+        }
     }
 
     private static string UniqueSlug(string slug, IReadOnlyList<DevCraftFeature> features)

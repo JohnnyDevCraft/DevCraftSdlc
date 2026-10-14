@@ -121,10 +121,10 @@ public sealed class FeatureCommandTests
             ["list"],
             console,
             launcher,
-            selectClient: () =>
+            selectHandoff: () =>
             {
                 clientSelected = true;
-                return SupportedTerminalClientCatalog.Create()[0];
+                return new AgentHandoff(SupportedTerminalClientCatalog.Create()[0], string.Empty);
             });
 
         int featureListIndex = console.SelectTitles.FindIndex(title => title == "Select a feature");
@@ -169,10 +169,10 @@ public sealed class FeatureCommandTests
             ["list"],
             console,
             launcher,
-            selectClient: () =>
+            selectHandoff: () =>
             {
                 featureSelectedBeforeClient = console.StatusMessages.Contains("Selected feature: Deferred Client Feature");
-                return selectedClient;
+                return new AgentHandoff(selectedClient, string.Empty);
             });
 
         Assert.True(featureSelectedBeforeClient);
@@ -482,10 +482,10 @@ public sealed class FeatureCommandTests
             ["list"],
             console,
             launcher,
-            selectClient: () =>
+            selectHandoff: () =>
             {
                 clientSelected = true;
-                return SupportedTerminalClientCatalog.Create()[0];
+                return new AgentHandoff(SupportedTerminalClientCatalog.Create()[0], string.Empty);
             });
 
         Assert.Contains("Feature actions", console.SelectTitles);
@@ -812,6 +812,101 @@ public sealed class FeatureCommandTests
         Assert.Contains(
             "Could not start Visual Studio Code. Make sure the `code` command is installed and on your PATH.",
             console.StatusMessages);
+    }
+
+    [Fact]
+    public void NewAsksStartingPromptAndPassesItToLauncher()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = RepoCentralContext(root, profileRoot);
+        FakeConsoleInteraction console = new([]);
+        console.EnqueueTextEdit("Start with the acceptance criteria.");
+        FakeFeatureAiSessionLauncher launcher = new();
+
+        FeatureCommand.Run(context, ["new", "Prompted", "Feature"], console, launcher);
+
+        Assert.Equal(["Starting Prompt"], console.TextEditTitles);
+        Assert.Equal([string.Empty], console.TextEditInitialTexts);
+        Assert.Single(launcher.Launches);
+        Assert.Equal("Start with the acceptance criteria.", Assert.Single(launcher.StartingPrompts));
+    }
+
+    [Fact]
+    public void NewCancelledStartingPromptCreatesNothingAndLaunchesNothing()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = RepoCentralContext(root, profileRoot);
+        FakeConsoleInteraction console = new([]);
+        console.EnqueueTextEdit("Discarded", saved: false);
+        FakeFeatureAiSessionLauncher launcher = new();
+
+        FeatureCommand.Run(context, ["new", "Cancelled", "Feature"], console, launcher);
+
+        Assert.Empty(ProjectDevCraftConfigurationReader.Read(root.Path)!.Features);
+        Assert.Empty(launcher.Launches);
+        Assert.Contains("Agent handoff cancelled.", console.StatusMessages);
+    }
+
+    [Fact]
+    public void ListStartConversationPassesStartingPrompt()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = RepoCentralContext(root, profileRoot, ExistingFeature());
+        FakeConsoleInteraction console = new([], ["Existing Feature (existing-feature)", StartConversation]);
+        console.EnqueueTextEdit("Line one\nLine two");
+        FakeFeatureAiSessionLauncher launcher = new();
+
+        FeatureCommand.Run(context, ["list"], console, launcher);
+
+        Assert.Single(launcher.Launches);
+        Assert.Equal("Line one\nLine two", Assert.Single(launcher.StartingPrompts));
+    }
+
+    [Fact]
+    public void ListStartConversationCancelledStartingPromptDoesNotLaunch()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = RepoCentralContext(root, profileRoot, ExistingFeature());
+        FakeConsoleInteraction console = new([], ["Existing Feature (existing-feature)", StartConversation]);
+        console.EnqueueTextEdit("Discarded", saved: false);
+        FakeFeatureAiSessionLauncher launcher = new();
+
+        FeatureCommand.Run(context, ["list"], console, launcher);
+
+        Assert.Empty(launcher.Launches);
+        Assert.Contains("Agent handoff cancelled.", console.StatusMessages);
+    }
+
+    private static DevCraftFeature ExistingFeature()
+    {
+        return new DevCraftFeature(
+            "Existing Feature",
+            "existing-feature",
+            "Feature in repository.",
+            "existing-feature-folder",
+            FeatureStorageMode.RepoCentral,
+            null);
+    }
+
+    private static StartupContext RepoCentralContext(TestDirectory root, TestDirectory profileRoot, params DevCraftFeature[] features)
+    {
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        ProjectDevCraftConfigurationStore.Write(
+            root.Path,
+            new ProjectDevCraftConfiguration(
+                Guid.NewGuid().ToString(),
+                FeatureStorageMode.RepoCentral,
+                "features.json",
+                SampleProfile,
+                features));
+
+        return new StartupContext(root.Path, profile, Path.Combine(profile, "soul.md"));
     }
 
     private const string EditFeatureName = "Edit Feature Name";

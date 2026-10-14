@@ -8,12 +8,13 @@ public sealed class FakeFeatureAiSessionLauncher : IFeatureAiSessionLauncher
 
     public List<(DevCraftFeature Feature, SupportedTerminalClient Client, string Instruction)> Launches { get; } = [];
     public List<ProjectDevCraftConfiguration> ProjectConfigurations { get; } = [];
+    public List<string> StartingPrompts { get; } = [];
 
     public void Launch(
         StartupContext context,
         ProjectDevCraftConfiguration projectConfiguration,
         DevCraftFeature feature,
-        SupportedTerminalClient client,
+        AgentHandoff handoff,
         string instruction)
     {
         if (ExceptionToThrow is not null)
@@ -21,7 +22,8 @@ public sealed class FakeFeatureAiSessionLauncher : IFeatureAiSessionLauncher
             throw ExceptionToThrow;
         }
 
-        Launches.Add((feature, client, instruction));
+        Launches.Add((feature, handoff.Client, instruction));
+        StartingPrompts.Add(handoff.StartingPrompt);
         ProjectConfigurations.Add(projectConfiguration);
     }
 }

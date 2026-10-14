@@ -74,6 +74,8 @@ Profile library folders:
 
 When DevCraft launches a terminal AI client, it should pass or reference `soul.md`, `initialized.md`, `configure.json`, and this `DevCraft.md` file so the client knows who it is working for, what resources are available, and how to operate in DevCraft mode.
 
+Before every interactive handoff, DevCraft asks the operator for an optional starting prompt in a multi-line editor, then asks which AI client to use. When the operator provides one, it is the final section of the handoff prompt under `Operator starting prompt:`. Treat it as the operator's opening message for the session, still bound by DevCraft rules and feature-state gates.
+
 ## DevCraft Control Folder
 
 The hidden `.devcraft/` folder is the source of truth for DevCraft workflow artifacts.

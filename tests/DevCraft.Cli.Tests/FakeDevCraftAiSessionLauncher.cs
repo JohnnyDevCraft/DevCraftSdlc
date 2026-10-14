@@ -8,12 +8,14 @@ public sealed class FakeDevCraftAiSessionLauncher : IDevCraftAiSessionLauncher
 
     public List<(SupportedTerminalClient Client, string Instruction)> Launches { get; } = [];
 
+    public List<string> StartingPrompts { get; } = [];
+
     public IEnumerable<string> Instructions => Launches.Select(launch => launch.Instruction);
 
     public void Launch(
         StartupContext context,
         ProjectDevCraftConfiguration projectConfiguration,
-        SupportedTerminalClient client,
+        AgentHandoff handoff,
         string instruction)
     {
         if (ExceptionToThrow is not null)
@@ -21,6 +23,7 @@ public sealed class FakeDevCraftAiSessionLauncher : IDevCraftAiSessionLauncher
             throw ExceptionToThrow;
         }
 
-        Launches.Add((client, instruction));
+        Launches.Add((handoff.Client, instruction));
+        StartingPrompts.Add(handoff.StartingPrompt);
     }
 }

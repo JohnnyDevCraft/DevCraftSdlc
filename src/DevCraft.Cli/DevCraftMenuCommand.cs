@@ -132,25 +132,25 @@ public static class DevCraftMenuCommand
                 () => launcher.Launch(
                     context,
                     projectConfiguration,
-                    SelectAiClient(context, console),
+                    SelectHandoff(context, console),
                     "Work on project discovery. Use and maintain the repository DevCraft discovery artifact for this project.")),
             ProjectDesign => LaunchClient(
                 () => launcher.Launch(
                     context,
                     projectConfiguration,
-                    SelectAiClient(context, console),
+                    SelectHandoff(context, console),
                     "Work on project design and component design. Use and maintain the repository DevCraft design artifact for this project.")),
             ProjectTheme => LaunchClient(
                 () => launcher.Launch(
                     context,
                     projectConfiguration,
-                    SelectAiClient(context, console),
+                    SelectHandoff(context, console),
                     "Work on project theme. Use and maintain the repository DevCraft theme artifact for this project.")),
             ProjectSetup => LaunchClient(
                 () => launcher.Launch(
                     context,
                     projectConfiguration,
-                    SelectAiClient(context, console),
+                    SelectHandoff(context, console),
                     "Work on project setup. Use and maintain the repository DevCraft setup context for this project.")),
             CreateProject => RunCreateProject(context, console, launcher, projectConfiguration),
             _ => throw new InvalidOperationException($"Unsupported project management option: {selected}."),
@@ -174,7 +174,7 @@ public static class DevCraftMenuCommand
             () => launcher.Launch(
                 context,
                 projectConfiguration,
-                SelectAiClient(context, console),
+                SelectHandoff(context, console),
                 $"""
                 Start a situational conversation with the user.
 
@@ -216,7 +216,7 @@ public static class DevCraftMenuCommand
             () => launcher.Launch(
                 context,
                 projectConfiguration,
-                SelectAiClient(context, console),
+                SelectHandoff(context, console),
                 $"""
                 Help the user create a project using the selected DevCraft project type.
 
@@ -1102,7 +1102,7 @@ public static class DevCraftMenuCommand
         launcher.Launch(
             context,
             projectConfiguration,
-            SelectAiClient(context, console),
+            SelectHandoff(context, console),
             $"""
             Import DevCraft settings from a local documentation repository into the profile-level DevCraft folder.
 
@@ -1137,7 +1137,7 @@ public static class DevCraftMenuCommand
         launcher.Launch(
             context,
             projectConfiguration,
-            SelectAiClient(context, console),
+            SelectHandoff(context, console),
             $"""
             Configure DevCraft: {skillName}.
 
@@ -1184,7 +1184,7 @@ public static class DevCraftMenuCommand
             }
 
             FeatureStorageSelector.EnsureSelected(context, console, projectConfiguration);
-            FeatureCommand.Run(context, ["list"], console, featureLauncher, selectClient: () => SelectAiClient(context, console));
+            FeatureCommand.Run(context, ["list"], console, featureLauncher, selectHandoff: () => SelectHandoff(context, console));
             return;
         }
 
@@ -1198,7 +1198,7 @@ public static class DevCraftMenuCommand
         }
 
         FeatureStorageSelector.EnsureSelected(context, console, configuration);
-        FeatureCommand.Run(context, ["new", featureName], console, featureLauncher, SelectAiClient(context, console));
+        FeatureCommand.Run(context, ["new", featureName], console, featureLauncher, SelectHandoff(context, console));
     }
 
     private static string? RunSkillsMenu(
@@ -1231,7 +1231,7 @@ public static class DevCraftMenuCommand
             () => launcher.Launch(
                 context,
                 projectConfiguration,
-                SelectAiClient(context, console),
+                SelectHandoff(context, console),
                 $"""
                 Use the selected DevCraft skill with the user.
 
@@ -1254,6 +1254,11 @@ public static class DevCraftMenuCommand
     private static string SkillChoice(ProfileCatalogDocument skill)
     {
         return $"{skill.Name} ({skill.Slug})";
+    }
+
+    private static AgentHandoff SelectHandoff(StartupContext context, IConsoleInteraction console)
+    {
+        return AgentHandoffPrompter.Resolve(console, () => SelectAiClient(context, console));
     }
 
     private static SupportedTerminalClient SelectAiClient(StartupContext context, IConsoleInteraction console)
@@ -1300,6 +1305,10 @@ public static class DevCraftMenuCommand
             launch();
 
             return null;
+        }
+        catch (AgentHandoffCancelledException exception)
+        {
+            return exception.Message;
         }
         catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
         {

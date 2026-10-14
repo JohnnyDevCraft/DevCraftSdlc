@@ -40,6 +40,8 @@ public sealed class FakeConsoleInteraction : IConsoleInteraction
 
     public List<IReadOnlyList<FieldEditField>> FieldEditFields { get; } = [];
 
+    public List<string> Events { get; } = [];
+
     public int MenuShellCount { get; private set; }
 
     public void EnqueueFieldEdit(IReadOnlyDictionary<string, string> values, bool saved = true)
@@ -117,6 +119,7 @@ public sealed class FakeConsoleInteraction : IConsoleInteraction
     public TextEditResult EditText(TextEditOptions options)
     {
         TextEditTitles.Add(options.Title);
+        Events.Add($"text:{options.Title}");
         TextEditInitialTexts.Add(options.InitialText);
 
         return textEdits.Count > 0
@@ -127,6 +130,7 @@ public sealed class FakeConsoleInteraction : IConsoleInteraction
     public string Select(string title, IReadOnlyList<string> choices)
     {
         SelectTitles.Add(title);
+        Events.Add($"select:{title}");
         SelectChoices.Add(choices);
 
         if (selections.Count > 0)

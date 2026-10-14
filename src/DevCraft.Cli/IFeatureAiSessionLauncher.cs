@@ -6,6 +6,6 @@ public interface IFeatureAiSessionLauncher
         StartupContext context,
         ProjectDevCraftConfiguration projectConfiguration,
         DevCraftFeature feature,
-        SupportedTerminalClient client,
+        AgentHandoff handoff,
         string instruction);
 }

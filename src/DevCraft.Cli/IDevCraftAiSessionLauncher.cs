@@ -5,6 +5,6 @@ public interface IDevCraftAiSessionLauncher
     void Launch(
         StartupContext context,
         ProjectDevCraftConfiguration projectConfiguration,
-        SupportedTerminalClient client,
+        AgentHandoff handoff,
         string instruction);
 }

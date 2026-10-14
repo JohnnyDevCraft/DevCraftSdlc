@@ -65,7 +65,7 @@
     {
       "Name": "Fix System Central Projects, and Features Mappings",
       "Slug": "fix-system-central-projects-and-features-mappings",
-      "ShortDescription": "Persist System Central features to the profile projects.json so the project's feature list exists in both the repository configure.json and the central index.",
+      "ShortDescription": "Persist System Central features to the profile projects.json so the project\u0027s feature list exists in both the repository configure.json and the central index.",
       "FolderName": "9f5f16e3-2b9b-4c33-8864-9815ff0a0ac8",
       "StorageType": "system-central",
       "ExternalReference": null,
@@ -94,6 +94,15 @@
       "Slug": "fix-editing-and-default-values",
       "ShortDescription": "Every edit pre-fills the existing value so the operator changes it instead of retyping it, and the project-name prompt accepts the shown default (the current folder name) on Enter.",
       "FolderName": "eb957661-e935-4694-8077-1beda3154834",
+      "StorageType": "system-central",
+      "ExternalReference": null,
+      "Status": "Complete"
+    },
+    {
+      "Name": "Starting prompt",
+      "Slug": "starting-prompt",
+      "ShortDescription": "Prompt the operator for an opening prompt in a long-text window before AI client selection on every agent handoff, and append it as the final section of the generated prompt (beta 18).",
+      "FolderName": "560ad985-1921-413f-b0fa-14eb5b8ca288",
       "StorageType": "system-central",
       "ExternalReference": null,
       "Status": "Complete"

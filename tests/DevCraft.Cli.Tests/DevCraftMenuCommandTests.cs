@@ -42,6 +42,87 @@ public sealed class DevCraftMenuCommandTests : IDisposable
     }
 
     [Fact]
+    public void RunProjectDiscoveryAsksStartingPromptBeforeClientAndPassesIt()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        FakeConsoleInteraction console = new([], ["Project Management", "Project discovery", "OpenAI Codex (codex)", "Exit"]);
+        console.EnqueueTextEdit("Let's define the MVP.");
+        FakeDevCraftAiSessionLauncher launcher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, new FakeFeatureAiSessionLauncher());
+
+        int promptIndex = console.Events.IndexOf("text:Starting Prompt");
+        int clientIndex = console.Events.IndexOf("select:Which AI client should I use?");
+        Assert.True(promptIndex >= 0);
+        Assert.True(clientIndex > promptIndex);
+        Assert.Equal("Let's define the MVP.", Assert.Single(launcher.StartingPrompts));
+    }
+
+    [Fact]
+    public void RunProjectDiscoveryCancelledStartingPromptReturnsToMenuWithoutLaunching()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        FakeConsoleInteraction console = new([], ["Project Management", "Project discovery", "Exit"]);
+        console.EnqueueTextEdit("Discarded", saved: false);
+        FakeDevCraftAiSessionLauncher launcher = new();
+
+        DevCraftMenuCommand.Run(context, console, launcher, new FakeFeatureAiSessionLauncher());
+
+        Assert.Empty(launcher.Launches);
+        Assert.DoesNotContain("Which AI client should I use?", console.SelectTitles);
+        Assert.Contains(console.SelectTitles, title => title.StartsWith("Agent handoff cancelled.", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void RunNewFeatureCancelledStartingPromptCreatesNoFeature()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        FakeConsoleInteraction console = new(["Cancelled Feature"], ["Features", "New feature", "Exit"]);
+        console.EnqueueTextEdit("Discarded", saved: false);
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), featureLauncher);
+
+        Assert.Empty(featureLauncher.Launches);
+        Assert.Empty(ProjectDevCraftConfigurationReader.Read(root.Path)!.Features);
+        Assert.DoesNotContain("Which AI client should I use?", console.SelectTitles);
+    }
+
+    [Fact]
+    public void RunNewFeaturePassesStartingPromptToFeatureLauncher()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        FakeConsoleInteraction console = new(["Prompted Feature"], ["Features", "New feature", "OpenAI Codex (codex)", "Exit"]);
+        console.EnqueueTextEdit("Here is what this feature is about.");
+        FakeFeatureAiSessionLauncher featureLauncher = new();
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), featureLauncher);
+
+        Assert.Single(featureLauncher.Launches);
+        Assert.Equal("Here is what this feature is about.", Assert.Single(featureLauncher.StartingPrompts));
+        Assert.True(console.Events.IndexOf("text:Starting Prompt") < console.Events.IndexOf("select:Which AI client should I use?"));
+    }
+
+    private static StartupContext MenuContext(TestDirectory root, TestDirectory profileRoot)
+    {
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        ProfileStructureInitializer.Ensure(profile);
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+
+        return new StartupContext(root.Path, profile, Path.Combine(profile, "soul.md"));
+    }
+
+    [Fact]
     public void RunOnlyShowsAvailableAiClients()
     {
         using TestDirectory root = new();
