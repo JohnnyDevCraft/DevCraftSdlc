@@ -1,0 +1,102 @@
+{
+  "ProjectKey": "9dd05571-0e1b-472f-bfbe-5949f991b923",
+  "SelectedFeatureStorage": "system-central",
+  "FeaturesIndexPath": "features.json",
+  "ProjectProfile": {
+    "Name": "DevCraft",
+    "Purpose": "Build DevCraft into a full SpecKit replacement and standalone repository for documentation-first software delivery.",
+    "Description": "DevCraft is an AI-driven SDLC CLI and documentation-first workflow system for managing project discovery, feature work, implementation evidence, and reusable DevCraft guidance."
+  },
+  "Features": [
+    {
+      "Name": "CLI Logo And Tagline",
+      "Slug": "cli-logo-and-tagline",
+      "ShortDescription": "Create the first DevCraft CLI branding feature: a polished ASCII-art DevCraft logo with designed by Johnny DevCraft beneath it.",
+      "FolderName": "698c982b-ed63-4054-8f2b-9d4ae7cb4e63",
+      "StorageType": "system-central",
+      "ExternalReference": null,
+      "Status": "Implementation"
+    },
+    {
+      "Name": "Startup Soul And Folder Scan",
+      "Slug": "startup-soul-and-folder-scan",
+      "ShortDescription": "Create soul setup, inspect the current working folder, and report detected projects and AI-driven SDLC status.",
+      "FolderName": "ff328024-00b6-43a1-96bb-04a4671cbc02",
+      "StorageType": "system-central",
+      "ExternalReference": null,
+      "Status": "Implementation"
+    },
+    {
+      "Name": "Recommend DevCraft For Unmanaged Folder",
+      "Slug": "recommend-devcraft-for-unmanaged-folder",
+      "ShortDescription": "Install DevCraft as the workflow for a scanned project folder when no AI-driven SDLC workflow is detected.",
+      "FolderName": "27b5d634-d018-43df-ad73-b72f34c2d92f",
+      "StorageType": "system-central",
+      "ExternalReference": null,
+      "Status": "Implementation"
+    },
+    {
+      "Name": "Situational Awareness Logs",
+      "Slug": "situational-awareness-logs",
+      "ShortDescription": "Maintain structured situational awareness logs and compress them into higher-level summaries over time.",
+      "FolderName": "10350043-a3f9-4982-afb5-85f891cda2de",
+      "StorageType": "system-central",
+      "ExternalReference": null,
+      "Status": "Implementation"
+    },
+    {
+      "Name": "Beta 11 Repository Upgrade Agent",
+      "Slug": "beta-11-repository-upgrade-agent",
+      "ShortDescription": "Upgrade existing repository DevCraft installations, record the installed version, and migrate older feature storage into the current layout.",
+      "FolderName": "e74de09d-ba5b-4e31-a1bd-11420acfaca8",
+      "StorageType": "system-central",
+      "ExternalReference": null,
+      "Status": "Implementation"
+    },
+    {
+      "Name": "Updates to the Instructions.txt",
+      "Slug": "updates-to-the-instructions-txt",
+      "ShortDescription": "Give desktop agents the full DevCraft startup context: soul first, situational awareness, and DevCraft rules dormant until Activate DevCraft.",
+      "FolderName": "48c4e2be-457b-41ed-9c58-b16422617077",
+      "StorageType": "system-central",
+      "ExternalReference": null,
+      "Status": "Implementation"
+    },
+    {
+      "Name": "Fix System Central Projects, and Features Mappings",
+      "Slug": "fix-system-central-projects-and-features-mappings",
+      "ShortDescription": "Persist System Central features to the profile projects.json so the project's feature list exists in both the repository configure.json and the central index.",
+      "FolderName": "9f5f16e3-2b9b-4c33-8864-9815ff0a0ac8",
+      "StorageType": "system-central",
+      "ExternalReference": null,
+      "Status": "Implementation"
+    },
+    {
+      "Name": "Enable Feature Rename",
+      "Slug": "enable-feature-rename",
+      "ShortDescription": "Add a per-feature action menu to List Features: edit the feature name in both indexes, open the feature directory in Visual Studio Code, or start a conversation about the feature.",
+      "FolderName": "74b0a273-4e74-4998-bc52-eaa127dfa71f",
+      "StorageType": "system-central",
+      "ExternalReference": null,
+      "Status": "Implementation"
+    },
+    {
+      "Name": "Issues running on Windows",
+      "Slug": "issues-running-on-windows",
+      "ShortDescription": "Fix Windows installation and confirmed Windows runtime defects: install.ps1 fails under iex on Windows PowerShell 5.1 with a null path error.",
+      "FolderName": "1976e2e8-7abe-4726-a69b-5d1e15daf2d8",
+      "StorageType": "system-central",
+      "ExternalReference": null,
+      "Status": "Implementation"
+    },
+    {
+      "Name": "Fix Editing, and Default Values",
+      "Slug": "fix-editing-and-default-values",
+      "ShortDescription": "Every edit pre-fills the existing value so the operator changes it instead of retyping it, and the project-name prompt accepts the shown default (the current folder name) on Enter.",
+      "FolderName": "eb957661-e935-4694-8077-1beda3154834",
+      "StorageType": "system-central",
+      "ExternalReference": null,
+      "Status": "Complete"
+    }
+  ]
+}
