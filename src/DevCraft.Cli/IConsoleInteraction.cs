@@ -14,6 +14,8 @@ public interface IConsoleInteraction
 
     FieldEditResult EditFields(FieldEditOptions options);
 
+    ValueEditResult EditValue(string title, string label, string initialValue, bool required = false);
+
     TextEditResult EditText(TextEditOptions options);
 
     string Select(string title, IReadOnlyList<string> choices);

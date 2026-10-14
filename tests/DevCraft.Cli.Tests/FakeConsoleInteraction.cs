@@ -8,6 +8,7 @@ public sealed class FakeConsoleInteraction : IConsoleInteraction
     private readonly Queue<string> selections;
     private readonly Queue<TextEditResult> textEdits = [];
     private readonly Queue<FieldEditResult> fieldEdits = [];
+    private readonly Queue<ValueEditResult> valueEdits = [];
 
     public FakeConsoleInteraction(IEnumerable<string> answers, IEnumerable<string>? selections = null)
     {
@@ -25,6 +26,12 @@ public sealed class FakeConsoleInteraction : IConsoleInteraction
 
     public List<IReadOnlyList<string>> SelectChoices { get; } = [];
 
+    public List<string> AskPrompts { get; } = [];
+
+    public List<string> ValueEditTitles { get; } = [];
+
+    public List<string> ValueEditInitialValues { get; } = [];
+
     public List<string> TextEditTitles { get; } = [];
 
     public List<string> TextEditInitialTexts { get; } = [];
@@ -38,6 +45,11 @@ public sealed class FakeConsoleInteraction : IConsoleInteraction
     public void EnqueueFieldEdit(IReadOnlyDictionary<string, string> values, bool saved = true)
     {
         fieldEdits.Enqueue(new FieldEditResult(saved, values));
+    }
+
+    public void EnqueueValueEdit(string value, bool saved = true)
+    {
+        valueEdits.Enqueue(new ValueEditResult(saved, value));
     }
 
     public void EnqueueTextEdit(string text, bool saved = true)
@@ -67,6 +79,8 @@ public sealed class FakeConsoleInteraction : IConsoleInteraction
 
     public string Ask(string prompt)
     {
+        AskPrompts.Add(prompt);
+
         return answers.Dequeue();
     }
 
@@ -88,6 +102,16 @@ public sealed class FakeConsoleInteraction : IConsoleInteraction
         }
 
         return new FieldEditResult(true, values);
+    }
+
+    public ValueEditResult EditValue(string title, string label, string initialValue, bool required = false)
+    {
+        ValueEditTitles.Add(title);
+        ValueEditInitialValues.Add(initialValue);
+
+        return valueEdits.Count > 0
+            ? valueEdits.Dequeue()
+            : new ValueEditResult(true, initialValue);
     }
 
     public TextEditResult EditText(TextEditOptions options)

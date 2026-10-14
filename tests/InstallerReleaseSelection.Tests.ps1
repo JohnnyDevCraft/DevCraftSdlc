@@ -24,17 +24,17 @@ $releases = @(
     [PSCustomObject]@{ tag_name = "v1.0.0-beta.6"; draft = $false },
     [PSCustomObject]@{ tag_name = "v1.0.0-beta.7"; draft = $false },
     [PSCustomObject]@{ tag_name = "v1.0.0-beta.8"; draft = $false },
-    [PSCustomObject]@{ tag_name = "v1.0.0-beta.16"; draft = $false },
+    [PSCustomObject]@{ tag_name = "v1.0.0-beta.17"; draft = $false },
     [PSCustomObject]@{ tag_name = "v0.9.0"; draft = $false }
 )
 
-Assert-Equal "v1.0.0-beta.16" (Select-ReleaseTag $releases) "selects newest beta over alpha releases"
+Assert-Equal "v1.0.0-beta.17" (Select-ReleaseTag $releases) "selects newest beta over alpha releases"
 Assert-True (Test-VersionGreater "v1.0.0-beta.1" "v1.0.0-alpha.12") "beta sorts after alpha 12"
 Assert-True (Test-VersionGreater "v1.0.0-beta.2" "v1.0.0-beta.1") "beta 2 sorts after beta 1"
 Assert-True (Test-VersionGreater "v1.0.0-beta.5" "v1.0.0-beta.2") "beta 5 sorts after beta 2"
 Assert-True (Test-VersionGreater "v1.0.0-beta.7" "v1.0.0-beta.6") "beta 7 sorts after beta 6"
 Assert-True (Test-VersionGreater "v1.0.0-beta.8" "v1.0.0-beta.7") "beta 8 sorts after beta 7"
-Assert-True (Test-VersionGreater "v1.0.0-beta.16" "v1.0.0-beta.15") "beta 16 sorts after beta 15"
+Assert-True (Test-VersionGreater "v1.0.0-beta.17" "v1.0.0-beta.16") "beta 17 sorts after beta 16"
 Assert-True (Test-VersionGreater "v1.0.0-alpha.12" "v1.0.0-alpha.9") "alpha 12 sorts after alpha 9"
 
 $env:DEVCRAFT_VERSION = "1.0.0-alpha.12"

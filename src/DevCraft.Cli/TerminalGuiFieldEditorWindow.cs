@@ -8,9 +8,9 @@ namespace DevCraft.Cli;
 internal sealed class TerminalGuiFieldEditorWindow : Window
 {
     private readonly IApplication app;
-    private readonly Action save;
+    private readonly Func<bool> save;
 
-    public TerminalGuiFieldEditorWindow(IApplication app, string title, Action save)
+    public TerminalGuiFieldEditorWindow(IApplication app, string title, Func<bool> save)
     {
         this.app = app;
         this.save = save;
@@ -38,8 +38,10 @@ internal sealed class TerminalGuiFieldEditorWindow : Window
 
     public void SaveAndStop()
     {
-        save();
-        app.RequestStop(this);
+        if (save())
+        {
+            app.RequestStop(this);
+        }
     }
 
     public void CancelAndStop() => app.RequestStop(this);

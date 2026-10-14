@@ -19,6 +19,7 @@ public static class DevCraftMenuCommand
     private const string Exit = "Exit";
     private const string ListFeatures = "List features";
     private const string NewFeature = "Create new feature";
+    private const string EditSoul = "Edit Soul";
     private const string ImportSettings = "Import Settings";
     private const string ChangeFeatureStorage = "Change Repository-Level Feature Storage";
     private const string CreateSkill = "Create Skill";
@@ -243,12 +244,15 @@ public static class DevCraftMenuCommand
         console.ShowMenuShell();
         string selected = console.Select(
             "Configure DevCraft",
-            [ImportSettings, ChangeFeatureStorage, ConfigureSituationalAwareness, ConfigureSupportedClients, AddDevCraftToDesktopAgent, CreateSkill, CreateStandards, CreateArchitecture, CreateProjectType, Back]);
+            [EditSoul, ImportSettings, ChangeFeatureStorage, ConfigureSituationalAwareness, ConfigureSupportedClients, AddDevCraftToDesktopAgent, CreateSkill, CreateStandards, CreateArchitecture, CreateProjectType, Back]);
 
         switch (selected)
         {
             case Back:
                 return;
+            case EditSoul:
+                SoulEditCommand.Run(context, console);
+                break;
             case ImportSettings:
                 RunImportSettings(context, console, launcher, projectConfiguration);
                 break;
@@ -630,9 +634,14 @@ public static class DevCraftMenuCommand
 
     private static DateTimeOffset? AskInactiveDate(IConsoleInteraction console)
     {
-        string value = console.Ask("Inactive date");
+        ValueEditResult result = console.EditValue("Inactive Date", "Inactive date", DateTime.Today.ToString("yyyy-MM-dd"), required: true);
 
-        return DateTime.TryParse(value, out DateTime date)
+        if (!result.Saved)
+        {
+            return null;
+        }
+
+        return DateTime.TryParse(result.Value, out DateTime date)
             ? new DateTimeOffset(DateTime.SpecifyKind(date.Date, DateTimeKind.Unspecified), TimeSpan.Zero)
             : null;
     }
@@ -746,7 +755,6 @@ public static class DevCraftMenuCommand
         while (true)
         {
             entry = store.Read(false).LogEntries.First(current => current.RowId.Equals(entry.RowId, StringComparison.OrdinalIgnoreCase));
-            console.WriteStatus($"DateTime: {entry.DateTime:u}{Environment.NewLine}Content:{Environment.NewLine}{entry.LogData}");
             console.ShowMenuShell();
             string selected = console.Select(LogEntryChoice(entry), [Edit, GoBack]);
 
@@ -755,10 +763,10 @@ public static class DevCraftMenuCommand
                 return;
             }
 
-            DateTimeOffset? dateTime = AskDateTime(console, "Log entry date/time", entry.DateTime);
+            // Log entry dates are not editable for now; editing goes straight to the content.
             TextEditResult content = console.EditText(new TextEditOptions("Edit Log Entry Content", entry.LogData));
 
-            if (dateTime is null || !content.Saved)
+            if (!content.Saved)
             {
                 console.WriteStatus("Log entry was not changed.");
                 continue;
@@ -766,7 +774,6 @@ public static class DevCraftMenuCommand
 
             entry = entry with
             {
-                DateTime = dateTime.Value,
                 LogData = content.Text.Trim(),
             };
             store.UpsertLogEntry(entry);
@@ -827,7 +834,6 @@ public static class DevCraftMenuCommand
         while (true)
         {
             summary = store.Read(false).Summaries.First(current => current.RowId.Equals(summary.RowId, StringComparison.OrdinalIgnoreCase));
-            console.WriteStatus($"DateTime: {summary.DateTime:u}{Environment.NewLine}Type: {summary.Type}{Environment.NewLine}Content:{Environment.NewLine}{summary.SummaryData}");
             console.ShowMenuShell();
             string selected = console.Select(SummaryChoice(summary), [Edit, GoBack]);
 
@@ -836,10 +842,17 @@ public static class DevCraftMenuCommand
                 return;
             }
 
-            DateTimeOffset? dateTime = AskDateTime(console, "Summary date/time", summary.DateTime);
+            DateTimeOffset? dateTime = EditDateTime(console, "Edit Summary Date", summary.DateTime);
+
+            if (dateTime is null)
+            {
+                console.WriteStatus("Summary was not changed.");
+                continue;
+            }
+
             TextEditResult content = console.EditText(new TextEditOptions("Edit Summary Content", summary.SummaryData));
 
-            if (dateTime is null || !content.Saved)
+            if (!content.Saved)
             {
                 console.WriteStatus("Summary was not changed.");
                 continue;
@@ -855,16 +868,22 @@ public static class DevCraftMenuCommand
         }
     }
 
-    private static DateTimeOffset? AskDateTime(IConsoleInteraction console, string prompt, DateTimeOffset current)
+    private static DateTimeOffset? EditDateTime(IConsoleInteraction console, string title, DateTimeOffset current)
     {
-        string value = console.Ask($"{prompt} [{current:u}]");
+        string initialValue = current.ToString("u");
+        ValueEditResult result = console.EditValue(title, "Date/time", initialValue, required: true);
 
-        if (string.IsNullOrWhiteSpace(value))
+        if (!result.Saved)
+        {
+            return null;
+        }
+
+        if (result.Value.Trim() == initialValue)
         {
             return current;
         }
 
-        return DateTimeOffset.TryParse(value, out DateTimeOffset parsed)
+        return DateTimeOffset.TryParse(result.Value, out DateTimeOffset parsed)
             ? parsed
             : null;
     }
@@ -1022,7 +1041,19 @@ public static class DevCraftMenuCommand
             if (storage == SituationStorage.Database)
             {
                 console.WriteStatus(MongoDockerInstructions.Text);
-                connection = console.Ask("Enter Database Connection String");
+                connection = console.EditValue(
+                    "Database Connection String",
+                    "Connection string",
+                    connection ?? string.Empty,
+                    required: true) is { Saved: true } edit
+                    ? edit.Value.Trim()
+                    : connection;
+
+                if (string.IsNullOrWhiteSpace(connection))
+                {
+                    console.WriteStatus("A database connection string is required. Situational awareness was not changed.");
+                    return;
+                }
             }
             else
             {

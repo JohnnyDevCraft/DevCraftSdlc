@@ -22,8 +22,8 @@ public sealed class StartupFlowTests
         [
             "John",
             "Jarvis",
-            "Empty Project",
         ]);
+        console.EnqueueValueEdit("Empty Project");
         console.EnqueueTextEdit("I build software.");
         console.EnqueueTextEdit("Be concise.");
         console.EnqueueTextEdit("A project created from an empty folder.");
@@ -63,8 +63,8 @@ public sealed class StartupFlowTests
         [
             "John",
             "Jarvis",
-            "Fresh Project",
         ]);
+        console.EnqueueValueEdit("Fresh Project");
         console.EnqueueTextEdit("I build software.");
         console.EnqueueTextEdit("Be concise.");
         console.EnqueueTextEdit("A fresh profile startup project.");
@@ -130,9 +130,8 @@ public sealed class StartupFlowTests
         File.WriteAllText(soul, "- Default terminal AI agent: Codex");
         File.WriteAllText(Path.Combine(root.Path, "Program.cs"), "Console.WriteLine();");
         StartupContext context = new(root.Path, profile, soul);
-        FakeConsoleInteraction console = new(
-            ["Operator Project"],
-            ["Enter a custom project name", "Enter a custom project description"]);
+        FakeConsoleInteraction console = new([]);
+        console.EnqueueValueEdit("Operator Project");
         console.EnqueueTextEdit("Operator description.");
         ProjectScanResult scanResult = new(
             SampleProfile,
@@ -149,6 +148,142 @@ public sealed class StartupFlowTests
         Assert.Contains("# Operator Project", readme);
         Assert.Contains("Operator description.", readme);
         Assert.DoesNotContain("# Sample", readme);
+    }
+
+    [Fact]
+    public void NewProjectPrefillsFolderNameAndAcceptsItUnchanged()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        (StartupContext context, FakeConsoleInteraction console) = CreateEmptyFolderStartup(root, profileRoot);
+        string folderName = Path.GetFileName(root.Path);
+
+        new StartupFlow(console, EmptyScanner(), () => []).Run(context);
+
+        Assert.Equal([folderName], console.ValueEditInitialValues);
+        Assert.Empty(console.AskPrompts);
+        Assert.Contains($"# {folderName}", ReadReadme(root));
+    }
+
+    [Fact]
+    public void NewProjectUsesEditedName()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        (StartupContext context, FakeConsoleInteraction console) = CreateEmptyFolderStartup(root, profileRoot);
+        console.EnqueueValueEdit("Edited Name");
+
+        new StartupFlow(console, EmptyScanner(), () => []).Run(context);
+
+        Assert.Contains("# Edited Name", ReadReadme(root));
+    }
+
+    [Fact]
+    public void ProjectProfileCancelKeepsDefaults()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        (StartupContext context, FakeConsoleInteraction console) = CreateEmptyFolderStartup(root, profileRoot);
+        console.EnqueueValueEdit("Changed", saved: false);
+        console.EnqueueTextEdit("Changed description", saved: false);
+
+        new StartupFlow(console, EmptyScanner(), () => []).Run(context);
+
+        string readme = ReadReadme(root);
+        Assert.Contains($"# {Path.GetFileName(root.Path)}", readme);
+        Assert.DoesNotContain("Changed", readme);
+    }
+
+    [Fact]
+    public void ProjectProfileWhitespaceNameRequiresEntry()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        (StartupContext context, FakeConsoleInteraction console) = CreateEmptyFolderStartup(root, profileRoot);
+        console.EnqueueValueEdit("   ");
+        console.EnqueueValueEdit("Named Project");
+
+        new StartupFlow(console, EmptyScanner(), () => []).Run(context);
+
+        Assert.Contains("Project name is required.", console.StatusMessages);
+        Assert.Equal(2, console.ValueEditTitles.Count);
+        Assert.Contains("# Named Project", ReadReadme(root));
+    }
+
+    [Fact]
+    public void ProjectProfileWithoutDeterminableNameRequiresEntry()
+    {
+        string fileSystemRoot = Path.GetPathRoot(Path.GetTempPath())!;
+
+        Assert.Equal(string.Empty, StartupFlow.DefaultProjectName(fileSystemRoot));
+    }
+
+    [Fact]
+    public void AiScannedProjectPrefillsSuggestedNameAndDescription()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        (StartupContext context, FakeConsoleInteraction console) = CreateCodeFolderStartup(root, profileRoot);
+
+        new StartupFlow(console, new FakeAiProjectScanner(new ProjectScanResult(SampleProfile, [], new AiSdlcDetection(false, null))), () => []).Run(context);
+
+        Assert.Equal(["Sample"], console.ValueEditInitialValues);
+        Assert.Equal([SampleProfile.Description], console.TextEditInitialTexts);
+        Assert.Contains("# Sample", ReadReadme(root));
+    }
+
+    [Fact]
+    public void AiScannedProjectFallsBackToFolderNameWhenSuggestionBlank()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        (StartupContext context, FakeConsoleInteraction console) = CreateCodeFolderStartup(root, profileRoot);
+        ProjectProfile blankName = SampleProfile with { Name = "  " };
+
+        new StartupFlow(console, new FakeAiProjectScanner(new ProjectScanResult(blankName, [], new AiSdlcDetection(false, null))), () => []).Run(context);
+
+        Assert.Equal([Path.GetFileName(root.Path)], console.ValueEditInitialValues);
+    }
+
+    [Fact]
+    public void AiScannedProjectDoesNotShowSuggestionMenu()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        (StartupContext context, FakeConsoleInteraction console) = CreateCodeFolderStartup(root, profileRoot);
+
+        new StartupFlow(console, new FakeAiProjectScanner(new ProjectScanResult(SampleProfile, [], new AiSdlcDetection(false, null))), () => []).Run(context);
+
+        Assert.DoesNotContain(console.SelectChoices.SelectMany(choices => choices), choice => choice.StartsWith("Use AI suggestion", StringComparison.Ordinal));
+        Assert.Empty(console.AskPrompts);
+    }
+
+    private static FakeAiProjectScanner EmptyScanner()
+    {
+        return new FakeAiProjectScanner(new ProjectScanResult(SampleProfile, [], new AiSdlcDetection(false, null)));
+    }
+
+    private static (StartupContext Context, FakeConsoleInteraction Console) CreateEmptyFolderStartup(TestDirectory root, TestDirectory profileRoot)
+    {
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string soul = Path.Combine(profile, "soul.md");
+        Directory.CreateDirectory(profile);
+        File.WriteAllText(soul, "- Default terminal AI agent: Codex");
+
+        return (new StartupContext(root.Path, profile, soul), new FakeConsoleInteraction([]));
+    }
+
+    private static (StartupContext Context, FakeConsoleInteraction Console) CreateCodeFolderStartup(TestDirectory root, TestDirectory profileRoot)
+    {
+        (StartupContext context, FakeConsoleInteraction console) = CreateEmptyFolderStartup(root, profileRoot);
+        File.WriteAllText(Path.Combine(root.Path, "Program.cs"), "Console.WriteLine();");
+
+        return (context, console);
+    }
+
+    private static string ReadReadme(TestDirectory root)
+    {
+        return File.ReadAllText(Path.Combine(root.Path, ".devcraft", "README.md"));
     }
 
     [Fact]
@@ -229,7 +364,8 @@ public sealed class StartupFlowTests
         Directory.CreateDirectory(Path.Combine(root.Path, ".specify"));
         File.WriteAllText(soul, "- Default terminal AI agent: Codex");
         StartupContext context = new(root.Path, profile, soul);
-        FakeConsoleInteraction console = new(["Forced Project", "Forced description."]);
+        FakeConsoleInteraction console = new([]);
+        console.EnqueueValueEdit("Forced Project");
         FakeAiProjectScanner scanner = new(new ProjectScanResult(SampleProfile, [], new AiSdlcDetection(false, null)));
         StartupFlow flow = new(console, scanner, () => []);
 
@@ -254,7 +390,8 @@ public sealed class StartupFlowTests
         File.WriteAllText(Path.Combine(root.Path, "Program.cs"), "Console.WriteLine(\"hello\");");
         File.WriteAllText(soul, "- Default terminal AI agent: Codex");
         StartupContext context = new(root.Path, profile, soul);
-        FakeConsoleInteraction console = new(["Forced Code Project", "Forced code description."]);
+        FakeConsoleInteraction console = new([]);
+        console.EnqueueValueEdit("Forced Code Project");
         FakeAiProjectScanner scanner = new(new ProjectScanResult(SampleProfile, [], new AiSdlcDetection(true, "Other AI workflow")));
         StartupFlow flow = new(console, scanner, () => []);
 

@@ -476,8 +476,9 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
         FakeConsoleInteraction console = new(
-            ["mongodb://localhost:27017/DevCraft"],
+            [],
             ["Configure DevCraft", "Configure Situational Awareness", "Yes", "Months & Weeks", "Database", "Exit"]);
+        console.EnqueueValueEdit("mongodb://localhost:27017/DevCraft");
         FakeDevCraftAiSessionLauncher launcher = new();
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
@@ -562,8 +563,9 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         store.AddPerson(new SituationPerson("person-1", "Ada", "Lovelace", "ada@example.com", "555-0100", "Advisor", "ACTIVE", "Architect", "Math", "Analytical Engines", null));
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
         FakeConsoleInteraction console = new(
-            ["Ada", "Byron", "2/2/2026"],
+            ["Ada", "Byron"],
             ["Logging", "Manage People", "List People", "Ada Lovelace (ada@example.com) | Architect | Math | Analytical Engines", "Edit Name", "Make Inactive", "Go Back", "Go Back", "Back", "Exit"]);
+        console.EnqueueValueEdit("2/2/2026");
         FakeDevCraftAiSessionLauncher launcher = new();
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
@@ -576,6 +578,26 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         Assert.Equal("INACTIVE", person.Status);
         Assert.Equal(new DateTimeOffset(2026, 2, 2, 0, 0, 0, TimeSpan.Zero), person.InactiveDate);
         Assert.Contains(console.StatusMessages, message => message.Contains("INACTIVE (2/2/2026)", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ManagePeopleMakeInactivePrefillsTodayWhenNoDate()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        (StartupContext context, string profile) = CreateSituationContext(root, profileRoot);
+        new FileSituationStore(profile).AddPerson(new SituationPerson(
+            "person-1", "Ada", "Lovelace", "ada@example.com", "555-0100", "Advisor", "ACTIVE", "Architect", "Math", "Analytical Engines", null));
+        FakeConsoleInteraction console = new(
+            [],
+            ["Logging", "Manage People", "List People", "Ada Lovelace (ada@example.com) | Architect | Math | Analytical Engines", "Make Inactive", "Go Back", "Go Back", "Back", "Exit"]);
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        Assert.Equal([DateTime.Today.ToString("yyyy-MM-dd")], console.ValueEditInitialValues);
+        SituationPerson person = Assert.Single(new FileSituationStore(profile).Read(false).People);
+        Assert.Equal("INACTIVE", person.Status);
+        Assert.Equal(new DateTimeOffset(DateTime.SpecifyKind(DateTime.Today, DateTimeKind.Unspecified), TimeSpan.Zero), person.InactiveDate);
     }
 
     [Fact]
@@ -631,7 +653,7 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         store.AddLogEntry(new SituationLogEntry("log-2", DateTimeOffset.Parse("2026-10-09T07:00:00-04:00"), "Compressed", true));
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
         FakeConsoleInteraction console = new(
-            ["2026-10-09T09:00:00-04:00"],
+            [],
             ["Logging", "Manage Logs", "List Log Entries", "2026-10-09 08:00 | Original", "Edit", "Go Back", "Go Back", "Back", "Exit"]);
         console.EnqueueTextEdit("Updated\nMarkdown");
         FakeDevCraftAiSessionLauncher launcher = new();
@@ -642,7 +664,9 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         SituationSnapshot snapshot = new FileSituationStore(profile).Read(false);
         SituationLogEntry updated = Assert.Single(snapshot.LogEntries.Where(entry => entry.RowId == "log-1"));
         Assert.Equal("Updated\nMarkdown", updated.LogData);
-        Assert.Equal(DateTimeOffset.Parse("2026-10-09T09:00:00-04:00"), updated.DateTime);
+        Assert.Equal(DateTimeOffset.Parse("2026-10-09T08:00:00-04:00"), updated.DateTime);
+        Assert.Empty(console.AskPrompts);
+        Assert.Empty(console.ValueEditTitles);
         Assert.False(updated.IsCompressed);
         Assert.DoesNotContain(console.SelectChoices.SelectMany(choice => choice), choice => choice.Contains("Compressed", StringComparison.Ordinal));
         Assert.Contains(console.TextEditTitles, title => title == "Edit Log Entry Content");
@@ -662,7 +686,7 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         store.AddSummary(new SituationSummary("summary-1", DateTimeOffset.Parse("2026-10-09T08:00:00-04:00"), "Original", "week", false));
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
         FakeConsoleInteraction console = new(
-            ["2026-10-09T09:00:00-04:00"],
+            [],
             ["Logging", "Manage Logs", "List Summaries", "Week", "2026-10-09 08:00 | Original", "Edit", "Go Back", "Go Back", "Go Back", "Back", "Exit"]);
         console.EnqueueTextEdit("Updated", saved: false);
         FakeDevCraftAiSessionLauncher launcher = new();
@@ -675,6 +699,101 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         Assert.Equal(DateTimeOffset.Parse("2026-10-09T08:00:00-04:00"), summary.DateTime);
         Assert.Equal("week", summary.Type);
         Assert.False(summary.IsCompressed);
+    }
+
+    [Fact]
+    public void RunManageLogsEditOpensContentWithExistingTextAndNoDatePrompt()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        (StartupContext context, string profile) = CreateSituationContext(root, profileRoot);
+        new FileSituationStore(profile).AddLogEntry(new SituationLogEntry("log-1", DateTimeOffset.Parse("2026-10-09T08:00:00-04:00"), "Original", false));
+        FakeConsoleInteraction console = new(
+            [],
+            ["Logging", "Manage Logs", "List Log Entries", "2026-10-09 08:00 | Original", "Edit", "Go Back", "Go Back", "Back", "Exit"]);
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        Assert.Equal(["Original"], console.TextEditInitialTexts);
+        Assert.Empty(console.AskPrompts);
+        Assert.Empty(console.ValueEditTitles);
+        SituationLogEntry entry = Assert.Single(new FileSituationStore(profile).Read(false).LogEntries);
+        Assert.Equal("Original", entry.LogData);
+        Assert.Equal(DateTimeOffset.Parse("2026-10-09T08:00:00-04:00"), entry.DateTime);
+    }
+
+    [Fact]
+    public void RunManageSummariesEditPrefillsDateAndContent()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        (StartupContext context, string profile) = CreateSituationContext(root, profileRoot);
+        DateTimeOffset original = DateTimeOffset.Parse("2026-10-09T08:00:00-04:00");
+        new FileSituationStore(profile).AddSummary(new SituationSummary("summary-1", original, "Original", "week", false));
+        FakeConsoleInteraction console = new([], SummaryEditSelections);
+        console.EnqueueValueEdit("2026-10-09T09:00:00-04:00");
+        console.EnqueueTextEdit("Updated");
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        Assert.Equal([original.ToString("u")], console.ValueEditInitialValues);
+        Assert.Equal(["Original"], console.TextEditInitialTexts);
+        Assert.Empty(console.AskPrompts);
+        SituationSummary summary = Assert.Single(new FileSituationStore(profile).Read(false).Summaries);
+        Assert.Equal("Updated", summary.SummaryData);
+        Assert.Equal(DateTimeOffset.Parse("2026-10-09T09:00:00-04:00"), summary.DateTime);
+    }
+
+    [Fact]
+    public void RunManageSummariesEditKeepsDateWhenAcceptedUnchanged()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        (StartupContext context, string profile) = CreateSituationContext(root, profileRoot);
+        DateTimeOffset original = DateTimeOffset.Parse("2026-10-09T08:00:00-04:00");
+        new FileSituationStore(profile).AddSummary(new SituationSummary("summary-1", original, "Original", "week", false));
+        FakeConsoleInteraction console = new([], SummaryEditSelections);
+        console.EnqueueTextEdit("Updated");
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        SituationSummary summary = Assert.Single(new FileSituationStore(profile).Read(false).Summaries);
+        Assert.Equal("Updated", summary.SummaryData);
+        Assert.Equal(original, summary.DateTime);
+    }
+
+    [Fact]
+    public void RunManageSummariesEditInvalidDateDoesNotChangeSummary()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        (StartupContext context, string profile) = CreateSituationContext(root, profileRoot);
+        DateTimeOffset original = DateTimeOffset.Parse("2026-10-09T08:00:00-04:00");
+        new FileSituationStore(profile).AddSummary(new SituationSummary("summary-1", original, "Original", "week", false));
+        FakeConsoleInteraction console = new([], SummaryEditSelections);
+        console.EnqueueValueEdit("not a date");
+        console.EnqueueTextEdit("Updated");
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        SituationSummary summary = Assert.Single(new FileSituationStore(profile).Read(false).Summaries);
+        Assert.Equal("Original", summary.SummaryData);
+        Assert.Equal(original, summary.DateTime);
+        Assert.Contains("Summary was not changed.", console.StatusMessages);
+    }
+
+    private static readonly string[] SummaryEditSelections =
+        ["Logging", "Manage Logs", "List Summaries", "Week", "2026-10-09 08:00 | Original", "Edit", "Go Back", "Go Back", "Go Back", "Back", "Exit"];
+
+    private static (StartupContext Context, string Profile) CreateSituationContext(TestDirectory root, TestDirectory profileRoot)
+    {
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        DevCraftProfileConfigurationWriter.Write(profile, new DevCraftProfileConfiguration([], [], [], [], [], [], [], true));
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+
+        return (new StartupContext(root.Path, profile, Path.Combine(profile, "soul.md")), profile);
     }
 
     [Fact]
@@ -1028,8 +1147,9 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
         const string connectionString = "mongodb://user:secret@localhost:27017/DevCraft";
         FakeConsoleInteraction console = new(
-            [connectionString],
+            [],
             ["Configure DevCraft", "Configure Situational Awareness", "Yes", "Months & Weeks", "Database", "Exit"]);
+        console.EnqueueValueEdit(connectionString);
 
         DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
 
@@ -1037,6 +1157,138 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         Assert.DoesNotContain(console.StatusMessages, message => message.Contains(connectionString, StringComparison.Ordinal));
         Assert.DoesNotContain(console.StatusMessages, message => message.Contains("secret", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void ConfigureSituationalAwarenessPrefillsExistingConnectionString()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        const string existing = "mongodb://localhost:27017/Existing";
+        DevCraftProfileConfigurationWriter.Write(
+            profile,
+            new DevCraftProfileConfiguration([], [], [], [], [], [], [], true, "weeks", "database", existing));
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new(
+            [],
+            ["Configure DevCraft", "Configure Situational Awareness", "Yes", "Months & Weeks", "Database", "Exit"]);
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        Assert.Equal([existing], console.ValueEditInitialValues);
+        Assert.Empty(console.AskPrompts);
+        Assert.Equal(existing, ProfileConfigurationReader.Read(profile).SituationConnection);
+    }
+
+    [Fact]
+    public void ConfigureSituationalAwarenessCancelWithoutConnectionStringDoesNotChangeConfiguration()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        DevCraftProfileConfigurationWriter.Write(profile, new DevCraftProfileConfiguration([], [], [], [], [], [], [], true));
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new(
+            [],
+            ["Configure DevCraft", "Configure Situational Awareness", "Yes", "Months & Weeks", "Database", "Exit"]);
+        console.EnqueueValueEdit(string.Empty, saved: false);
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        DevCraftProfileConfiguration configuration = ProfileConfigurationReader.Read(profile);
+        Assert.Equal("file", configuration.SituationStorage);
+        Assert.Null(configuration.SituationConnection);
+        Assert.Contains("A database connection string is required. Situational awareness was not changed.", console.StatusMessages);
+    }
+
+    [Fact]
+    public void ConfigureDevCraftListsEditSoulFirst()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        (StartupContext context, _) = CreateSituationContext(root, profileRoot);
+        FakeConsoleInteraction console = new([], ["Configure DevCraft", "Back", "Exit"]);
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        int index = console.SelectTitles.IndexOf("Configure DevCraft");
+        Assert.Equal("Edit Soul", console.SelectChoices[index][0]);
+    }
+
+    [Fact]
+    public void EditSoulPrefillsExistingAnswers()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        (StartupContext context, _) = CreateSituationContext(root, profileRoot);
+        SoulFileWriter.Write(context.SoulFilePath, SampleSoul);
+        FakeConsoleInteraction console = new([], ["Configure DevCraft", "Edit Soul", "Keep current: codex", "Exit"]);
+        console.EnqueueValueEdit("John");
+        console.EnqueueTextEdit("I build and design software.");
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        Assert.Equal(["John", "Jarvis"], console.ValueEditInitialValues);
+        Assert.Equal(["I build software.", "Be concise."], console.TextEditInitialTexts);
+        Assert.Empty(console.AskPrompts);
+        Assert.Equal("I build and design software.", SoulAnswersStore.Read(context.SoulFilePath).WorkAndAssistanceContext);
+        Assert.Contains("Soul updated.", console.StatusMessages);
+    }
+
+    [Fact]
+    public void EditSoulSavingUnchangedLeavesFileContentEqual()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        (StartupContext context, _) = CreateSituationContext(root, profileRoot);
+        SoulFileWriter.Write(context.SoulFilePath, SampleSoul);
+        string before = File.ReadAllText(context.SoulFilePath);
+        FakeConsoleInteraction console = new([], ["Configure DevCraft", "Edit Soul", "Keep current: codex", "Exit"]);
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        Assert.Equal(before, File.ReadAllText(context.SoulFilePath));
+    }
+
+    [Fact]
+    public void EditSoulCancelDoesNotWrite()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        (StartupContext context, _) = CreateSituationContext(root, profileRoot);
+        SoulFileWriter.Write(context.SoulFilePath, SampleSoul);
+        string before = File.ReadAllText(context.SoulFilePath);
+        FakeConsoleInteraction console = new([], ["Configure DevCraft", "Edit Soul", "Exit"]);
+        console.EnqueueValueEdit("Changed", saved: false);
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        Assert.Equal(before, File.ReadAllText(context.SoulFilePath));
+        Assert.Contains("Soul was not changed.", console.StatusMessages);
+    }
+
+    [Fact]
+    public void EditSoulMissingFileReportsAndDoesNotCreate()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        (StartupContext context, _) = CreateSituationContext(root, profileRoot);
+        FakeConsoleInteraction console = new([], ["Configure DevCraft", "Edit Soul", "Exit"]);
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        Assert.False(File.Exists(context.SoulFilePath));
+        Assert.Contains(console.StatusMessages, message => message.StartsWith("No soul.md found", StringComparison.Ordinal));
+        Assert.Empty(console.ValueEditTitles);
+    }
+
+    private static readonly SoulSetupAnswers SampleSoul = new("John", "I build software.", "Jarvis", "Be concise.", "codex");
 
     private static bool IsOutOfDateNotice(string message)
     {

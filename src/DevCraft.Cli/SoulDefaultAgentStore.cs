@@ -2,7 +2,7 @@ namespace DevCraft.Cli;
 
 public static class SoulDefaultAgentStore
 {
-    private const string Prefix = "- Default terminal AI agent:";
+    private const string Prefix = SoulAnswersStore.DefaultTerminalAgentPrefix;
 
     public static string Read(string soulFilePath)
     {
@@ -35,17 +35,7 @@ public static class SoulDefaultAgentStore
         }
 
         List<string> lines = File.ReadAllLines(soulFilePath).ToList();
-        int index = lines.FindIndex(line => line.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase));
-        string replacement = $"{Prefix} {defaultAgent}";
-
-        if (index >= 0)
-        {
-            lines[index] = replacement;
-        }
-        else
-        {
-            lines.Add(replacement);
-        }
+        SoulAnswersStore.ReplaceOrAppend(lines, Prefix, defaultAgent);
 
         File.WriteAllText(soulFilePath, string.Join(Environment.NewLine, lines) + Environment.NewLine);
     }

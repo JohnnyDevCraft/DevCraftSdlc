@@ -46,6 +46,16 @@ public sealed class SpectreConsoleInteraction : IConsoleInteraction
         return TerminalGuiFieldEditor.Edit(options);
     }
 
+    public ValueEditResult EditValue(string title, string label, string initialValue, bool required = false)
+    {
+        const string Key = "value";
+        FieldEditResult result = EditFields(new FieldEditOptions(
+            title,
+            [new FieldEditField(Key, label, initialValue, required)]));
+
+        return new ValueEditResult(result.Saved, result.Values.GetValueOrDefault(Key, initialValue));
+    }
+
     public TextEditResult EditText(TextEditOptions options)
     {
         ShowMenuShell();

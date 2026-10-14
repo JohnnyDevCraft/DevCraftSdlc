@@ -508,7 +508,8 @@ public sealed class FeatureCommandTests
                 SampleFeature("Second Existing", "second-existing", "folder-two", "Complete"),
             ]);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
-        FakeConsoleInteraction console = new(["  Renamed Feature  "], ["First Existing (first-existing)", EditFeatureName, "Back"]);
+        FakeConsoleInteraction console = new([], ["First Existing (first-existing)", EditFeatureName, "Back"]);
+        console.EnqueueValueEdit("  Renamed Feature  ");
         FakeFeatureAiSessionLauncher launcher = new();
 
         FeatureCommand.Run(context, ["list"], console, launcher);
@@ -565,7 +566,8 @@ public sealed class FeatureCommandTests
                     ]),
             ]));
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
-        FakeConsoleInteraction console = new(["Renamed"], ["Shared (shared)", EditFeatureName, "Back"]);
+        FakeConsoleInteraction console = new([], ["Shared (shared)", EditFeatureName, "Back"]);
+        console.EnqueueValueEdit("Renamed");
 
         FeatureCommand.Run(context, ["list"], console, new FakeFeatureAiSessionLauncher());
 
@@ -587,13 +589,57 @@ public sealed class FeatureCommandTests
             Guid.NewGuid().ToString(),
             [SampleFeature("First Existing", "first-existing", "folder-one", "Implementation")]);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
-        FakeConsoleInteraction console = new(["   "], ["First Existing (first-existing)", EditFeatureName, "Back"]);
+        FakeConsoleInteraction console = new([], ["First Existing (first-existing)", EditFeatureName, "Back"]);
+        console.EnqueueValueEdit("   ");
 
         FeatureCommand.Run(context, ["list"], console, new FakeFeatureAiSessionLauncher());
 
         Assert.Contains("Feature name is required.", console.StatusMessages);
         Assert.Equal("First Existing", Assert.Single(ProjectDevCraftConfigurationReader.Read(root.Path)!.Features).Name);
         Assert.Equal("First Existing", Assert.Single(Assert.Single(SystemCentralProjectsStore.Read(profile).Projects).Features).Name);
+    }
+
+    [Fact]
+    public void ListEditFeatureNamePrefillsCurrentName()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        WriteSystemCentralRepository(
+            root.Path,
+            Guid.NewGuid().ToString(),
+            [SampleFeature("First Existing", "first-existing", "folder-one", "Implementation")]);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["First Existing (first-existing)", EditFeatureName, "Back"]);
+
+        FeatureCommand.Run(context, ["list"], console, new FakeFeatureAiSessionLauncher());
+
+        Assert.Equal(["First Existing"], console.ValueEditInitialValues);
+        Assert.Empty(console.AskPrompts);
+        Assert.Contains("Feature name is unchanged.", console.StatusMessages);
+    }
+
+    [Fact]
+    public void ListEditFeatureNameCancelLeavesIndexesUnchanged()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        WriteSystemCentralRepository(
+            root.Path,
+            Guid.NewGuid().ToString(),
+            [SampleFeature("First Existing", "first-existing", "folder-one", "Implementation")]);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["First Existing (first-existing)", EditFeatureName, "Back"]);
+        console.EnqueueValueEdit("Renamed", saved: false);
+        string configurationPath = ProjectDevCraftConfigurationStore.PathFor(root.Path);
+        DateTime writtenAt = new(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        File.SetLastWriteTimeUtc(configurationPath, writtenAt);
+
+        FeatureCommand.Run(context, ["list"], console, new FakeFeatureAiSessionLauncher());
+
+        Assert.Contains("Feature name is unchanged.", console.StatusMessages);
+        Assert.Equal(writtenAt, File.GetLastWriteTimeUtc(configurationPath));
     }
 
     [Fact]
@@ -607,7 +653,8 @@ public sealed class FeatureCommandTests
             Guid.NewGuid().ToString(),
             [SampleFeature("First Existing", "first-existing", "folder-one", "Implementation")]);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
-        FakeConsoleInteraction console = new(["First Existing"], ["First Existing (first-existing)", EditFeatureName, "Back"]);
+        FakeConsoleInteraction console = new([], ["First Existing (first-existing)", EditFeatureName, "Back"]);
+        console.EnqueueValueEdit("First Existing");
         string configurationPath = ProjectDevCraftConfigurationStore.PathFor(root.Path);
         DateTime writtenAt = new(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         File.SetLastWriteTimeUtc(configurationPath, writtenAt);
@@ -629,7 +676,8 @@ public sealed class FeatureCommandTests
             Guid.NewGuid().ToString(),
             [SampleFeature("First Existing", "first-existing", "folder-one", "Implementation")]);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
-        FakeConsoleInteraction console = new(["Renamed Feature"], ["First Existing (first-existing)", EditFeatureName, StartConversation]);
+        FakeConsoleInteraction console = new([], ["First Existing (first-existing)", EditFeatureName, StartConversation]);
+        console.EnqueueValueEdit("Renamed Feature");
         FakeFeatureAiSessionLauncher launcher = new();
 
         FeatureCommand.Run(context, ["list"], console, launcher);

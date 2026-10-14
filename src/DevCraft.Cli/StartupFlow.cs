@@ -118,7 +118,7 @@ public sealed class StartupFlow
 
         if (!hasSdlcWorkflowMarkers && !scanResult.AiDrivenSdlc.Detected)
         {
-            ProjectProfile selectedProfile = SelectProjectProfile(scanResult.ProjectProfile);
+            ProjectProfile selectedProfile = SelectProjectProfile(context.CurrentDirectory, scanResult.ProjectProfile);
             InstallDevCraft(context.CurrentDirectory, selectedProfile, context.ProfileDirectory);
         }
 
@@ -179,51 +179,52 @@ public sealed class StartupFlow
             []);
     }
 
-    private ProjectProfile SelectProjectProfile(ProjectProfile aiProfile)
+    private ProjectProfile SelectProjectProfile(string directoryPath, ProjectProfile aiProfile)
     {
-        string selectedName = SelectSuggestedOrCustom(
-            "What should we call this project?",
-            aiProfile.Name,
-            "Enter a custom project name");
+        string suggestedName = string.IsNullOrWhiteSpace(aiProfile.Name)
+            ? DefaultProjectName(directoryPath)
+            : aiProfile.Name.Trim();
 
-        string selectedDescription = SelectSuggestedOrCustom(
-            "Tell me what this project is about.",
-            aiProfile.Description,
-            "Enter a custom project description",
-            true);
-
-        return new ProjectProfile(selectedName, selectedDescription, selectedDescription);
+        return EditProjectProfile(suggestedName, aiProfile.Description);
     }
 
     private ProjectProfile AskForNewProjectProfile(string directoryPath)
     {
-        string defaultName = Path.GetFileName(Path.GetFullPath(directoryPath).TrimEnd(Path.DirectorySeparatorChar));
-        string projectName = console.Ask($"What should we call this project? [{defaultName}]");
-
-        if (string.IsNullOrWhiteSpace(projectName))
-        {
-            projectName = defaultName;
-        }
-
-        TextEditResult projectDescriptionResult = console.EditText(new TextEditOptions("Project Description", string.Empty));
-        string projectDescription = projectDescriptionResult.Saved ? projectDescriptionResult.Text.Trim() : string.Empty;
-
-        return new ProjectProfile(projectName, projectDescription, projectDescription);
+        return EditProjectProfile(DefaultProjectName(directoryPath), string.Empty);
     }
 
-    private string SelectSuggestedOrCustom(string prompt, string suggestion, string customChoice, bool largeText = false)
+    internal static string DefaultProjectName(string directoryPath)
     {
-        string useSuggestionChoice = $"Use AI suggestion: {suggestion}";
-        string selected = console.Select(prompt, [useSuggestionChoice, customChoice]);
+        return Path.GetFileName(Path.GetFullPath(directoryPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+    }
 
-        if (selected == customChoice)
+    // Cancel keeps the shown defaults: installation has no abort path, so Esc means "use what is shown".
+    private ProjectProfile EditProjectProfile(string suggestedName, string suggestedDescription)
+    {
+        string projectName = suggestedName;
+
+        while (true)
         {
-            return largeText
-                ? console.EditText(new TextEditOptions(prompt, suggestion)).Text.Trim()
-                : console.Ask(prompt);
+            ValueEditResult nameResult = console.EditValue("Project Profile", "Project name", projectName, required: true);
+
+            if (nameResult.Saved)
+            {
+                projectName = nameResult.Value.Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(projectName))
+            {
+                break;
+            }
+
+            console.WriteStatus("Project name is required.");
+            projectName = string.Empty;
         }
 
-        return suggestion;
+        TextEditResult descriptionResult = console.EditText(new TextEditOptions("Project Description", suggestedDescription));
+        string projectDescription = descriptionResult.Saved ? descriptionResult.Text.Trim() : suggestedDescription.Trim();
+
+        return new ProjectProfile(projectName, projectDescription, projectDescription);
     }
 
     private static void InstallDevCraft(string directoryPath, ProjectProfile? projectProfile, string profileDirectory)

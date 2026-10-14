@@ -27,7 +27,7 @@ public static class TerminalGuiTextEditor
                 editedText = editor.Document?.Text ?? string.Empty;
             });
 
-        int contentTop = TerminalGuiHeader.AddTo(window);
+        int contentTop = TerminalGuiHeader.AddTo(window, app.Screen.Height);
         Label hint = new()
         {
             Text = "Ctrl+S Save | Esc Cancel | Ctrl+Z Undo | Ctrl+Y Redo | Ctrl+V Paste",

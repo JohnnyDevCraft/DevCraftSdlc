@@ -135,7 +135,14 @@ public static class FeatureCommand
         DevCraftFeature feature,
         IConsoleInteraction console)
     {
-        string newName = console.Ask("What is the new feature name?").Trim();
+        ValueEditResult edit = console.EditValue("Edit Feature Name", "Feature name", feature.Name, required: true);
+
+        if (!edit.Saved)
+        {
+            return (projectConfiguration, feature, "Feature name is unchanged.");
+        }
+
+        string newName = edit.Value.Trim();
 
         if (string.IsNullOrWhiteSpace(newName))
         {

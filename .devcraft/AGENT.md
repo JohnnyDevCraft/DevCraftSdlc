@@ -58,13 +58,13 @@
 
 ## Active Feature Tracking
 
-- Active Feature ID: 1976e2e8-7abe-4726-a69b-5d1e15daf2d8
-- Active Feature Name: Issues running on Windows
+- Active Feature ID: eb957661-e935-4694-8077-1beda3154834
+- Active Feature Name: Fix Editing, and Default Values
 - Active Feature Storage: system-central
 - Active Feature Operator Mode: Agent Operator Mode
 - Active Feature State: Implementation
-- Current Implementation Phase: Phases 1 and 2 implemented; awaiting push, first Windows CI run, and the operator's Windows test. Phase 3 blocked on that test.
-- Previous Active Feature: 74b0a273-4e74-4998-bc52-eaa127dfa71f Enable Feature Rename (Implementation; final phase done, awaiting operator review and install of the beta 16 build)
+- Current Implementation Phase: All phases implemented and validated locally; released as 1.0.0-beta.17. Awaiting CI on the tagged push and the operator smoke test (VAL-007).
+- Previous Active Feature: 1976e2e8-7abe-4726-a69b-5d1e15daf2d8 Issues running on Windows (Implementation; Phases 1 and 2 done and pushed, Windows CI green; awaiting the operator's Windows test, which unblocks Phase 3)
 
 ## Working Agreements
 
@@ -78,3 +78,4 @@
 - Implementation must follow TDD: red test, green implementation, refactor while tests stay green.
 - DevCraft installation creates and maintains `.devcraft/` artifacts only; preserve root `AGENT.md` and `AGENTS.md` if they already exist.
 - Context files must be updated as part of completed work.
+- CLI inputs that edit an existing value or offer a default use a pre-filled Terminal.Gui form (`EditValue` / `EditFields` / `EditText`) that can be saved as-is or changed. Spectre `Ask` is only for inputs with no existing or default value. (Operator directive, 2026-10-14, feature eb957661-e935-4694-8077-1beda3154834.)

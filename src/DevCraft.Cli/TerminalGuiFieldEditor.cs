@@ -14,12 +14,33 @@ public static class TerminalGuiFieldEditor
         using IApplication app = Application.Create();
         app.Init();
 
+        Label validation = new()
+        {
+            Text = string.Empty,
+            X = 0,
+            Y = Pos.AnchorEnd(2),
+            Width = Dim.Fill(),
+        };
+
         using TerminalGuiFieldEditorWindow window = new(
             app,
             $"{options.Title} - Ctrl+S Save, Esc Cancel",
-            () => saved = true);
+            () =>
+            {
+                FieldEditField? missing = FieldEditValidation.FirstMissingRequired(options.Fields, ReadValues(inputs));
 
-        int row = TerminalGuiHeader.AddTo(window);
+                if (missing is not null)
+                {
+                    validation.Text = $"{missing.Label} is required.";
+                    inputs[missing.Key].SetFocus();
+                    return false;
+                }
+
+                saved = true;
+                return true;
+            });
+
+        int row = TerminalGuiHeader.AddTo(window, app.Screen.Height);
 
         foreach (FieldEditField field in options.Fields)
         {
@@ -57,15 +78,18 @@ public static class TerminalGuiFieldEditor
         };
         save.Accepted += (_, _) => window.SaveAndStop();
         cancel.Accepted += (_, _) => window.CancelAndStop();
-        window.Add(save, cancel);
+        window.Add(validation, save, cancel);
 
         app.Run(window);
 
-        IReadOnlyDictionary<string, string> values = inputs.ToDictionary(
+        return new FieldEditResult(saved, ReadValues(inputs));
+    }
+
+    private static IReadOnlyDictionary<string, string> ReadValues(Dictionary<string, TextField> inputs)
+    {
+        return inputs.ToDictionary(
             pair => pair.Key,
             pair => pair.Value.Value ?? string.Empty,
             StringComparer.Ordinal);
-
-        return new FieldEditResult(saved, values);
     }
 }
