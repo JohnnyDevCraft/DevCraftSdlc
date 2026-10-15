@@ -79,6 +79,40 @@ public static class ProfileConfigurationReader
             schemaVersion)
         {
             DefaultFeatureStorage = NormalizeFeatureStorage(configuration.DefaultFeatureStorage),
+            FeatureTypes = NormalizeFeatureTypes(configuration.FeatureTypes),
+            GitTooling = NormalizeGitTooling(configuration.GitTooling),
+        };
+    }
+
+    private static IReadOnlyList<string> NormalizeFeatureTypes(IReadOnlyList<string>? featureTypes)
+    {
+        List<string> normalized = (featureTypes ?? [])
+            .Where(featureType => !string.IsNullOrWhiteSpace(featureType))
+            .Select(featureType => featureType.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return normalized.Count == 0
+            ? DevCraftProfileConfiguration.DefaultFeatureTypes
+            : normalized;
+    }
+
+    private static GitToolingSettings NormalizeGitTooling(GitToolingSettings? gitTooling)
+    {
+        Dictionary<string, string> variables = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach ((string name, string? value) in gitTooling?.BranchVariables ?? new Dictionary<string, string>())
+        {
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                variables[name.Trim()] = value?.Trim() ?? string.Empty;
+            }
+        }
+
+        return new GitToolingSettings
+        {
+            BranchTemplate = gitTooling?.BranchTemplate?.Trim() ?? string.Empty,
+            BranchVariables = variables,
         };
     }
 

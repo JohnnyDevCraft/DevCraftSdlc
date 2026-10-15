@@ -62,9 +62,11 @@ public static class DevCraftMenuCommand
         IDevCraftAiSessionLauncher launcher,
         IFeatureAiSessionLauncher featureLauncher,
         ISituationSummaryGenerator? summaryGenerator = null,
-        IRepositoryDocumentAgent? documentAgent = null)
+        IRepositoryDocumentAgent? documentAgent = null,
+        IGitRunner? gitRunner = null)
     {
         documentAgent ??= new TerminalRepositoryDocumentAgent();
+        gitRunner ??= new ProcessGitRunner();
         ProjectDevCraftConfiguration? projectConfiguration = ProjectDevCraftConfigurationReader.Read(context.CurrentDirectory);
 
         if (projectConfiguration is null)
@@ -106,13 +108,13 @@ public static class DevCraftMenuCommand
                     notice = RunSituationalConversation(context, console, launcher, projectConfiguration);
                     break;
                 case Features:
-                    notice = LaunchClient(() => RunFeatureMenu(context, console, featureLauncher));
+                    notice = LaunchClient(() => RunFeatureMenu(context, console, featureLauncher, gitRunner, documentAgent));
                     break;
                 case Skills:
                     notice = RunSkillsMenu(context, console, launcher, projectConfiguration);
                     break;
                 case ConfigureDevCraft:
-                    notice = LaunchClient(() => RunConfigureDevCraft(context, console, launcher, projectConfiguration));
+                    notice = LaunchClient(() => RunConfigureDevCraft(context, console, launcher, projectConfiguration, gitRunner));
                     break;
             }
         }
@@ -246,12 +248,13 @@ public static class DevCraftMenuCommand
         StartupContext context,
         IConsoleInteraction console,
         IDevCraftAiSessionLauncher launcher,
-        ProjectDevCraftConfiguration projectConfiguration)
+        ProjectDevCraftConfiguration projectConfiguration,
+        IGitRunner gitRunner)
     {
         console.ShowMenuShell();
         string selected = console.Select(
             "Configure DevCraft",
-            [EditSoul, ImportSettings, ChangeFeatureStorage, ConfigureSituationalAwareness, ConfigureSupportedClients, AddDevCraftToDesktopAgent, CreateSkill, CreateStandards, CreateArchitecture, CreateProjectType, Back]);
+            [EditSoul, ImportSettings, ChangeFeatureStorage, ConfigureSituationalAwareness, ConfigureSupportedClients, GitToolingConfigurationCommand.ConfigureGitTooling, AddDevCraftToDesktopAgent, CreateSkill, CreateStandards, CreateArchitecture, CreateProjectType, Back]);
 
         switch (selected)
         {
@@ -271,6 +274,9 @@ public static class DevCraftMenuCommand
                 break;
             case ConfigureSupportedClients:
                 RunConfigureSupportedClients(context, console);
+                break;
+            case GitToolingConfigurationCommand.ConfigureGitTooling:
+                GitToolingConfigurationCommand.Run(context, console, gitRunner);
                 break;
             case AddDevCraftToDesktopAgent:
                 ShowDesktopAgentInstructions(context, console);
@@ -1171,7 +1177,9 @@ public static class DevCraftMenuCommand
     private static string? RunFeatureMenu(
         StartupContext context,
         IConsoleInteraction console,
-        IFeatureAiSessionLauncher featureLauncher)
+        IFeatureAiSessionLauncher featureLauncher,
+        IGitRunner gitRunner,
+        IRepositoryDocumentAgent documentAgent)
     {
         console.ShowMenuShell();
         string selected = console.Select("Feature options", [ListFeatures, NewFeature, Back]);
@@ -1191,7 +1199,14 @@ public static class DevCraftMenuCommand
             }
 
             FeatureStorageSelector.EnsureSelected(context, console, projectConfiguration);
-            FeatureCommand.Run(context, ["list"], console, featureLauncher, selectHandoff: () => SelectHandoff(context, console));
+            FeatureCommand.Run(
+                context,
+                ["list"],
+                console,
+                featureLauncher,
+                selectHandoff: () => SelectHandoff(context, console),
+                gitRunner: gitRunner,
+                commitAgent: documentAgent);
             return null;
         }
 

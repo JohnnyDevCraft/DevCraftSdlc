@@ -737,6 +737,8 @@ public static class ProfileStructureInitializer
             existing.SituationConnection)
         {
             DefaultFeatureStorage = existing.DefaultFeatureStorage,
+            FeatureTypes = existing.FeatureTypes,
+            GitTooling = existing.GitTooling,
         };
 
         if (File.Exists(configurePath))

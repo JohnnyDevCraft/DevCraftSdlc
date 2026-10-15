@@ -83,6 +83,27 @@ Project Management also offers two headless runs of the operator's default agent
 
 Both runs must preserve the Project Status and Discovery Stage values.
 
+## Git Tooling
+
+DevCraft runs everyday git work itself, so it does not need an AI agent session for it.
+
+`Configure DevCraft` → `Configure GIT Tooling` stores its settings in the profile `.DevCraft/configure.json`:
+
+- `Setup GIT Configuration (Email & Name)` opens a form pre-filled with the current `git config --global user.email` and `user.name`, and replaces both on save.
+- `Setup Branch Variables` adds, edits, and removes `GitTooling.BranchVariables`, a dictionary of template tokens and their values. `WorkItem`, `Title`, and `FeatureType` are built-in and cannot be redefined. A variable whose value is `INPUT` is asked for when a branch is created, but only when the template uses it.
+- `Setup Branch Template` sets `GitTooling.BranchTemplate`, for example `{adUser}/{FeatureType}/{WorkItem}-{Title}`. Tokens match case-insensitively. A token with no variable is asked for, the same as `INPUT`.
+
+`FeatureTypes` (default `["enabler", "bug", "story"]`) is the list offered for `{FeatureType}`. It is separate from the spec `Type` values.
+
+`Feature actions` adds four git actions. They act on the current repository and do not change feature state:
+
+- `Commit Code` stages every change and asks the default agent, headless, for a commit message only. DevCraft then commits and pushes to `origin`, setting the upstream when the branch has none. With a clean tree, DevCraft calls no agent and pushes only when the branch is ahead or has no upstream.
+- `Switch and Pull` lists local and `origin` branches, switches to the selected one, and pulls when it has an upstream. When there are uncommitted changes, it offers `Commit Code first` or `Cancel`.
+- `Create Branch` branches from the current branch, using either the template or a custom name. The template path pre-fills Title from the feature name and WorkItem from its external reference, and shows the resolved name for editing. Values are made ref-safe, and Title is capped at 55 characters. The name is validated with `git check-ref-format --branch` and must not already exist.
+- `Merge From` commits the current changes (without pushing), switches to the selected source branch and pulls it, switches back, and merges the source into the original branch. Conflicts are listed and left for the operator to resolve.
+
+DevCraft never runs destructive recovery such as `reset --hard`, `clean`, `merge --abort`, or a force push. A failed step stops the action with a notice.
+
 ## DevCraft Control Folder
 
 The hidden `.devcraft/` folder is the source of truth for DevCraft workflow artifacts.
@@ -325,6 +346,7 @@ DevCraft supports two branching models.
 ### Advanced Branching
 
 - Create a feature branch from the master branch for each implementation feature.
+- `Create Branch` in Feature actions can build the name from the profile branch template (see Git Tooling).
 - Use the naming convention:
   - `[username]/[bug|feature|task|enabler]/[ticket-id]-[ai_generated_description_up_to_55_chars]`
 

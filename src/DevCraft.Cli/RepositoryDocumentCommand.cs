@@ -84,7 +84,7 @@ public static class RepositoryDocumentCommand
         string prompt,
         IReadOnlyList<string> allowedFiles)
     {
-        SupportedTerminalClient client = DefaultClient(context);
+        SupportedTerminalClient client = DefaultTerminalClient.Resolve(context);
         RepositoryDocumentSyncResult result;
 
         try
@@ -118,12 +118,5 @@ public static class RepositoryDocumentCommand
         }
 
         return (result, string.Join(' ', parts));
-    }
-
-    private static SupportedTerminalClient DefaultClient(StartupContext context)
-    {
-        return SupportedTerminalClientResolver.Resolve(
-            SoulDefaultAgentStore.Read(context.SoulFilePath),
-            ProfileConfigurationReader.Read(context.ProfileDirectory).SupportedClients);
     }
 }

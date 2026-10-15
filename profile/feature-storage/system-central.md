@@ -73,6 +73,10 @@ Selecting a feature from the list opens a `Feature actions` menu:
 - `Edit Feature Name` - asks for a new name and writes it to both indexes: `Name` in the repository `.devcraft/configure.json` and `feature-name` in profile `features/projects.json`. The slug, GUID folder name, storage type, external reference, status, and description do not change, and feature artifacts are not edited.
 - `Open Feature Directory using Code` - runs `code {feature-dir}` to open the feature's artifact folder in Visual Studio Code. System Central features open `features/{feature-guid}` in the profile DevCraft folder; Repo Central features open `.devcraft/features/{feature-guid}` in the repository. Features on external storage have no local directory.
 - `Start a conversation about the feature` - opens the Starting Prompt editor (Ctrl+S to continue, Esc to cancel), selects the AI client, and starts a session for the feature with the operator's text appended as the final `Operator starting prompt:` section.
+- `Commit Code` - commits all changes with an agent-written message and pushes to `origin`, creating the upstream when needed.
+- `Switch and Pull` - switches to a local or `origin` branch and pulls it.
+- `Create Branch` - creates and switches to a new branch named from the profile branch template or a custom name.
+- `Merge From` - commits the current changes, refreshes a source branch, and merges it into the current branch.
 - `Back` - returns without starting anything.
 
 Because a rename keeps the slug, agents can keep resolving a renamed feature by slug or by folder name.

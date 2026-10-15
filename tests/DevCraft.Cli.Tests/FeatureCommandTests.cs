@@ -560,8 +560,35 @@ public sealed class FeatureCommandTests
 
         int actionsIndex = console.SelectTitles.FindIndex(title => title == "Feature actions");
         Assert.True(actionsIndex > console.SelectTitles.FindIndex(title => title == "Select a feature"));
-        Assert.Equal([EditFeatureName, OpenFeatureDirectory, StartConversation, "Back"], console.SelectChoices[actionsIndex]);
+        Assert.Equal([EditFeatureName, OpenFeatureDirectory, StartConversation, "Commit Code", "Switch and Pull", "Create Branch", "Merge From", "Back"], console.SelectChoices[actionsIndex]);
         Assert.Equal("Work on existing feature.", Assert.Single(launcher.Launches).Instruction);
+    }
+
+    [Fact]
+    public void ListCreateBranchRunsGitAndReturnsToFeatureActionsWithNotice()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        WriteSystemCentralRepository(
+            root.Path,
+            Guid.NewGuid().ToString(),
+            [SampleFeature("First Existing", "first-existing", "folder-one", "Implementation")]);
+        StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
+        FakeConsoleInteraction console = new([], ["First Existing (first-existing)", "Create Branch", "Enter a custom branch name", "Back"]);
+        console.EnqueueValueEdit("topic/new-work");
+        FakeGitRunner git = new FakeGitRunner()
+            .On("symbolic-ref --short -q HEAD", output: "main\n")
+            .On("show-ref --verify --quiet refs/heads/topic/new-work", exitCode: 1);
+        FakeFeatureAiSessionLauncher launcher = new();
+
+        FeatureCommand.Run(context, ["list"], console, launcher, gitRunner: git, commitAgent: new FakeRepositoryDocumentAgent());
+
+        Assert.Contains("switch -c topic/new-work", git.Calls);
+        Assert.Contains(
+            $"Created branch topic/new-work from main and switched to it.{Environment.NewLine}{Environment.NewLine}Feature actions",
+            console.SelectTitles);
+        Assert.Empty(launcher.Launches);
     }
 
     [Fact]

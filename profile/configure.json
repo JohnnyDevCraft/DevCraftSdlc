@@ -295,5 +295,14 @@
   "SituationScale": "weeks",
   "SituationStorage": "file",
   "SituationConnection": null,
+  "FeatureTypes": [
+    "enabler",
+    "bug",
+    "story"
+  ],
+  "GitTooling": {
+    "BranchTemplate": "",
+    "BranchVariables": {}
+  },
   "SchemaVersion": 1
 }

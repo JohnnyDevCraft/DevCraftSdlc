@@ -99,4 +99,66 @@ public sealed class ProfileConfigurationReaderTests
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => ProfileConfigurationReader.ReadFile(path));
         Assert.Contains("newer than this DevCraft version supports", exception.Message);
     }
+    [Fact]
+    public void ReadFileDefaultsFeatureTypesAndEmptyGitToolingWhenMissing()
+    {
+        using TestDirectory root = new();
+        string path = Path.Combine(root.Path, "configure.json");
+        File.WriteAllText(path, """{ "SchemaVersion": 1 }""");
+
+        DevCraftProfileConfiguration configuration = ProfileConfigurationReader.ReadFile(path);
+
+        Assert.Equal(["enabler", "bug", "story"], configuration.FeatureTypes);
+        Assert.Equal(string.Empty, configuration.GitTooling.BranchTemplate);
+        Assert.Empty(configuration.GitTooling.BranchVariables);
+    }
+
+    [Fact]
+    public void FeatureTypesAndGitToolingRoundTripThroughWriter()
+    {
+        using TestDirectory root = new();
+        DevCraftProfileConfigurationWriter.Write(
+            root.Path,
+            new DevCraftProfileConfiguration([], [], [], [], [], [], [])
+            {
+                FeatureTypes = ["feature", " bug ", "feature", ""],
+                GitTooling = new GitToolingSettings
+                {
+                    BranchTemplate = "{adUser}/{FeatureType}/{WorkItem}-{Title}",
+                    BranchVariables = new Dictionary<string, string> { ["adUser"] = "jdoe", ["Team"] = "INPUT" },
+                },
+            });
+
+        DevCraftProfileConfiguration configuration = ProfileConfigurationReader.Read(root.Path);
+
+        Assert.Equal(["feature", "bug"], configuration.FeatureTypes);
+        Assert.Equal("{adUser}/{FeatureType}/{WorkItem}-{Title}", configuration.GitTooling.BranchTemplate);
+        Assert.Equal("jdoe", configuration.GitTooling.BranchVariables["adUser"]);
+        Assert.Equal("INPUT", configuration.GitTooling.BranchVariables["Team"]);
+    }
+
+    [Fact]
+    public void ProfileStructureEnsurePreservesFeatureTypesAndGitTooling()
+    {
+        using TestDirectory root = new();
+        string profile = Path.Combine(root.Path, ".DevCraft");
+        DevCraftProfileConfigurationWriter.Write(
+            profile,
+            new DevCraftProfileConfiguration([], [], [], [], [], [], [])
+            {
+                FeatureTypes = ["task"],
+                GitTooling = new GitToolingSettings
+                {
+                    BranchTemplate = "{WorkItem}",
+                    BranchVariables = new Dictionary<string, string> { ["adUser"] = "jdoe" },
+                },
+            });
+
+        ProfileStructureInitializer.Ensure(profile);
+
+        DevCraftProfileConfiguration configuration = ProfileConfigurationReader.Read(profile);
+        Assert.Equal(["task"], configuration.FeatureTypes);
+        Assert.Equal("{WorkItem}", configuration.GitTooling.BranchTemplate);
+        Assert.Equal("jdoe", configuration.GitTooling.BranchVariables["adUser"]);
+    }
 }

@@ -772,6 +772,22 @@ public sealed class DevCraftMenuCommandTests : IDisposable
     }
 
     [Fact]
+    public void RunConfigureGitToolingOpensGitToolingMenu()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        FakeConsoleInteraction console = new([], ["Configure DevCraft", "Configure GIT Tooling", "Setup Branch Template", "Back", "Exit"]);
+        console.EnqueueValueEdit("{adUser}/{FeatureType}/{WorkItem}-{Title}");
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher(), gitRunner: new FakeGitRunner());
+
+        int configureIndex = console.SelectTitles.FindIndex(title => title == "Configure DevCraft");
+        Assert.Contains("Configure GIT Tooling", console.SelectChoices[configureIndex]);
+        Assert.Equal("{adUser}/{FeatureType}/{WorkItem}-{Title}", ProfileConfigurationReader.Read(context.ProfileDirectory).GitTooling.BranchTemplate);
+    }
+
+    [Fact]
     public void RunConfigureSituationalAwarenessDatabaseShowsMongoDockerInstructions()
     {
         using TestDirectory root = new();

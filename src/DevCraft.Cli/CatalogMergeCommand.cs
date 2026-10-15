@@ -64,7 +64,12 @@ public static class CatalogMergeCommand
             target.SituationEnabled,
             target.SituationScale,
             target.SituationStorage,
-            target.SituationConnection);
+            target.SituationConnection)
+        {
+            DefaultFeatureStorage = target.DefaultFeatureStorage,
+            FeatureTypes = target.FeatureTypes,
+            GitTooling = target.GitTooling,
+        };
 
         return (
             configuration,

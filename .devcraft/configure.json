@@ -115,6 +115,15 @@
       "StorageType": "system-central",
       "ExternalReference": null,
       "Status": "Complete"
+    },
+    {
+      "Name": "GIT Management Feature",
+      "Slug": "git-management-feature",
+      "ShortDescription": "Run Git from DevCraft without an agent: Feature Types, Configure GIT Tooling (identity, branch variables, branch template), and Commit Code, Switch and Pull, Create Branch, and Merge From feature actions (beta 20).",
+      "FolderName": "ce090732-f01f-4810-be42-1a79d54fbeed",
+      "StorageType": "system-central",
+      "ExternalReference": null,
+      "Status": "Implementation"
     }
   ]
 }

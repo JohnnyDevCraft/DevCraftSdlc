@@ -16,5 +16,11 @@ public sealed record DevCraftProfileConfiguration(
 {
     public const int CurrentSchemaVersion = 1;
 
+    public static readonly IReadOnlyList<string> DefaultFeatureTypes = ["enabler", "bug", "story"];
+
     public string DefaultFeatureStorage { get; init; } = FeatureStorageMode.SystemCentral;
+
+    public IReadOnlyList<string> FeatureTypes { get; init; } = DefaultFeatureTypes;
+
+    public GitToolingSettings GitTooling { get; init; } = new();
 }

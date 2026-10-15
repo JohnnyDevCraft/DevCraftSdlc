@@ -13,6 +13,10 @@ public static class FeatureCommand
     private const string EditFeatureName = "Edit Feature Name";
     private const string OpenFeatureDirectory = "Open Feature Directory using Code";
     private const string StartConversation = "Start a conversation about the feature";
+    private const string CommitCode = "Commit Code";
+    private const string SwitchAndPull = "Switch and Pull";
+    private const string CreateBranch = "Create Branch";
+    private const string MergeFrom = "Merge From";
 
     public static void Run(
         StartupContext context,
@@ -21,7 +25,9 @@ public static class FeatureCommand
         IFeatureAiSessionLauncher launcher,
         AgentHandoff? handoff = null,
         Func<AgentHandoff>? selectHandoff = null,
-        IFeatureDirectoryOpener? directoryOpener = null)
+        IFeatureDirectoryOpener? directoryOpener = null,
+        IGitRunner? gitRunner = null,
+        IRepositoryDocumentAgent? commitAgent = null)
     {
         ProfileStructureInitializer.Ensure(context.ProfileDirectory);
         ProjectDevCraftConfiguration? projectConfiguration = ProjectDevCraftConfigurationReader.Read(context.CurrentDirectory);
@@ -43,7 +49,12 @@ public static class FeatureCommand
         if (args[0].Equals("list", StringComparison.OrdinalIgnoreCase))
         {
             DevCraftProfileConfiguration profileConfiguration = ProfileConfigurationReader.Read(context.ProfileDirectory);
-            ListFeatures(context, projectConfiguration, profileConfiguration, console, launcher, handoff, selectHandoff, directoryOpener ?? new CodeFeatureDirectoryOpener());
+            GitFeatureActions gitActions = new(
+                context,
+                console,
+                gitRunner ?? new ProcessGitRunner(),
+                commitAgent ?? new TerminalRepositoryDocumentAgent());
+            ListFeatures(context, projectConfiguration, profileConfiguration, console, launcher, handoff, selectHandoff, directoryOpener ?? new CodeFeatureDirectoryOpener(), gitActions);
             return;
         }
 
@@ -78,7 +89,8 @@ public static class FeatureCommand
         IFeatureAiSessionLauncher launcher,
         AgentHandoff? handoff,
         Func<AgentHandoff>? selectHandoff,
-        IFeatureDirectoryOpener directoryOpener)
+        IFeatureDirectoryOpener directoryOpener,
+        GitFeatureActions gitActions)
     {
         IReadOnlyList<DevCraftFeature> features = projectConfiguration.Features;
 
@@ -106,7 +118,7 @@ public static class FeatureCommand
                 notice is null
                     ? FeatureActions
                     : $"{notice}{Environment.NewLine}{Environment.NewLine}{FeatureActions}",
-                [EditFeatureName, OpenFeatureDirectory, StartConversation, Back]);
+                [EditFeatureName, OpenFeatureDirectory, StartConversation, CommitCode, SwitchAndPull, CreateBranch, MergeFrom, Back]);
 
             if (action == Back)
             {
@@ -127,6 +139,12 @@ public static class FeatureCommand
                 continue;
             }
 
+            if (action is CommitCode or SwitchAndPull or CreateBranch or MergeFrom)
+            {
+                notice = RunGitAction(action, feature, gitActions);
+                continue;
+            }
+
             if (!TryResolveHandoff(context, console, handoff, selectHandoff, out AgentHandoff? conversationHandoff))
             {
                 return;
@@ -139,6 +157,24 @@ public static class FeatureCommand
                 conversationHandoff,
                 "Work on existing feature.");
             return;
+        }
+    }
+
+    private static string? RunGitAction(string action, DevCraftFeature feature, GitFeatureActions gitActions)
+    {
+        try
+        {
+            return action switch
+            {
+                CommitCode => gitActions.CommitCode(),
+                SwitchAndPull => gitActions.SwitchAndPull(),
+                CreateBranch => gitActions.CreateBranch(feature),
+                _ => gitActions.MergeFrom(),
+            };
+        }
+        catch (InvalidOperationException exception)
+        {
+            return exception.Message;
         }
     }
 
