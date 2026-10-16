@@ -1521,6 +1521,26 @@ public sealed class FeatureCommandTests
         Assert.Equal(["Back", "Completed", "Beta (beta)"], console.SelectChoices[console.SelectTitles.IndexOf("Select a feature")]);
     }
 
+    [Theory]
+    [InlineData("list")]
+    [InlineData("new")]
+    public void KeylessConfig_ListAndNew_ReportAndDoNotThrow(string command)
+    {
+        using TestDirectory root = new();
+        string profile = Path.Combine(root.Path, ".DevCraft");
+        string repo = Path.Combine(root.Path, "repo");
+        Directory.CreateDirectory(Path.Combine(repo, ".devcraft"));
+        File.WriteAllText(ProjectDevCraftConfigurationStore.PathFor(repo), """{ "SelectedFeatureStorage": "system-central" }""");
+        FakeConsoleInteraction console = new([]);
+        FakeFeatureAiSessionLauncher launcher = new();
+
+        FeatureCommand.Run(new StartupContext(repo, profile, Path.Combine(profile, "soul.md")), [command, "Thing"], console, launcher, gitRunner: new FakeGitRunner());
+
+        Assert.Contains("This folder's .devcraft/configure.json has no ProjectKey. Run `devcraft -force` here to repair it.", console.StatusMessages);
+        Assert.Empty(launcher.Launches);
+        Assert.Equal("""{ "SelectedFeatureStorage": "system-central" }""", File.ReadAllText(ProjectDevCraftConfigurationStore.PathFor(repo)));
+    }
+
     private const string EditFeatureName = "Edit Feature Name";
     private const string OpenFeatureDirectory = "Open Feature Directory using Code";
     private const string StartConversation = "Start a conversation about the feature";

@@ -42,4 +42,25 @@ public sealed class DevCraftRepositoryUpgradePromptBuilderTests
         Assert.Contains(".DevCraft/features/<guid>", prompt);
         Assert.Contains("feature browsing", prompt, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void IncludesFallbackKeyProfileAndRequiredFields()
+    {
+        using TestDirectory root = new();
+        StartupContext context = new(root.Path, Path.Combine(root.Path, ".DevCraft"), Path.Combine(root.Path, ".DevCraft", "soul.md"));
+        ProjectDevCraftConfiguration configuration = new(
+            "4f7c2b1e-1111-2222-3333-444455556666",
+            null,
+            "features.json",
+            new ProjectProfile("Code Arc", "Ship the arc.", "Arc services."),
+            []);
+
+        string prompt = DevCraftRepositoryUpgradePromptBuilder.Build(new DevCraftRepositoryUpgradeRequest(context, configuration, "1.0.0-beta.22", null, "system-central"));
+
+        Assert.Contains("- ProjectKey: 4f7c2b1e-1111-2222-3333-444455556666", prompt);
+        Assert.Contains("- ProjectProfile.Name: Code Arc", prompt);
+        Assert.Contains("- ProjectProfile.Purpose: Ship the arc.", prompt);
+        Assert.Contains("- ProjectProfile.Description: Arc services.", prompt);
+        Assert.Contains("must keep ProjectKey, SelectedFeatureStorage, FeaturesIndexPath, and ProjectProfile (Name, Purpose, Description)", prompt);
+    }
 }

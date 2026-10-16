@@ -462,6 +462,57 @@ public sealed class StartupFlowTests
     }
 
     [Fact]
+    public void RunForce_AgentDropsKeyAndProfile_DevCraftRestoresThem()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string soul = Path.Combine(profile, "soul.md");
+        Directory.CreateDirectory(profile);
+        File.WriteAllText(soul, "- Default terminal AI agent: Codex");
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
+        string key = ProjectDevCraftConfigurationReader.Read(root.Path)!.ProjectKey;
+        FakeDevCraftRepositoryUpgradeLauncher upgrade = new()
+        {
+            OnUpgrade = request => File.WriteAllText(
+                ProjectDevCraftConfigurationStore.PathFor(request.Context.CurrentDirectory),
+                """{ "SelectedFeatureStorage": "system-central", "FeaturesIndexPath": "features.json" }"""),
+        };
+
+        new StartupFlow(new FakeConsoleInteraction([]), new FakeAiProjectScanner(new ProjectScanResult(SampleProfile, [], new AiSdlcDetection(false, null))), () => [], upgrade)
+            .Run(new StartupContext(root.Path, profile, soul), forceInstall: true);
+
+        ProjectDevCraftConfiguration repaired = ProjectDevCraftConfigurationReader.Read(root.Path)!;
+        Assert.Equal(key, repaired.ProjectKey);
+        Assert.Equal(SampleProfile, repaired.ProjectProfile);
+        Assert.Equal("system-central", repaired.SelectedFeatureStorage);
+    }
+
+    [Fact]
+    public void RunForce_KeylessConfig_GetsKeyBeforeUpgrade()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        string profile = Path.Combine(profileRoot.Path, ".DevCraft");
+        string soul = Path.Combine(profile, "soul.md");
+        Directory.CreateDirectory(profile);
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        File.WriteAllText(soul, "- Default terminal AI agent: Codex");
+        File.WriteAllText(ProjectDevCraftConfigurationStore.PathFor(root.Path), """{ "SelectedFeatureStorage": "system-central" }""");
+        FakeDevCraftRepositoryUpgradeLauncher upgrade = new();
+
+        new StartupFlow(new FakeConsoleInteraction([]), new FakeAiProjectScanner(new ProjectScanResult(SampleProfile, [], new AiSdlcDetection(false, null))), () => [], upgrade)
+            .Run(new StartupContext(root.Path, profile, soul), forceInstall: true);
+
+        DevCraftRepositoryUpgradeRequest request = Assert.Single(upgrade.Requests);
+        Assert.True(Guid.TryParse(request.ProjectConfiguration.ProjectKey, out _));
+        ProjectDevCraftConfiguration saved = ProjectDevCraftConfigurationReader.Read(root.Path)!;
+        Assert.Equal(request.ProjectConfiguration.ProjectKey, saved.ProjectKey);
+        Assert.Equal(Path.GetFileName(root.Path), saved.ProjectProfile.Name);
+    }
+
+    [Fact]
     public void RunForceInDevCraftFolderWithMissingConfigurationLaunchesUpgradeAgent()
     {
         using TestDirectory root = new();

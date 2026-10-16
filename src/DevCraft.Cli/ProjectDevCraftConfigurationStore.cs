@@ -23,6 +23,7 @@ public static class ProjectDevCraftConfigurationStore
     public static void Write(string projectDirectory, ProjectDevCraftConfiguration configuration)
     {
         string path = PathFor(projectDirectory);
+        ProfileFolderGuard.ThrowIfProfile(Path.GetDirectoryName(path)!);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
         File.WriteAllText(path, Serialize(configuration));

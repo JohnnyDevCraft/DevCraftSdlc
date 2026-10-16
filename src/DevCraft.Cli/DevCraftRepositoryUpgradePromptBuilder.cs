@@ -27,6 +27,14 @@ public static class DevCraftRepositoryUpgradePromptBuilder
 
             Effective feature storage for this repository: {{request.EffectiveFeatureStorage}}
 
+            Fallback project context (use these exact values when configure.json is missing, invalid, or lacks them):
+            - ProjectKey: {{request.ProjectConfiguration.ProjectKey}}
+            - ProjectProfile.Name: {{request.ProjectConfiguration.ProjectProfile.Name}}
+            - ProjectProfile.Purpose: {{request.ProjectConfiguration.ProjectProfile.Purpose}}
+            - ProjectProfile.Description: {{request.ProjectConfiguration.ProjectProfile.Description}}
+
+            Repository .devcraft/configure.json must keep ProjectKey, SelectedFeatureStorage, FeaturesIndexPath, and ProjectProfile (Name, Purpose, Description). Never change an existing ProjectKey.
+
             Rules:
             - Read actual files before changing them.
             - Preserve user-authored content.

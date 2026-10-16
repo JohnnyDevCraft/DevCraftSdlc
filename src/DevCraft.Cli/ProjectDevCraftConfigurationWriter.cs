@@ -4,6 +4,7 @@ public static class ProjectDevCraftConfigurationWriter
 {
     public static string WriteIfMissing(string controlDirectory, ProjectProfile profile)
     {
+        ProfileFolderGuard.ThrowIfProfile(controlDirectory);
         string path = Path.Combine(controlDirectory, "configure.json");
 
         if (File.Exists(path))

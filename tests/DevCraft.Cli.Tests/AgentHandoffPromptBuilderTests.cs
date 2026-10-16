@@ -100,6 +100,23 @@ public sealed class AgentHandoffPromptBuilderTests
         Assert.Contains("- Branch: None", prompt);
     }
 
+    [Fact]
+    public void NoProjectKey_SaysNoRepositoryConfiguration()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+
+        string prompt = AgentHandoffPromptBuilder.Build(
+            Context(root, profileRoot),
+            Configuration() with { ProjectKey = string.Empty },
+            null,
+            "Start a situational conversation with the user.",
+            string.Empty);
+
+        Assert.Contains("- Repository configuration: none (DevCraft is not running in a project folder)", prompt);
+        Assert.DoesNotContain(ProjectDevCraftConfigurationStore.PathFor(root.Path), prompt);
+    }
+
     private static ProjectDevCraftConfiguration Configuration()
     {
         return new ProjectDevCraftConfiguration(

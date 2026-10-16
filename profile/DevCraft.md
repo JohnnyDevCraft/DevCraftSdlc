@@ -137,6 +137,8 @@ Repository configuration lives in `.devcraft/configure.json`.
 - `SelectedFeatureStorage` is the storage type new features get in this repository.
 - `Features` lists only repo-central features, and is left out when there are none. Features of every storage type are indexed in profile `.DevCraft/features/projects.json`, which also records each feature's `work-item-id`, `external-reference` (the work item URL), and `branch`, and each project's `working-copies` and `repo-remote`. See `feature-storage/system-central.md`.
 
+DevCraft never treats the folder that holds the profile (normally `~`) as a project. On case-insensitive file systems its `.devcraft` is the profile folder `~/.DevCraft` itself. Run there, DevCraft installs nothing, never runs the `-force` upgrade, refuses `devcraft feature ...`, and opens a profile-only menu (Logging, Situational Conversation, Skills, Configure DevCraft without feature storage). Writing a project `configure.json` into the profile folder is refused everywhere. A `configure.json` with no `ProjectKey` is reported ("run `devcraft -force` here to repair it"); `-force` restores a missing key or profile after the upgrade agent runs.
+
 Feature storage selection is repository-scoped. The profile `.DevCraft/configure.json` catalogs available feature storage types, but it must not store the selected feature storage for every repository. If `.devcraft/configure.json` does not have a `SelectedFeatureStorage` value when a user lists or creates features, DevCraft must ask the user to choose one and save that choice back to the current repository's `.devcraft/configure.json`. Changing feature storage from Configure DevCraft updates only the current repository.
 
 ## Situational Awareness AI Handoff

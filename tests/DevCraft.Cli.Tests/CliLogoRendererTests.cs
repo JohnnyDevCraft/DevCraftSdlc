@@ -43,7 +43,7 @@ public sealed class CliLogoRendererTests
 
         string output = logo.ToPlainText();
 
-        Assert.Contains("Version 1.0.0-beta.21 | ~/Source/repos/DevCraft | master +2", output);
+        Assert.Contains("Version 1.0.0-beta.22 | ~/Source/repos/DevCraft | master +2", output);
         Assert.DoesNotContain("+", logo.VersionLine.Replace("master +2", string.Empty, StringComparison.Ordinal));
     }
 
@@ -54,7 +54,7 @@ public sealed class CliLogoRendererTests
 
         CliLogo logo = CliLogoRenderer.Create();
 
-        Assert.Contains("Version 1.0.0-beta.21 | ~/Source/repos/ShipSimV3 | main -4", logo.VersionLine);
+        Assert.Contains("Version 1.0.0-beta.22 | ~/Source/repos/ShipSimV3 | main -4", logo.VersionLine);
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public sealed class CliLogoRendererTests
     {
         CliLogo logo = CliLogoRenderer.Create(new CliHeaderContext("~/Source/repos/DevCraft", "feature/header", null));
 
-        Assert.Equal("Version 1.0.0-beta.21 | ~/Source/repos/DevCraft | feature/header", logo.VersionLine);
+        Assert.Equal("Version 1.0.0-beta.22 | ~/Source/repos/DevCraft | feature/header", logo.VersionLine);
     }
 
     [Fact]

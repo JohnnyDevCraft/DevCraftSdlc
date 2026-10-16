@@ -75,6 +75,42 @@ public sealed class ProjectDevCraftConfigurationStoreTests
         Assert.Equal(feature, Assert.Single(ProjectDevCraftConfigurationReader.Read(root.Path)!.Features));
     }
 
+    [Fact]
+    public void Read_MissingProfile_Defaults()
+    {
+        using TestDirectory root = new();
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        File.WriteAllText(ProjectDevCraftConfigurationStore.PathFor(root.Path), """{ "ProjectKey": "key-1", "SelectedFeatureStorage": "system-central" }""");
+
+        ProjectDevCraftConfiguration configuration = ProjectDevCraftConfigurationReader.Read(root.Path)!;
+
+        Assert.Equal(new ProjectProfile(Path.GetFileName(root.Path), "Pending.", "Pending."), configuration.ProjectProfile);
+        Assert.Equal("system-central", configuration.SelectedFeatureStorage);
+    }
+
+    [Fact]
+    public void Read_ProfileMissingFields_Defaults()
+    {
+        using TestDirectory root = new();
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        File.WriteAllText(ProjectDevCraftConfigurationStore.PathFor(root.Path), """{ "ProjectKey": "key-1", "ProjectProfile": { "Name": "Arc" } }""");
+
+        Assert.Equal(new ProjectProfile("Arc", "Pending.", "Pending."), ProjectDevCraftConfigurationReader.Read(root.Path)!.ProjectProfile);
+    }
+
+    [Fact]
+    public void Read_MissingKey_IsEmpty()
+    {
+        using TestDirectory root = new();
+        Directory.CreateDirectory(Path.Combine(root.Path, ".devcraft"));
+        File.WriteAllText(ProjectDevCraftConfigurationStore.PathFor(root.Path), "{}");
+
+        ProjectDevCraftConfiguration configuration = ProjectDevCraftConfigurationReader.Read(root.Path)!;
+
+        Assert.Equal(string.Empty, configuration.ProjectKey);
+        Assert.Equal("features.json", configuration.FeaturesIndexPath);
+    }
+
     private static ProjectDevCraftConfiguration Configuration(IReadOnlyList<DevCraftFeature> features)
     {
         return new ProjectDevCraftConfiguration("key-1", FeatureStorageMode.SystemCentral, "features.json", Profile, features);

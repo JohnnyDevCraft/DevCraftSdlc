@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace DevCraft.Cli;
 
 public sealed class StartupFlow
@@ -52,6 +54,12 @@ public sealed class StartupFlow
         else if (profileState.SoulFileExists)
         {
             console.WriteStatus($"Soul file found: {profileState.SoulFilePath}");
+        }
+
+        if (ProfileHome.Is(context))
+        {
+            console.WriteStatus(ProfileHome.Notice(context));
+            return true;
         }
 
         console.ShowStartupStage("Checking for code...");
@@ -131,6 +139,11 @@ public sealed class StartupFlow
             ProjectDevCraftConfigurationReader.Read(context.CurrentDirectory)
             ?? CreateLegacyProjectConfiguration(context.CurrentDirectory);
 
+        if (string.IsNullOrWhiteSpace(projectConfiguration.ProjectKey))
+        {
+            projectConfiguration = projectConfiguration with { ProjectKey = Guid.NewGuid().ToString() };
+        }
+
         DevCraftProfileConfiguration profileConfiguration = ProfileConfigurationReader.Read(context.ProfileDirectory);
         string currentVersion = DevCraftCurrentVersionProvider.Get();
         string? repositoryVersion = DevCraftRepositoryVersionStore.Read(context.CurrentDirectory);
@@ -157,10 +170,62 @@ public sealed class StartupFlow
             return false;
         }
 
+        RestoreProjectIdentity(context.CurrentDirectory, projectConfiguration);
         DevCraftRepositoryVersionStore.Write(context.CurrentDirectory, currentVersion);
         console.WriteStatus($"DevCraft repository upgraded to {currentVersion}: {result.Summary}");
 
         return true;
+    }
+
+    // The upgrade agent rewrites configure.json; put back a project key or profile it left out.
+    private static void RestoreProjectIdentity(string repositoryDirectory, ProjectDevCraftConfiguration handedOff)
+    {
+        string path = ProjectDevCraftConfigurationStore.PathFor(repositoryDirectory);
+        ProjectDevCraftConfiguration? written = null;
+        bool hasKey = false;
+        bool hasProfile = false;
+
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(path));
+            JsonElement root = document.RootElement;
+            hasKey = HasProperty(root, "ProjectKey", JsonValueKind.String, out JsonElement key) && key.GetString()!.Trim().Length > 0;
+            hasProfile = HasProperty(root, "ProjectProfile", JsonValueKind.Object, out _);
+            written = ProjectDevCraftConfigurationReader.Read(repositoryDirectory);
+        }
+        catch (Exception exception) when (exception is IOException or JsonException)
+        {
+        }
+
+        if (written is not null && hasKey && hasProfile)
+        {
+            return;
+        }
+
+        ProjectDevCraftConfigurationStore.Write(
+            repositoryDirectory,
+            written is null
+                ? handedOff
+                : written with
+                {
+                    ProjectKey = hasKey ? written.ProjectKey : handedOff.ProjectKey,
+                    ProjectProfile = hasProfile ? written.ProjectProfile : handedOff.ProjectProfile,
+                });
+    }
+
+    private static bool HasProperty(JsonElement element, string name, JsonValueKind kind, out JsonElement value)
+    {
+        foreach (JsonProperty property in element.EnumerateObject())
+        {
+            if (property.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && property.Value.ValueKind == kind)
+            {
+                value = property.Value;
+                return true;
+            }
+        }
+
+        value = default;
+        return false;
     }
 
     private static ProjectDevCraftConfiguration CreateLegacyProjectConfiguration(string repositoryDirectory)

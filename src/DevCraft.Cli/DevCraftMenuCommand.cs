@@ -68,7 +68,12 @@ public static class DevCraftMenuCommand
     {
         documentAgent ??= new TerminalRepositoryDocumentAgent();
         gitRunner ??= new ProcessGitRunner();
-        ProjectDevCraftConfiguration? projectConfiguration = ProjectDevCraftConfigurationReader.Read(context.CurrentDirectory);
+
+        // In the profile home the repository configuration path is the profile itself, so it is never read.
+        bool profileHome = ProfileHome.Is(context);
+        ProjectDevCraftConfiguration? projectConfiguration = profileHome
+            ? ProfileHomeConfiguration()
+            : ProjectDevCraftConfigurationReader.Read(context.CurrentDirectory);
 
         if (projectConfiguration is null)
         {
@@ -79,7 +84,9 @@ public static class DevCraftMenuCommand
 
         while (true)
         {
-            projectConfiguration = ProjectDevCraftConfigurationReader.Read(context.CurrentDirectory);
+            projectConfiguration = profileHome
+                ? projectConfiguration
+                : ProjectDevCraftConfigurationReader.Read(context.CurrentDirectory);
 
             if (projectConfiguration is null)
             {
@@ -93,7 +100,9 @@ public static class DevCraftMenuCommand
             notice = null;
             string selected = console.Select(
                 title,
-                [ProjectManagement, Logging, SituationalConversation, Features, Skills, ConfigureDevCraft, Exit]);
+                profileHome
+                    ? [Logging, SituationalConversation, Skills, ConfigureDevCraft, Exit]
+                    : [ProjectManagement, Logging, SituationalConversation, Features, Skills, ConfigureDevCraft, Exit]);
 
             switch (selected)
             {
@@ -115,10 +124,21 @@ public static class DevCraftMenuCommand
                     notice = RunSkillsMenu(context, console, launcher, projectConfiguration);
                     break;
                 case ConfigureDevCraft:
-                    notice = LaunchClient(() => RunConfigureDevCraft(context, console, launcher, projectConfiguration, gitRunner));
+                    notice = LaunchClient(() => RunConfigureDevCraft(context, console, launcher, projectConfiguration, gitRunner, profileHome));
                     break;
             }
         }
+    }
+
+    // Profile-wide actions launched from the profile home get this stand-in; it is never written anywhere.
+    private static ProjectDevCraftConfiguration ProfileHomeConfiguration()
+    {
+        return new ProjectDevCraftConfiguration(
+            string.Empty,
+            null,
+            "features.json",
+            new ProjectProfile("DevCraft profile", "Profile-wide DevCraft work outside any project.", "Profile-wide DevCraft work outside any project."),
+            []);
     }
 
     private static string? RunProjectManagementMenu(
@@ -251,12 +271,18 @@ public static class DevCraftMenuCommand
         IConsoleInteraction console,
         IDevCraftAiSessionLauncher launcher,
         ProjectDevCraftConfiguration projectConfiguration,
-        IGitRunner gitRunner)
+        IGitRunner gitRunner,
+        bool profileHome)
     {
+        List<string> choices = [EditSoul, ImportSettings, ChangeFeatureStorage, ConfigureSituationalAwareness, ConfigureSupportedClients, GitToolingConfigurationCommand.ConfigureGitTooling, AddDevCraftToDesktopAgent, CreateSkill, CreateStandards, CreateArchitecture, CreateProjectType, Back];
+
+        if (profileHome)
+        {
+            choices.Remove(ChangeFeatureStorage);
+        }
+
         console.ShowMenuShell();
-        string selected = console.Select(
-            "Configure DevCraft",
-            [EditSoul, ImportSettings, ChangeFeatureStorage, ConfigureSituationalAwareness, ConfigureSupportedClients, GitToolingConfigurationCommand.ConfigureGitTooling, AddDevCraftToDesktopAgent, CreateSkill, CreateStandards, CreateArchitecture, CreateProjectType, Back]);
+        string selected = console.Select("Configure DevCraft", choices);
 
         switch (selected)
         {

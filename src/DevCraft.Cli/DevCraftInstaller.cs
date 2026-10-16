@@ -9,6 +9,7 @@ public static class DevCraftInstaller
     {
         ProjectProfile profile = ResolveProjectProfile(projectDirectory, projectProfile);
         string controlDirectory = Path.Combine(projectDirectory, ".devcraft");
+        ProfileFolderGuard.ThrowIfProfile(controlDirectory);
         List<string> createdPaths = [];
         List<string> preservedPaths = [];
 

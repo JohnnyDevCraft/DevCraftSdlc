@@ -8,9 +8,13 @@ public sealed class FakeDevCraftRepositoryUpgradeLauncher : IDevCraftRepositoryU
 
     public List<DevCraftRepositoryUpgradeRequest> Requests { get; } = [];
 
+    // Simulates what the upgrade agent writes before it reports back.
+    public Action<DevCraftRepositoryUpgradeRequest>? OnUpgrade { get; set; }
+
     public DevCraftRepositoryUpgradeResult Upgrade(DevCraftRepositoryUpgradeRequest request)
     {
         Requests.Add(request);
+        OnUpgrade?.Invoke(request);
 
         return Result;
     }

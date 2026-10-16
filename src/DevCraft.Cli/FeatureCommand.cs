@@ -37,12 +37,24 @@ public static class FeatureCommand
         string? workItemId = null,
         string? workItemUrl = null)
     {
+        if (ProfileHome.Is(context))
+        {
+            console.WriteStatus(ProfileHome.Notice(context));
+            return;
+        }
+
         ProfileStructureInitializer.Ensure(context.ProfileDirectory);
         ProjectDevCraftConfiguration? projectConfiguration = ProjectDevCraftConfigurationReader.Read(context.CurrentDirectory);
 
         if (projectConfiguration is null)
         {
             console.WriteStatus("DevCraft is not initialized in this repository.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(projectConfiguration.ProjectKey))
+        {
+            console.WriteStatus("This folder's .devcraft/configure.json has no ProjectKey. Run `devcraft -force` here to repair it.");
             return;
         }
 

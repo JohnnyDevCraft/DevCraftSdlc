@@ -10,7 +10,9 @@ public static class AgentHandoffPromptBuilder
         string startingPrompt)
     {
         string profileDirectory = context.ProfileDirectory;
-        string repoConfigurationPath = ProjectDevCraftConfigurationStore.PathFor(context.CurrentDirectory);
+        string repoConfigurationPath = string.IsNullOrWhiteSpace(projectConfiguration.ProjectKey)
+            ? "none (DevCraft is not running in a project folder)"
+            : ProjectDevCraftConfigurationStore.PathFor(context.CurrentDirectory);
         string featureText = feature is null
             ? "No active feature was selected for this handoff."
             : $"""
