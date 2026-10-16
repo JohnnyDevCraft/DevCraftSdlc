@@ -35,18 +35,16 @@ public static class DevCraftRepositoryUpgradePromptBuilder
             - Both repository-central and system-central feature folders must use GUID folder names.
             - Repository-central feature folders live under repository .devcraft/features/<guid>.
             - System-central feature folders live under profile .DevCraft/features/<guid>.
-            - Keep repository .devcraft/configure.json feature history and profile .DevCraft/features/projects.json feature history aligned.
-            - Repository .devcraft/configure.json is the source for the active codebase when DevCraft is run in this folder.
-            - Profile .DevCraft/features/projects.json is the cross-folder project and feature history index.
+            - Profile .DevCraft/features/projects.json indexes every feature of every storage type for this project; feature browsing reads it.
+            - Repository .devcraft/configure.json Features lists only repo-central features. DevCraft moves any other entry into projects.json and removes it from configure.json the next time it runs here.
             - Ensure feature browsing can list migrated features after upgrade.
 
-            Repository configuration feature records should include Name, Slug, ShortDescription, FolderName, StorageType, ExternalReference, and Status.
-            Profile projects index entries should include project id, name, slug, repo-location, repo-name, and feature records with id, feature-name, slug, description, folder-name, storage-type, work-item-id, external-reference, and status.
+            Repository configuration feature records (repo-central only) should include Name, Slug, ShortDescription, FolderName, StorageType, ExternalReference (the work item URL), Status, WorkItemId, and Branch.
+            Profile projects index entries should include project id, name, slug, repo-name, repo-remote, working-copies (path, branch, last-seen), and feature records with id, feature-name, slug, description, folder-name, storage-type, work-item-id, external-reference, branch, and status.
 
             If effective storage is system-central:
             - Move or copy legacy repository feature folders into profile .DevCraft/features/<guid>.
-            - Update repository feature records so StorageType is system-central.
-            - Update profile projects.json with the same feature identities.
+            - Record the features in profile projects.json with StorageType system-central; do not keep them in repository configure.json.
 
             If effective storage is repo-central:
             - Keep feature artifacts under repository .devcraft/features/<guid>.

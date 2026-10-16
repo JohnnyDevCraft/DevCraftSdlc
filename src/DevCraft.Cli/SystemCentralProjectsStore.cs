@@ -1,5 +1,6 @@
 namespace DevCraft.Cli;
 
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 
@@ -46,15 +47,24 @@ public static class SystemCentralProjectsStore
 
     public static void Write(string profileDirectory, SystemCentralProjectsIndex index)
     {
-        string path = PathFor(profileDirectory);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-
-        string json = WriteJson(index);
-
-        File.WriteAllText(path, json);
+        WriteAtomically(PathFor(profileDirectory), WriteJson(index));
     }
 
-    public static void WriteIfChanged(string profileDirectory, SystemCentralProjectsIndex index)
+    // Reads, changes, and writes the index while holding the projects.json lock, so concurrent sessions
+    // never overwrite each other's changes. Throws ProjectsIndexBusyException when the lock is not free in time.
+    public static SystemCentralProjectsIndex Update(
+        string profileDirectory,
+        Func<SystemCentralProjectsIndex, SystemCentralProjectsIndex> change,
+        TimeSpan? timeout = null)
+    {
+        using IDisposable held = ProjectsIndexLock.Acquire(profileDirectory, timeout);
+        SystemCentralProjectsIndex updated = change(Read(profileDirectory));
+        WriteIfChanged(profileDirectory, updated);
+
+        return updated;
+    }
+
+    private static void WriteIfChanged(string profileDirectory, SystemCentralProjectsIndex index)
     {
         string path = PathFor(profileDirectory);
         string json = WriteJson(index);
@@ -64,8 +74,16 @@ public static class SystemCentralProjectsStore
             return;
         }
 
+        WriteAtomically(path, json);
+    }
+
+    // A crash mid-write leaves only the temporary file behind; projects.json is replaced in one step.
+    private static void WriteAtomically(string path, string json)
+    {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllText(path, json);
+        string temporaryPath = path + ".tmp";
+        File.WriteAllText(temporaryPath, json);
+        File.Move(temporaryPath, path, overwrite: true);
     }
 
     private static string WriteJson(SystemCentralProjectsIndex index)
@@ -87,8 +105,20 @@ public static class SystemCentralProjectsStore
                 writer.WriteString("id", project.ProjectKey);
                 writer.WriteString("name", project.Name);
                 writer.WriteString("slug", project.Slug);
-                writer.WriteString("repo-location", project.RepositoryPath);
                 writer.WriteString("repo-name", project.RepositoryName);
+                WriteNullableString(writer, "repo-remote", project.RepositoryRemote);
+                writer.WriteStartArray("working-copies");
+
+                foreach (WorkingCopy copy in project.WorkingCopies)
+                {
+                    writer.WriteStartObject();
+                    writer.WriteString("path", copy.Path);
+                    WriteNullableString(writer, "branch", copy.Branch);
+                    WriteNullableString(writer, "last-seen", copy.LastSeen?.UtcDateTime.ToString("O", CultureInfo.InvariantCulture));
+                    writer.WriteEndObject();
+                }
+
+                writer.WriteEndArray();
                 writer.WriteStartArray("features");
 
                 foreach (DevCraftFeature feature in project.Features)
@@ -100,8 +130,9 @@ public static class SystemCentralProjectsStore
                     writer.WriteString("description", feature.ShortDescription);
                     writer.WriteString("folder-name", feature.FolderName);
                     writer.WriteString("storage-type", feature.StorageType);
-                    WriteNullableString(writer, "work-item-id", FeatureWorkItemId(feature));
+                    WriteNullableString(writer, "work-item-id", feature.WorkItemId);
                     WriteNullableString(writer, "external-reference", feature.ExternalReference);
+                    WriteNullableString(writer, "branch", feature.Branch);
                     writer.WriteString("status", string.IsNullOrWhiteSpace(feature.Status) ? "Discovery" : feature.Status);
                     writer.WriteEndObject();
                 }
@@ -133,7 +164,6 @@ public static class SystemCentralProjectsStore
         string projectKey = ReadString(projectElement, "id", "ProjectKey");
         string name = ReadString(projectElement, "name", "Name");
         string slug = ReadString(projectElement, "slug", "Slug");
-        string repositoryPath = ReadString(projectElement, "repo-location", "RepositoryPath");
         List<DevCraftFeature> features = [];
 
         if (TryGetProperty(projectElement, out JsonElement featuresElement, "features", "Features") &&
@@ -148,7 +178,67 @@ public static class SystemCentralProjectsStore
             }
         }
 
-        return new SystemCentralProject(projectKey, name, slug, repositoryPath, features);
+        List<WorkingCopy> workingCopies = ReadWorkingCopies(projectElement);
+        string repositoryName = ReadString(projectElement, "repo-name", "RepositoryName");
+
+        if (repositoryName.Length == 0 && workingCopies.Count > 0)
+        {
+            repositoryName = SystemCentralProject.FolderName(workingCopies[0].Path);
+        }
+
+        return new SystemCentralProject(
+            projectKey,
+            name,
+            slug,
+            repositoryName,
+            ReadNullableString(projectElement, "repo-remote", "RepositoryRemote"),
+            workingCopies,
+            features);
+    }
+
+    // Files written before working copies were tracked hold one repository path; it becomes the first copy.
+    private static List<WorkingCopy> ReadWorkingCopies(JsonElement projectElement)
+    {
+        List<WorkingCopy> copies = [];
+
+        if (TryGetProperty(projectElement, out JsonElement copiesElement, "working-copies", "WorkingCopies") &&
+            copiesElement.ValueKind == JsonValueKind.Array)
+        {
+            foreach (JsonElement copyElement in copiesElement.EnumerateArray())
+            {
+                string path = copyElement.ValueKind == JsonValueKind.Object ? ReadString(copyElement, "path", "Path") : string.Empty;
+
+                if (path.Length > 0)
+                {
+                    copies.Add(new WorkingCopy(
+                        path,
+                        ReadNullableString(copyElement, "branch", "Branch"),
+                        ReadTimestamp(copyElement, "last-seen", "LastSeen")));
+                }
+            }
+
+            return copies;
+        }
+
+        string legacyPath = ReadString(projectElement, "repo-location", "RepositoryPath");
+
+        if (legacyPath.Length > 0)
+        {
+            copies.Add(new WorkingCopy(legacyPath, null, null));
+        }
+
+        return copies;
+    }
+
+    private static DateTimeOffset? ReadTimestamp(JsonElement element, params string[] names)
+    {
+        return DateTimeOffset.TryParse(
+            ReadNullableString(element, names),
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.RoundtripKind,
+            out DateTimeOffset value)
+            ? value
+            : null;
     }
 
     private static DevCraftFeature ReadFeature(JsonElement featureElement)
@@ -168,19 +258,9 @@ public static class SystemCentralProjectsStore
             folderName,
             storageType,
             externalReference,
-            string.IsNullOrWhiteSpace(status) ? "Discovery" : status);
-    }
-
-    private static string? FeatureWorkItemId(DevCraftFeature feature)
-    {
-        if (FeatureStorageMode.IsLocal(feature.StorageType))
-        {
-            return null;
-        }
-
-        return string.IsNullOrWhiteSpace(feature.ExternalReference)
-            ? null
-            : feature.ExternalReference.Trim();
+            string.IsNullOrWhiteSpace(status) ? "Discovery" : status,
+            ReadNullableString(featureElement, "work-item-id", "WorkItemId"),
+            ReadNullableString(featureElement, "branch", "Branch"));
     }
 
     private static string ReadString(JsonElement element, params string[] names)

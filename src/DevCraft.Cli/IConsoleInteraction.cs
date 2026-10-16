@@ -20,5 +20,7 @@ public interface IConsoleInteraction
 
     string Select(string title, IReadOnlyList<string> choices);
 
+    IReadOnlyList<string> SelectMany(string title, IReadOnlyList<string> choices);
+
     T RunStatus<T>(string message, Func<T> action);
 }

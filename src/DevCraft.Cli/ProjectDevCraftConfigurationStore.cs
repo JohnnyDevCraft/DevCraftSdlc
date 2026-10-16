@@ -1,9 +1,20 @@
 namespace DevCraft.Cli;
 
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 
 public static class ProjectDevCraftConfigurationStore
 {
+    // An empty Features list is left out so System Central repositories commit no feature index.
+    private static readonly JsonSerializerOptions Options = new()
+    {
+        WriteIndented = true,
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver
+        {
+            Modifiers = { OmitEmptyFeatures },
+        },
+    };
+
     public static string PathFor(string projectDirectory)
     {
         return Path.Combine(projectDirectory, ".devcraft", "configure.json");
@@ -14,14 +25,27 @@ public static class ProjectDevCraftConfigurationStore
         string path = PathFor(projectDirectory);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
-        string json = JsonSerializer.Serialize(
-            configuration,
-            new JsonSerializerOptions
-            {
-                WriteIndented = true,
-            });
+        File.WriteAllText(path, Serialize(configuration));
+    }
 
-        File.WriteAllText(path, json);
+    public static string Serialize(ProjectDevCraftConfiguration configuration)
+    {
+        return JsonSerializer.Serialize(configuration, Options);
+    }
+
+    private static void OmitEmptyFeatures(JsonTypeInfo typeInfo)
+    {
+        if (typeInfo.Type != typeof(ProjectDevCraftConfiguration))
+        {
+            return;
+        }
+
+        foreach (JsonPropertyInfo property in typeInfo.Properties)
+        {
+            if (property.Name == nameof(ProjectDevCraftConfiguration.Features))
+            {
+                property.ShouldSerialize = (_, value) => value is IReadOnlyList<DevCraftFeature> { Count: > 0 };
+            }
+        }
     }
 }
-

@@ -19,6 +19,10 @@ public static class AgentHandoffPromptBuilder
                 - Slug: {feature.Slug}
                 - Short description: {feature.ShortDescription}
                 - Folder name: {feature.FolderName}
+                - Storage: {feature.StorageType}
+                - Work item ID: {feature.WorkItemId ?? "None"}
+                - Work item URL: {feature.ExternalReference ?? "None"}
+                - Branch: {feature.Branch ?? "None"}
                 """;
         string situationContext = SituationPromptContextBuilder.Build(profileDirectory);
 

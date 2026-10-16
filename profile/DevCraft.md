@@ -95,11 +95,13 @@ DevCraft runs everyday git work itself, so it does not need an AI agent session 
 
 `FeatureTypes` (default `["enabler", "bug", "story"]`) is the list offered for `{FeatureType}`. It is separate from the spec `Type` values.
 
+`Feature actions` also offers `Edit Work Item` (Work Item ID and URL), `Set Feature to Current Branch` (links the working copy's current branch; one branch per feature and one feature per branch, confirmed before replacing or moving), and `Clear Feature Branch`. List Features shows the feature linked to the current branch first and marks where other working copies have features checked out. `Project Management` → `Remove Working Copy` removes a recorded working copy. Changing feature storage between Repo Central and System Central offers to move selected active features. New Feature asks for the feature name, an optional Work Item ID, and an optional Work Item URL.
+
 `Feature actions` adds four git actions. They act on the current repository and do not change feature state:
 
 - `Commit Code` stages every change and asks the default agent, headless, for a commit message only. DevCraft then commits and pushes to `origin`, setting the upstream when the branch has none. With a clean tree, DevCraft calls no agent and pushes only when the branch is ahead or has no upstream.
 - `Switch and Pull` lists local and `origin` branches, switches to the selected one, and pulls when it has an upstream. When there are uncommitted changes, it offers `Commit Code first` or `Cancel`.
-- `Create Branch` branches from the current branch, using either the template or a custom name. The template path pre-fills Title from the feature name and WorkItem from its external reference, and shows the resolved name for editing. Values are made ref-safe, and Title is capped at 55 characters. The name is validated with `git check-ref-format --branch` and must not already exist.
+- `Create Branch` branches from the current branch, using either the template or a custom name. The template path pre-fills Title from the feature name and WorkItem from its work item ID, and shows the resolved name for editing. Values are made ref-safe, and Title is capped at 55 characters. The name is validated with `git check-ref-format --branch` and must not already exist.
 - `Merge From` commits the current changes (without pushing), switches to the selected source branch and pulls it, switches back, and merges the source into the original branch. Conflicts are listed and left for the operator to resolve.
 
 DevCraft never runs destructive recovery such as `reset --hard`, `clean`, `merge --abort`, or a force push. A failed step stops the action with a notice.
@@ -131,9 +133,9 @@ Only create the feature files that are needed for the feature's current state, e
 
 Repository configuration lives in `.devcraft/configure.json`.
 
-- `ProjectKey` identifies the repository project and links it to profile-level System Central feature storage when that mode is selected.
-- `SelectedFeatureStorage` is the feature storage mechanism for this repository only.
-- `Features` is the local index of DevCraft features used by this repository, including external work item or issue links when applicable.
+- `ProjectKey` identifies the repository project and links every clone and worktree of the repository to its entry in profile `.DevCraft/features/projects.json`.
+- `SelectedFeatureStorage` is the storage type new features get in this repository.
+- `Features` lists only repo-central features, and is left out when there are none. Features of every storage type are indexed in profile `.DevCraft/features/projects.json`, which also records each feature's `work-item-id`, `external-reference` (the work item URL), and `branch`, and each project's `working-copies` and `repo-remote`. See `feature-storage/system-central.md`.
 
 Feature storage selection is repository-scoped. The profile `.DevCraft/configure.json` catalogs available feature storage types, but it must not store the selected feature storage for every repository. If `.devcraft/configure.json` does not have a `SelectedFeatureStorage` value when a user lists or creates features, DevCraft must ask the user to choose one and save that choice back to the current repository's `.devcraft/configure.json`. Changing feature storage from Configure DevCraft updates only the current repository.
 

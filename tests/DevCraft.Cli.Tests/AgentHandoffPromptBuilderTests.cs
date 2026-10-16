@@ -68,6 +68,38 @@ public sealed class AgentHandoffPromptBuilderTests
         return new StartupContext(root.Path, profile, Path.Combine(profile, "soul.md"));
     }
 
+    [Fact]
+    public void Feature_IncludesStorageWorkItemAndBranch()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+
+        string prompt = AgentHandoffPromptBuilder.Build(
+            Context(root, profileRoot),
+            Configuration(),
+            Feature() with { StorageType = FeatureStorageMode.RepoCentral, WorkItemId = "PROJ-482", ExternalReference = "https://jira.example.com/browse/PROJ-482", Branch = "story/482-linking" },
+            "Work on existing feature.",
+            string.Empty);
+
+        Assert.Contains("- Storage: repo-central", prompt);
+        Assert.Contains("- Work item ID: PROJ-482", prompt);
+        Assert.Contains("- Work item URL: https://jira.example.com/browse/PROJ-482", prompt);
+        Assert.Contains("- Branch: story/482-linking", prompt);
+    }
+
+    [Fact]
+    public void Feature_WithoutWorkItemOrBranch_SaysNone()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+
+        string prompt = AgentHandoffPromptBuilder.Build(Context(root, profileRoot), Configuration(), Feature(), "Work on existing feature.", string.Empty);
+
+        Assert.Contains("- Work item ID: None", prompt);
+        Assert.Contains("- Work item URL: None", prompt);
+        Assert.Contains("- Branch: None", prompt);
+    }
+
     private static ProjectDevCraftConfiguration Configuration()
     {
         return new ProjectDevCraftConfiguration(

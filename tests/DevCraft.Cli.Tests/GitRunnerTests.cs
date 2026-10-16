@@ -64,4 +64,27 @@ public sealed class GitRunnerTests
         Assert.True(File.Exists(Path.Combine(work, "b.txt")));
         Assert.Equal("main", git.Run(work, ["rev-parse", "--abbrev-ref", "HEAD"]).StandardOutput.Trim());
     }
+
+    [Fact]
+    public void GitRepositoryInfo_AgainstRealRepo_UnbornBranchReportsName()
+    {
+        using TestDirectory root = new();
+        ProcessGitRunner git = new();
+        git.Run(root.Path, ["-c", "init.defaultBranch=main", "init", "--quiet"]);
+        git.Run(root.Path, ["remote", "add", "origin", "git@github.com:Org/ProjectCodeArc.git"]);
+
+        GitRepositoryInfo info = GitRepositoryInfo.Read(git, root.Path);
+
+        Assert.True(info.IsRepository);
+        Assert.Equal("main", info.Branch);
+        Assert.Equal("git@github.com:Org/ProjectCodeArc.git", info.RemoteUrl);
+    }
+
+    [Fact]
+    public void GitRepositoryInfo_AgainstPlainFolder_IsNotARepository()
+    {
+        using TestDirectory root = new();
+
+        Assert.False(GitRepositoryInfo.Read(new ProcessGitRunner(), root.Path).IsRepository);
+    }
 }

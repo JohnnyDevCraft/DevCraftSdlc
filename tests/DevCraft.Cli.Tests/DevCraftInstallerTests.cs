@@ -23,7 +23,7 @@ public sealed class DevCraftInstallerTests
         Assert.Contains("\"SelectedFeatureStorage\": null", configureJson);
         Assert.Contains("\"FeaturesIndexPath\"", configureJson);
         Assert.Contains("\"features.json\"", configureJson);
-        Assert.Contains("\"Features\"", configureJson);
+        Assert.DoesNotContain("\"Features\"", configureJson);
         Assert.Contains("\"Sample Project\"", configureJson);
     }
 

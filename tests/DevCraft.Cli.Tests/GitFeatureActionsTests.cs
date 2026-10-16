@@ -6,7 +6,15 @@ public sealed class GitFeatureActionsTests
 {
     private const string CommitMessageResponse = """{ "success": true, "summary": "Login fix.", "message": "Fix login redirect\n\nKeep the return URL." }""";
 
-    private static readonly DevCraftFeature Feature = new("Fix login page", "fix-login-page", "Pending.", "folder", "system-central", "AB#1234");
+    private static readonly DevCraftFeature Feature = new(
+        "Fix login page",
+        "fix-login-page",
+        "Pending.",
+        "folder",
+        "system-central",
+        "https://dev.azure.com/org/project/_workitems/edit/1234",
+        "Discovery",
+        "AB#1234");
 
     [Fact]
     public void CommitCodeStagesAsksAgentForMessageCommitsAndPushesWithUpstream()
@@ -193,6 +201,39 @@ public sealed class GitFeatureActionsTests
         Assert.Contains("check-ref-format --branch jdoe/bug/1234-Fix-login-page-core", git.Calls);
         Assert.Contains("switch -c jdoe/bug/1234-Fix-login-page-core", git.Calls);
         Assert.Equal("Created branch jdoe/bug/1234-Fix-login-page-core from main and switched to it.", notice);
+    }
+
+    [Fact]
+    public void CreateBranch_DoesNotLinkFeatureBranch()
+    {
+        using TestDirectory root = new();
+        string profile = Path.Combine(root.Path, ".DevCraft");
+        FakeGitRunner git = CleanRepository("main").On("show-ref --verify --quiet refs/heads/topic/x", exitCode: 1);
+        FakeConsoleInteraction console = new([], ["Enter a custom branch name"]);
+        console.EnqueueValueEdit("topic/x");
+
+        string? notice = Actions(root, console, git, new FakeRepositoryDocumentAgent()).CreateBranch(Feature);
+
+        Assert.Equal("Created branch topic/x from main and switched to it.", notice);
+        Assert.False(File.Exists(SystemCentralProjectsStore.PathFor(profile)));
+        Assert.Null(Feature.Branch);
+    }
+
+    [Fact]
+    public void CreateBranch_NullWorkItemId_AsksForIt()
+    {
+        using TestDirectory root = new();
+        WriteProfile(root, "{WorkItem}-{Title}", new Dictionary<string, string>());
+        FakeGitRunner git = CleanRepository("main").On("show-ref --verify --quiet refs/heads/77-Thing", exitCode: 1);
+        FakeConsoleInteraction console = new([], ["Use branch template"]);
+        console.EnqueueFieldEdit(new Dictionary<string, string> { ["WorkItem"] = "77", ["Title"] = "Thing" });
+
+        string? notice = Actions(root, console, git, new FakeRepositoryDocumentAgent())
+            .CreateBranch(Feature with { WorkItemId = null });
+
+        FieldEditField workItem = console.FieldEditFields[0][0];
+        Assert.Equal(("WorkItem", string.Empty, true), (workItem.Key, workItem.InitialValue, workItem.Required));
+        Assert.Equal("Created branch 77-Thing from main and switched to it.", notice);
     }
 
     [Fact]

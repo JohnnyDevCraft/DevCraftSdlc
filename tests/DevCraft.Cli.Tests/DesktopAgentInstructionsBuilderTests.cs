@@ -137,6 +137,21 @@ public sealed class DesktopAgentInstructionsBuilderTests
         Assert.Contains($"Path relative to {root.Path}", text);
     }
 
+    [Fact]
+    public void SystemCentral_ReadsProjectsJson_NotConfigFeatures()
+    {
+        using TestDirectory root = new();
+        WriteConfiguration(root.Path, "file");
+
+        string text = DesktopAgentInstructionsBuilder.Build(root.Path);
+
+        Assert.Contains("That file indexes every feature of the project, whatever its storage type", text);
+        Assert.Contains("Features list holds only repo-central features", text);
+        Assert.Contains("\"branch\"", text);
+        Assert.Contains("\"work-item-id\"", text);
+        Assert.DoesNotContain("and the Features list (Name, Slug, FolderName, Status)", text);
+    }
+
     [Theory]
     [InlineData("disabled")]
     [InlineData("file")]

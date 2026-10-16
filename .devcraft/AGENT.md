@@ -58,9 +58,11 @@
 
 ## Active Feature Tracking
 
-- Active Feature ID: ce090732-f01f-4810-be42-1a79d54fbeed
-- Active Feature Name: GIT Management Feature (Implementation, Agent Operator Mode; all phases implemented and tested for 1.0.0-beta.20, not yet committed or released)
-- Last Completed Feature: 5aade414-d9f5-41ee-9425-21a41c35d52d Feature Listing & SpecKit Import & New Feature Form (Complete 2026-10-14; released as 1.0.0-beta.19, completed in Agent Operator Mode)
+- Active Feature ID: None
+- Active Feature Name: None
+- Last Completed Feature: 84ebd2e2-0e66-4100-adcf-fb4fc577fe55 Feature Repo Linking - Advanced (Complete 2026-10-16, Agent Operator Mode; built for 1.0.0-beta.21 and not yet committed, tagged, or released)
+- Open Feature: ce090732-f01f-4810-be42-1a79d54fbeed GIT Management Feature (Implementation; committed and released as 1.0.0-beta.20 in 61dc237)
+- Previously Completed Feature: 5aade414-d9f5-41ee-9425-21a41c35d52d Feature Listing & SpecKit Import & New Feature Form (Complete 2026-10-14; released as 1.0.0-beta.19, completed in Agent Operator Mode)
 - Open Feature: 1976e2e8-7abe-4726-a69b-5d1e15daf2d8 Issues running on Windows (Implementation; Phases 1 and 2 done and pushed, Windows CI green; awaiting the operator's Windows test, which unblocks Phase 3)
 
 ## Working Agreements

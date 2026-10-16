@@ -9,6 +9,7 @@ public sealed class FakeConsoleInteraction : IConsoleInteraction
     private readonly Queue<TextEditResult> textEdits = [];
     private readonly Queue<FieldEditResult> fieldEdits = [];
     private readonly Queue<ValueEditResult> valueEdits = [];
+    private readonly Queue<IReadOnlyList<string>> multiSelections = [];
 
     public FakeConsoleInteraction(IEnumerable<string> answers, IEnumerable<string>? selections = null)
     {
@@ -27,6 +28,10 @@ public sealed class FakeConsoleInteraction : IConsoleInteraction
     public List<IReadOnlyList<string>> SelectChoices { get; } = [];
 
     public List<string> AskPrompts { get; } = [];
+
+    public List<string> SelectManyTitles { get; } = [];
+
+    public List<IReadOnlyList<string>> SelectManyChoices { get; } = [];
 
     public List<string> ValueEditTitles { get; } = [];
 
@@ -47,6 +52,11 @@ public sealed class FakeConsoleInteraction : IConsoleInteraction
     public void EnqueueFieldEdit(IReadOnlyDictionary<string, string> values, bool saved = true)
     {
         fieldEdits.Enqueue(new FieldEditResult(saved, values));
+    }
+
+    public void EnqueueSelectMany(params string[] selected)
+    {
+        multiSelections.Enqueue(selected);
     }
 
     public void EnqueueValueEdit(string value, bool saved = true)
@@ -139,6 +149,15 @@ public sealed class FakeConsoleInteraction : IConsoleInteraction
         }
 
         return choices[0];
+    }
+
+    public IReadOnlyList<string> SelectMany(string title, IReadOnlyList<string> choices)
+    {
+        SelectManyTitles.Add(title);
+        Events.Add($"selectMany:{title}");
+        SelectManyChoices.Add(choices);
+
+        return multiSelections.Count > 0 ? multiSelections.Dequeue() : [];
     }
 
     public T RunStatus<T>(string message, Func<T> action)

@@ -254,7 +254,7 @@ public sealed class GitFeatureActions(
             }
             else if (token.Equals(BranchNameResolver.WorkItemToken, StringComparison.OrdinalIgnoreCase))
             {
-                fields.Add(new FieldEditField(token, "Work item", feature.ExternalReference ?? string.Empty, Required: true));
+                fields.Add(new FieldEditField(token, "Work item", feature.WorkItemId ?? string.Empty, Required: true));
             }
             else if (token.Equals(BranchNameResolver.TitleToken, StringComparison.OrdinalIgnoreCase))
             {

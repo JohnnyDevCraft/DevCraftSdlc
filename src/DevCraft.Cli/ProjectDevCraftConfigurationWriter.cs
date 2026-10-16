@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace DevCraft.Cli;
 
 public static class ProjectDevCraftConfigurationWriter
@@ -19,14 +17,7 @@ public static class ProjectDevCraftConfigurationWriter
             "features.json",
             profile,
             []);
-        string json = JsonSerializer.Serialize(
-            configuration,
-            new JsonSerializerOptions
-            {
-                WriteIndented = true,
-            });
-
-        File.WriteAllText(path, json);
+        File.WriteAllText(path, ProjectDevCraftConfigurationStore.Serialize(configuration));
 
         return path;
     }

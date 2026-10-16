@@ -18,14 +18,116 @@ public static class FeatureStorageSelector
     public static ProjectDevCraftConfiguration? Change(
         StartupContext context,
         IConsoleInteraction console,
-        ProjectDevCraftConfiguration projectConfiguration)
+        ProjectDevCraftConfiguration projectConfiguration,
+        IGitRunner? gitRunner = null)
     {
-        return SelectAndSave(
+        ProjectDevCraftConfiguration? updated = SelectAndSave(
             context,
             console,
             projectConfiguration,
             "Select the feature storage mechanism for this repository",
             includeBack: true);
+
+        if (updated is not null)
+        {
+            OfferMoves(context, console, updated, gitRunner ?? new ProcessGitRunner());
+        }
+
+        return updated;
+    }
+
+    // Existing features keep their storage unless the operator picks them. Only the two local storage types
+    // can be moved here; moving to ADO, GitHub, or JIRA comes in a later feature.
+    private static void OfferMoves(
+        StartupContext context,
+        IConsoleInteraction console,
+        ProjectDevCraftConfiguration configuration,
+        IGitRunner git)
+    {
+        string target = FeatureStorageResolver.Resolve(ProfileConfigurationReader.Read(context.ProfileDirectory), configuration);
+
+        if (!FeatureStorageMode.IsLocal(target))
+        {
+            console.WriteStatus(
+                $"Moving existing features to {target} will come in a later feature. Existing features stay where they are; new features will use {target}.");
+            return;
+        }
+
+        FeatureIndex index;
+
+        try
+        {
+            index = FeatureIndex.Load(context, configuration, git, console);
+        }
+        catch (ProjectsIndexBusyException exception)
+        {
+            console.WriteStatus(exception.Message);
+            return;
+        }
+
+        List<DevCraftFeature> movable = index.Features
+            .Where(feature => !feature.Status.Equals("Complete", StringComparison.OrdinalIgnoreCase)
+                && FeatureStorageMode.IsLocal(feature.StorageType)
+                && !feature.StorageType.Equals(target, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (movable.Count == 0)
+        {
+            return;
+        }
+
+        IReadOnlyList<string> selected = console.SelectMany(
+            $"Move existing features to {target}? Select none to leave them where they are.",
+            movable.Select(Choice).ToList());
+
+        if (selected.Count == 0)
+        {
+            console.WriteStatus("No features were moved.");
+            return;
+        }
+
+        List<string> moved = [];
+        List<string> failed = [];
+
+        foreach (DevCraftFeature feature in movable.Where(feature => selected.Contains(Choice(feature))))
+        {
+            FeatureMoveResult result = FeatureMover.Move(context, index, feature, target);
+            index = result.Index;
+
+            if (result.Moved)
+            {
+                moved.Add(result.Error is null ? feature.Name : $"{feature.Name} ({result.Error})");
+            }
+            else
+            {
+                failed.Add($"{feature.Name} ({result.Error})");
+            }
+        }
+
+        List<string> skipped = movable.Where(feature => !selected.Contains(Choice(feature))).Select(feature => feature.Name).ToList();
+        List<string> report = [];
+
+        if (moved.Count > 0)
+        {
+            report.Add($"Moved to {target}: {string.Join(", ", moved)}.");
+        }
+
+        if (skipped.Count > 0)
+        {
+            report.Add($"Not moved: {string.Join(", ", skipped)}.");
+        }
+
+        if (failed.Count > 0)
+        {
+            report.Add($"Failed: {string.Join(", ", failed)}.");
+        }
+
+        console.WriteStatus(string.Join(' ', report));
+    }
+
+    private static string Choice(DevCraftFeature feature)
+    {
+        return $"{feature.Name} ({feature.Slug})";
     }
 
     private static ProjectDevCraftConfiguration? SelectAndSave(

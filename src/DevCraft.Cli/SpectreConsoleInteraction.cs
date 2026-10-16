@@ -73,6 +73,18 @@ public sealed class SpectreConsoleInteraction : IConsoleInteraction
                 .AddChoices(choices));
     }
 
+    public IReadOnlyList<string> SelectMany(string title, IReadOnlyList<string> choices)
+    {
+        ShowMenuShell();
+
+        return AnsiConsole.Prompt(
+            new MultiSelectionPrompt<string>()
+                .Title(Markup.Escape(title))
+                .NotRequired()
+                .InstructionsText("[grey](Space to select, Enter to confirm)[/]")
+                .AddChoices(choices));
+    }
+
     public T RunStatus<T>(string message, Func<T> action)
     {
         return AnsiConsole

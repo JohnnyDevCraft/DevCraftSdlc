@@ -124,6 +124,15 @@
       "StorageType": "system-central",
       "ExternalReference": null,
       "Status": "Implementation"
+    },
+    {
+      "Name": "Feature Repo Linking - Advanced",
+      "Slug": "feature-repo-linking-advanced",
+      "ShortDescription": "Every working copy shares one central feature index: projects.json indexes all features (configure.json only repo-central ones), records working copies and the remote, links each feature to one branch, and stores work item ID and URL; locked atomic writes, key adoption by remote, local storage moves (beta 21).",
+      "FolderName": "84ebd2e2-0e66-4100-adcf-fb4fc577fe55",
+      "StorageType": "system-central",
+      "ExternalReference": null,
+      "Status": "Complete"
     }
   ]
 }

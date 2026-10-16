@@ -84,7 +84,7 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         using TestDirectory profileRoot = new();
         StartupContext context = MenuContext(root, profileRoot);
         FakeConsoleInteraction console = new([], ["Features", "New feature", "Exit"]);
-        console.EnqueueValueEdit("Cancelled Feature");
+        console.EnqueueFieldEdit(NewFeatureForm("Cancelled Feature"));
         console.EnqueueTextEdit("Discarded", saved: false);
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
@@ -102,7 +102,7 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         using TestDirectory profileRoot = new();
         StartupContext context = MenuContext(root, profileRoot);
         FakeConsoleInteraction console = new([], ["Features", "New feature", "OpenAI Codex (codex)", "Exit"]);
-        console.EnqueueValueEdit("Prompted Feature");
+        console.EnqueueFieldEdit(NewFeatureForm("Prompted Feature"));
         console.EnqueueTextEdit("Here is what this feature is about.");
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
@@ -300,6 +300,182 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         File.WriteAllText(Path.Combine(memory, "constitution.md"), "# Constitution\n\n## Principle I\n");
     }
 
+    [Fact]
+    public void NewFeature_AsksWorkItemIdAndUrl()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        FakeConsoleInteraction console = new([], ["Features", "Create new feature", "OpenAI Codex (codex)", "Exit"]);
+        console.EnqueueFieldEdit(NewFeatureForm("Linked Feature", " PROJ-482 ", " https://jira.example.com/browse/PROJ-482 "));
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        DevCraftFeature feature = Assert.Single(Assert.Single(SystemCentralProjectsStore.Read(context.ProfileDirectory).Projects).Features);
+        Assert.Equal("PROJ-482", feature.WorkItemId);
+        Assert.Equal("https://jira.example.com/browse/PROJ-482", feature.ExternalReference);
+    }
+
+    [Fact]
+    public void NewFeature_EmptyValues_StoredAsNull()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        FakeConsoleInteraction console = new([], ["Features", "Create new feature", "OpenAI Codex (codex)", "Exit"]);
+        console.EnqueueFieldEdit(NewFeatureForm("Plain Feature", "   ", ""));
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        DevCraftFeature feature = Assert.Single(Assert.Single(SystemCentralProjectsStore.Read(context.ProfileDirectory).Projects).Features);
+        Assert.Null(feature.WorkItemId);
+        Assert.Null(feature.ExternalReference);
+    }
+
+    [Fact]
+    public void NewFeature_InvalidUrl_ReopensFormPrefilled()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        FakeConsoleInteraction console = new([], ["Features", "Create new feature", "OpenAI Codex (codex)", "Exit"]);
+        console.EnqueueFieldEdit(NewFeatureForm("Linked Feature", "1234", "dev.azure.com/org/p/_workitems/edit/1234"));
+        console.EnqueueFieldEdit(NewFeatureForm("Linked Feature", "1234", "https://dev.azure.com/org/p/_workitems/edit/1234"));
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        Assert.Equal(2, console.FieldEditTitles.Count);
+        Assert.Contains("Work Item URL must be an absolute http or https URL.", console.FieldEditTitles[1], StringComparison.Ordinal);
+        Assert.Equal(
+            ["Linked Feature", "1234", "dev.azure.com/org/p/_workitems/edit/1234"],
+            console.FieldEditFields[1].Select(field => field.InitialValue));
+        Assert.Equal(
+            "https://dev.azure.com/org/p/_workitems/edit/1234",
+            Assert.Single(Assert.Single(SystemCentralProjectsStore.Read(context.ProfileDirectory).Projects).Features).ExternalReference);
+    }
+
+    [Theory]
+    [InlineData("1234")]
+    [InlineData("PROJ-482")]
+    [InlineData("AB#1234")]
+    [InlineData("#57")]
+    public void NewFeature_FreeTextIds_Accepted(string workItemId)
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        FakeConsoleInteraction console = new([], ["Features", "Create new feature", "OpenAI Codex (codex)", "Exit"]);
+        console.EnqueueFieldEdit(NewFeatureForm("Any Tracker", workItemId));
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        Assert.Equal(workItemId, Assert.Single(Assert.Single(SystemCentralProjectsStore.Read(context.ProfileDirectory).Projects).Features).WorkItemId);
+    }
+
+    [Fact]
+    public void RemoveWorkingCopy_Confirm_Removes()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        string other = Path.Combine(root.Path, "Active Work 1", "ProjectCodeArc");
+        Directory.CreateDirectory(other);
+        WriteCopies(context, new WorkingCopy(other, "story/1", new DateTimeOffset(2026, 10, 15, 8, 30, 0, TimeSpan.Zero)), new WorkingCopy(root.Path, "main", null));
+        string choice = $"Active Work 1 — {other} — story/1 — last seen 2026-10-15 08:30 UTC";
+        FakeConsoleInteraction console = new([], ["Project Management", "Remove Working Copy", choice, "Yes", "Exit"]);
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        Assert.Contains(choice, console.SelectChoices[console.SelectTitles.IndexOf("Remove Working Copy")]);
+        Assert.Contains($"Remove working copy {other}?", console.SelectTitles);
+        Assert.Equal([root.Path], CopyPaths(context));
+        Assert.StartsWith($"Removed working copy Active Work 1 ({other}).", console.SelectTitles.Last(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RemoveWorkingCopy_Decline_Keeps()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        string other = Path.Combine(root.Path, "Active Work 1", "ProjectCodeArc");
+        Directory.CreateDirectory(other);
+        WriteCopies(context, new WorkingCopy(other, null, null));
+        FakeConsoleInteraction console = new([], ["Project Management", "Remove Working Copy", $"Active Work 1 — {other} — (none) — last seen unknown", "No", "Exit"]);
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        Assert.Equal([other], CopyPaths(context));
+    }
+
+    [Fact]
+    public void RemoveWorkingCopy_CurrentCopy_Refused()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        WriteCopies(context, new WorkingCopy(root.Path, "main", null));
+        FakeConsoleInteraction console = new([], ["Project Management", "Remove Working Copy", $"{Path.GetFileName(root.Path)} — {root.Path} — main — last seen unknown", "Exit"]);
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        Assert.Equal([root.Path], CopyPaths(context));
+        Assert.StartsWith("This is the working copy DevCraft is running in; it cannot be removed.", console.SelectTitles.Last(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RemoveWorkingCopy_MissingFolder_Flagged()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        string gone = Path.Combine(root.Path, "Active Work 3", "ProjectCodeArc");
+        WriteCopies(context, new WorkingCopy(gone, "story/3", null));
+        FakeConsoleInteraction console = new([], ["Project Management", "Remove Working Copy", "Back", "Exit"]);
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        Assert.Contains(
+            $"Active Work 3 — {gone} — story/3 — last seen unknown — missing",
+            console.SelectChoices[console.SelectTitles.IndexOf("Remove Working Copy")]);
+    }
+
+    [Fact]
+    public void RemoveWorkingCopy_NoCopies_ExplainsAndReturns()
+    {
+        using TestDirectory root = new();
+        using TestDirectory profileRoot = new();
+        StartupContext context = MenuContext(root, profileRoot);
+        FakeConsoleInteraction console = new([], ["Project Management", "Remove Working Copy", "Exit"]);
+
+        DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
+
+        Assert.StartsWith("No working copies are recorded for this project yet.", console.SelectTitles.Last(), StringComparison.Ordinal);
+    }
+
+    private static void WriteCopies(StartupContext context, params WorkingCopy[] copies)
+    {
+        ProjectDevCraftConfiguration configuration = ProjectDevCraftConfigurationReader.Read(context.CurrentDirectory)!;
+        SystemCentralProjectsStore.Write(
+            context.ProfileDirectory,
+            new SystemCentralProjectsIndex([new SystemCentralProject(configuration.ProjectKey, "Code Arc", "code-arc", "ProjectCodeArc", null, copies, [])]));
+    }
+
+    private static List<string> CopyPaths(StartupContext context)
+    {
+        return Assert.Single(SystemCentralProjectsStore.Read(context.ProfileDirectory).Projects).WorkingCopies.Select(copy => copy.Path).ToList();
+    }
+
+    private static Dictionary<string, string> NewFeatureForm(string name, string workItemId = "", string workItemUrl = "")
+    {
+        return new Dictionary<string, string>
+        {
+            ["FeatureName"] = name,
+            ["WorkItemId"] = workItemId,
+            ["WorkItemUrl"] = workItemUrl,
+        };
+    }
+
     private static StartupContext MenuContext(TestDirectory root, TestDirectory profileRoot)
     {
         string profile = Path.Combine(profileRoot.Path, ".DevCraft");
@@ -402,7 +578,7 @@ public sealed class DevCraftMenuCommandTests : IDisposable
 
         int projectManagementIndex = console.SelectTitles.FindIndex(title => title == "Project Management");
         IReadOnlyList<string> choices = console.SelectChoices[projectManagementIndex];
-        Assert.Equal(["Project discovery", "Project design", "Project theme", "Project setup", "Create Project", "Import SpecKit Constitution", "Infer Project Details", "Back"], choices);
+        Assert.Equal(["Project discovery", "Project design", "Project theme", "Project setup", "Create Project", "Import SpecKit Constitution", "Infer Project Details", "Remove Working Copy", "Back"], choices);
         Assert.Contains("What do you want to work on?", console.SelectTitles.Last());
         Assert.Empty(launcher.Instructions);
         Assert.Empty(featureLauncher.Launches);
@@ -441,14 +617,14 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         ProjectDevCraftConfigurationWriter.WriteIfMissing(Path.Combine(root.Path, ".devcraft"), SampleProfile);
         StartupContext context = new(root.Path, profile, Path.Combine(profile, "soul.md"));
         FakeConsoleInteraction console = new([], ["Features", "Create new feature", "OpenAI Codex (codex)", "Exit"]);
-        console.EnqueueValueEdit("Menu Feature");
+        console.EnqueueFieldEdit(NewFeatureForm("Menu Feature"));
         FakeDevCraftAiSessionLauncher launcher = new();
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
         DevCraftMenuCommand.Run(context, console, launcher, featureLauncher);
 
-        ProjectDevCraftConfiguration configuration = ProjectDevCraftConfigurationReader.Read(root.Path)!;
-        DevCraftFeature feature = Assert.Single(configuration.Features);
+        Assert.Empty(ProjectDevCraftConfigurationReader.Read(root.Path)!.Features);
+        DevCraftFeature feature = Assert.Single(Assert.Single(SystemCentralProjectsStore.Read(profile).Projects).Features);
         Assert.Equal("Menu Feature", feature.Name);
         Assert.Empty(launcher.Instructions);
         Assert.Single(featureLauncher.Launches);
@@ -461,14 +637,16 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         using TestDirectory profileRoot = new();
         StartupContext context = MenuContext(root, profileRoot);
         FakeConsoleInteraction console = new([], ["Features", "Create new feature", "OpenAI Codex (codex)", "Exit"]);
-        console.EnqueueValueEdit("  Form Feature  ");
+        console.EnqueueFieldEdit(NewFeatureForm("  Form Feature  "));
 
         DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), new FakeFeatureAiSessionLauncher());
 
         Assert.Empty(console.AskPrompts);
-        Assert.Equal("New Feature", Assert.Single(console.ValueEditTitles));
-        Assert.Equal(string.Empty, Assert.Single(console.ValueEditInitialValues));
-        Assert.Equal("Form Feature", Assert.Single(ProjectDevCraftConfigurationReader.Read(root.Path)!.Features).Name);
+        Assert.Equal("New Feature", Assert.Single(console.FieldEditTitles));
+        Assert.Equal(["Feature name", "Work Item ID", "Work Item URL"], console.FieldEditFields[0].Select(field => field.Label));
+        Assert.All(console.FieldEditFields[0], field => Assert.Equal(string.Empty, field.InitialValue));
+        Assert.True(console.FieldEditFields[0][0].Required);
+        Assert.Equal("Form Feature", Assert.Single(Assert.Single(SystemCentralProjectsStore.Read(context.ProfileDirectory).Projects).Features).Name);
     }
 
     [Theory]
@@ -480,7 +658,7 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         using TestDirectory profileRoot = new();
         StartupContext context = MenuContext(root, profileRoot);
         FakeConsoleInteraction console = new([], ["Features", "Create new feature", "Exit"]);
-        console.EnqueueValueEdit(name, saved);
+        console.EnqueueFieldEdit(NewFeatureForm(name), saved);
         FakeFeatureAiSessionLauncher featureLauncher = new();
 
         DevCraftMenuCommand.Run(context, console, new FakeDevCraftAiSessionLauncher(), featureLauncher);
@@ -602,6 +780,10 @@ public sealed class DevCraftMenuCommandTests : IDisposable
         Assert.Contains("Discovery, Clarification, Research, Planning, Analysis, Implementation, and Complete", instruction, StringComparison.Ordinal);
         Assert.Contains("does not authorize implementation", instruction, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("project discovery", instruction, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("working-copies", instruction, StringComparison.Ordinal);
+        Assert.Contains("repo-remote", instruction, StringComparison.Ordinal);
+        Assert.Contains("branch", instruction, StringComparison.Ordinal);
+        Assert.DoesNotContain("repo-location", instruction, StringComparison.Ordinal);
         Assert.Empty(featureLauncher.Launches);
     }
 
