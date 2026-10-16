@@ -6,9 +6,14 @@ public static class ProfileHome
 {
     public static bool Is(StartupContext context)
     {
-        string? parent = Path.GetDirectoryName(WorkingCopyPaths.Normalize(context.ProfileDirectory));
+        return Is(context.CurrentDirectory, context.ProfileDirectory);
+    }
 
-        return parent is not null && WorkingCopyPaths.Same(context.CurrentDirectory, parent);
+    public static bool Is(string directory, string profileDirectory)
+    {
+        string? parent = Path.GetDirectoryName(WorkingCopyPaths.Normalize(profileDirectory));
+
+        return parent is not null && WorkingCopyPaths.Same(directory, parent);
     }
 
     public static string Notice(StartupContext context)

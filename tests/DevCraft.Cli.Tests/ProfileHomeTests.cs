@@ -65,6 +65,19 @@ public sealed class ProfileHomeTests
     }
 
     [Fact]
+    public void Installer_InProfileHomeWhereDevcraftIsSeparateFolder_IsRefused()
+    {
+        // Case-sensitive file systems (Linux): ~/.devcraft is not ~/.DevCraft, but ~ is still the profile home.
+        using TestDirectory root = new();
+        string profile = Path.Combine(root.Path, "profile-store");
+        Directory.CreateDirectory(profile);
+
+        Assert.Throws<InvalidOperationException>(() => DevCraftInstaller.Install(root.Path, new ProjectProfile("X", "P", "D"), profile));
+
+        Assert.False(Directory.Exists(Path.Combine(root.Path, ".devcraft")));
+    }
+
+    [Fact]
     public void StoreWrite_NormalRepository_Allowed()
     {
         using TestDirectory repo = new();

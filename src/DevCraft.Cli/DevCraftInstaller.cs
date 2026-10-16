@@ -10,6 +10,12 @@ public static class DevCraftInstaller
         ProjectProfile profile = ResolveProjectProfile(projectDirectory, projectProfile);
         string controlDirectory = Path.Combine(projectDirectory, ".devcraft");
         ProfileFolderGuard.ThrowIfProfile(controlDirectory);
+
+        if (profileDirectory is not null && ProfileHome.Is(projectDirectory, profileDirectory))
+        {
+            throw new InvalidOperationException(
+                $"Refusing to install DevCraft in the folder that holds the DevCraft profile ({profileDirectory}). Run devcraft from a project folder.");
+        }
         List<string> createdPaths = [];
         List<string> preservedPaths = [];
 
