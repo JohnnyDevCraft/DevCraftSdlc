@@ -47,22 +47,22 @@ function Get-ProfileRelativePath($SourceRoot, $FullName) {
 function Copy-Profile($SourceProfile) {
     New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 
-    if (Test-Path $SourceProfile) {
+    if (Test-Path -LiteralPath $SourceProfile) {
         $sourceRoot = (Get-Item -LiteralPath $SourceProfile).FullName
 
-        Get-ChildItem $SourceProfile -Directory -Recurse | ForEach-Object {
+        Get-ChildItem -LiteralPath $sourceRoot -Directory -Recurse | ForEach-Object {
             $relativePath = Get-ProfileRelativePath $sourceRoot $_.FullName
             New-Item -ItemType Directory -Force -Path (Join-Path $InstallDir $relativePath) | Out-Null
         }
 
-        Get-ChildItem $SourceProfile -File -Recurse | Where-Object { $_.Name -ne "soul.md" } | ForEach-Object {
+        Get-ChildItem -LiteralPath $sourceRoot -File -Recurse | Where-Object { $_.Name -ne "soul.md" } | ForEach-Object {
             $relativePath = Get-ProfileRelativePath $sourceRoot $_.FullName
             $targetPath = Join-Path $InstallDir $relativePath
             # Seeded user data: copy only when missing so reinstalls never reset it.
             $isSeededUserData = @("configure.json", "features/projects.json") -contains $relativePath.Replace("\", "/")
-            if (-not ($isSeededUserData -and (Test-Path $targetPath))) {
+            if (-not ($isSeededUserData -and (Test-Path -LiteralPath $targetPath))) {
                 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $targetPath) | Out-Null
-                Copy-Item $_.FullName $targetPath -Force
+                Copy-Item -LiteralPath $_.FullName -Destination $targetPath -Force
             }
         }
     }
@@ -80,19 +80,63 @@ function Copy-Profile($SourceProfile) {
     }
 }
 
+function Remove-OldBinaries($TargetDirectory, $TargetName) {
+    # A binary that was still running during an earlier install could not be deleted then.
+    Get-ChildItem -LiteralPath $TargetDirectory -Filter ".$TargetName.*.old" -Force | ForEach-Object {
+        Remove-OldBinary $_.FullName
+    }
+}
+
+function Remove-OldBinary($Path) {
+    try {
+        Remove-Item -LiteralPath $Path -Force -ErrorAction Stop
+    }
+    catch {
+        # Still running; the next install removes it.
+    }
+}
+
 function Install-Binary($SourceBinary, $TargetBinary) {
-    $targetDirectory = Split-Path -Parent $TargetBinary
-    New-Item -ItemType Directory -Force -Path $targetDirectory | Out-Null
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $TargetBinary) | Out-Null
+    # .NET file calls resolve relative paths against the process folder, not the PowerShell location.
+    $targetDirectory = (Get-Item -LiteralPath (Split-Path -Parent $TargetBinary)).FullName
+    $targetName = Split-Path -Leaf $TargetBinary
+    $TargetBinary = Join-Path $targetDirectory $targetName
     $tempBinary = Join-Path $targetDirectory ".devcraft-install-$([Guid]::NewGuid()).tmp"
+    $oldBinary = $null
+
+    Remove-OldBinaries $targetDirectory $targetName
 
     try {
-        Copy-Item $SourceBinary $tempBinary -Force
-        Move-Item $tempBinary $TargetBinary -Force
+        Copy-Item -LiteralPath $SourceBinary -Destination $tempBinary -Force
+
+        # Moving onto an existing devcraft.exe fails with "file already exists" when it cannot be
+        # deleted, such as while it runs. Windows still allows renaming it, so move it aside first.
+        if (Test-Path -LiteralPath $TargetBinary) {
+            $oldBinary = Join-Path $targetDirectory ".$targetName.$([Guid]::NewGuid()).old"
+            [System.IO.File]::Move($TargetBinary, $oldBinary)
+        }
+
+        try {
+            [System.IO.File]::Move($tempBinary, $TargetBinary)
+        }
+        catch {
+            if ($oldBinary) {
+                [System.IO.File]::Move($oldBinary, $TargetBinary)
+                $oldBinary = $null
+            }
+
+            throw
+        }
     }
     finally {
-        if (Test-Path $tempBinary) {
-            Remove-Item $tempBinary -Force
+        if (Test-Path -LiteralPath $tempBinary) {
+            Remove-Item -LiteralPath $tempBinary -Force
         }
+    }
+
+    if ($oldBinary) {
+        Remove-OldBinary $oldBinary
     }
 }
 
